@@ -1,0 +1,13 @@
+.gradle
+build
+.idea
+*.iml
+*.ipr
+*.iws
+out
+.
+local.properties
+app/release
+/opt/projects/AndroidSdlTemplate/CMakeFiles
+.cxx/
+CMakeFiles/

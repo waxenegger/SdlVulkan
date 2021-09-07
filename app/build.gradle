@@ -1,0 +1,56 @@
+apply plugin: 'com.android.application'
+
+android {
+    sourceSets {
+        main.res.srcDirs = ['src/main/res']
+    }
+
+    lintOptions {
+        disable 'GoogleAppIndexingWarning'
+        disable 'MissingApplicationIcon'
+        disable 'TrustAllX509TrustManager'
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
+    }
+
+    externalNativeBuild {
+        cmake {
+            version "3.18.1"
+            path "CMakeLists.txt"
+        }
+    }
+
+    ndkVersion "23.0.7599858"
+    compileSdkVersion 26
+
+    defaultConfig {
+        minSdkVersion 26
+        applicationId "sdl.android"
+        externalNativeBuild {
+            cmake {
+                arguments "APP_PLATFORM=android-26", "-DANDROID_TOOLCHAIN=clang"
+            }
+        }
+        ndk {
+            ldLibs "android", "log"
+            abiFilters /*'x86',*/ 'x86_64'
+            /*, 'armeabi', 'armeabi-v7a', 'arm64-v8a'*/
+        }
+        splits {
+            abi {
+                enable true
+                reset()
+                include 'x86_64'
+                universalApk true
+            }
+        }
+
+    }
+}
+
+dependencies {
+    implementation fileTree(dir: '.', include: ['*.jar', '*.so'])
+}
