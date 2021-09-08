@@ -11,3 +11,6 @@ app/release
 /opt/projects/AndroidSdlTemplate/CMakeFiles
 .cxx/
 CMakeFiles/
+libVkLayer_khronos_validation.so
+SPIRV-Tools-opt.lib
+shaderc_combined.lib
