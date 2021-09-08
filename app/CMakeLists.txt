@@ -22,6 +22,7 @@ set(sdlDir "${projectDir}/SDL2-2.0.16")
 add_subdirectory(${sdlDir} EXCLUDE_FROM_ALL)
 set(SDL2MAIN_LIBRARY SDL2main)
 set(SDL2_LIBRARY SDL2)
+set(VulkanDir "VulkanSDK/1.2.189.0/android")
 
 # Joysticks were causing trouble on android.
 add_definitions(-DSDL_JOYSTICK=0)
@@ -30,12 +31,16 @@ add_definitions(-DSDL_JOYSTICK=0)
 
 # Sources (relative to the project root dir).
 set(projectSources
-  ../src/platform.cpp ../src/android.cpp
+  ../src/platform.cpp
+  ../src/android.cpp
+  ../src/graphics.cpp
 )
 
 # Include dirs.
 set(projectIncludeDirs ${projectIncludeDirs}
-  "${sdlDir}/include" "${projectDir}/../glm"
+  "${sdlDir}/include"
+  ${VulkanDir}/include
+  "${projectDir}/../glm"
 )
 
 find_library(${SDL2MAIN_LIBRARY}  ${SDL2_LIBRARY})
@@ -46,6 +51,7 @@ add_library(${targetName} SHARED ${projectSources})
 target_link_libraries(${targetName}
   ${SDL2MAIN_LIBRARY}
   ${SDL2_LIBRARY}
+  vulkan
   log
 )
 
