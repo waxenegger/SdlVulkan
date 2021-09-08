@@ -1,12 +1,16 @@
 #ifndef SRC_INCLUDES_SHARED_INCL_H_
 #define SRC_INCLUDES_SHARED_INCL_H_
 
+#include "logging.h"
+
 #include <SDL.h>
 
 #include <SDL_vulkan.h>
 #include <vulkan/vulkan.h>
 
 #include <iostream>
+#include <vector>
+#include <memory>
 
 #include <glm.hpp>
 #include <gtc/matrix_transform.hpp>
