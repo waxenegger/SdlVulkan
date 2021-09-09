@@ -35,6 +35,7 @@ set(projectSources
   ../src/android.cpp
   ../src/graphics.cpp
   ../src/pipeline.cpp
+  ../src/shader.cpp
 )
 
 # Include dirs.

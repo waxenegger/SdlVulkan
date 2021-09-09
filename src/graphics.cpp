@@ -138,23 +138,24 @@ void GraphicsContext::listLayerNames() {
     VkResult ret;
 
     ret = vkEnumerateInstanceLayerProperties(&layerCount, nullptr);
-    ASSERT_VULKAN(ret);
+    if (ret != VK_SUCCESS) {
+        logError("Failed to query Layer Properties!");
+        return;
+    }
 
     std::vector<VkLayerProperties> availableLayers(layerCount);
 
-    if (ret == VK_SUCCESS) {
-        ret = vkEnumerateInstanceLayerProperties(&layerCount, availableLayers.data());
-        if (ret != VK_SUCCESS) {
-            logError("Failed to query Layer Properties!");
-            return;
-        }
+    ret = vkEnumerateInstanceLayerProperties(&layerCount, availableLayers.data());
+    if (ret != VK_SUCCESS) {
+        logError("Failed to query Layer Properties!");
+        return;
+    }
 
-        if (availableLayers.empty()) return;
+    if (availableLayers.empty()) return;
 
-        logInfo("Layers:");
-        for (auto & layer : availableLayers) {
-           logInfo("\t" + std::string(layer.layerName));
-        }
+    logInfo("Layers:");
+    for (auto & layer : availableLayers) {
+        logInfo("\t" + std::string(layer.layerName));
     }
 }
 
@@ -175,8 +176,6 @@ const std::vector<VkExtensionProperties> GraphicsContext::queryDeviceExtensions(
     std::vector<VkExtensionProperties> extensions;
     
     if (!this->isGraphicsActive() || device == nullptr) return extensions;
-    
-    logError("bla");
     
     uint32_t deviceExtensionCount = 0;
     
@@ -358,14 +357,17 @@ const std::vector<VkQueueFamilyProperties> GraphicsContext::getPhysicalDeviceQue
     std::vector<VkQueueFamilyProperties> queueFamilyProperties;
     if (device == nullptr) return queueFamilyProperties;
 
-    uint32_t deviceQueuerFamilyPropertiesCount = 0;    
-    vkGetPhysicalDeviceQueueFamilyProperties(device, &deviceQueuerFamilyPropertiesCount, nullptr);
-    if (deviceQueuerFamilyPropertiesCount > 0) {
-        vkGetPhysicalDeviceQueueFamilyProperties(device, &deviceQueuerFamilyPropertiesCount, queueFamilyProperties.data());
+    uint32_t deviceQueueFamilyPropertiesCount = 0;    
+    vkGetPhysicalDeviceQueueFamilyProperties(device, &deviceQueueFamilyPropertiesCount, nullptr);
+    if (deviceQueueFamilyPropertiesCount > 0) {
+        queueFamilyProperties.resize(deviceQueueFamilyPropertiesCount);
+        vkGetPhysicalDeviceQueueFamilyProperties(device, &deviceQueueFamilyPropertiesCount, queueFamilyProperties.data());
     }
 
     return queueFamilyProperties;
 }
+
+GraphicsContext::GraphicsContext() {}
 
 GraphicsContext::~GraphicsContext() {
     this->quitGraphics();

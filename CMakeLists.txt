@@ -18,10 +18,11 @@ find_package(Vulkan REQUIRED)
 
 # Sources
 set(projectSources
-  src/platform.cpp 
-  src/desktop.cpp
-  src/graphics.cpp
-  src/pipeline.cpp
+    src/platform.cpp
+    src/desktop.cpp
+    src/graphics.cpp
+    src/pipeline.cpp
+    src/shader.cpp
 )
 
 # Include dirs.
