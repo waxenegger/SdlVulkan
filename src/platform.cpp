@@ -8,13 +8,12 @@ int start(int argc, char* argv []) {
     logInfo("Creating Graphics Context...");
     graphics->initGraphics("Test App", VULKAN_VERSION);
     
-    if(graphics->isGraphicsActive()) { 
-        logInfo("Destroying Graphics Context...");
-        graphics->quitGraphics();
-    } else {
+    if(!graphics->isGraphicsActive()) {
         logError("Aborting Program!");
         return -1;
     }
+    
+    graphics->listPhysicalDevices();
     
     return 0;
 }

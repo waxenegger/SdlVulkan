@@ -31,10 +31,10 @@ void GraphicsContext::createVulkanInstance(const std::string & appName, const ui
     inst_info.pNext = nullptr;
     inst_info.flags = 0;
     inst_info.pApplicationInfo = &app;
-    inst_info.enabledLayerCount = this->vkLayerNames.size();
-    inst_info.ppEnabledLayerNames = !this->vkLayerNames.empty() ? this->vkLayerNames.data() : nullptr;
-    inst_info.enabledExtensionCount = this->vkExtensionNames.size();
-    inst_info.ppEnabledExtensionNames = !this->vkExtensionNames.empty() ? this->vkExtensionNames.data() : nullptr;
+    inst_info.enabledLayerCount = this->vulkanLayers.size();
+    inst_info.ppEnabledLayerNames = !this->vulkanLayers.empty() ? this->vulkanLayers.data() : nullptr;
+    inst_info.enabledExtensionCount = this->vulkanExtensions.size();
+    inst_info.ppEnabledExtensionNames = !this->vulkanExtensions.empty() ? this->vulkanExtensions.data() : nullptr;
 
     const VkResult ret = vkCreateInstance(&inst_info, nullptr, &this->vulkanInstance);
     if (ret != VK_SUCCESS) {
@@ -53,8 +53,8 @@ bool GraphicsContext::queryVulkanInstanceExtensions() {
         logError("Could not get SDL Vulkan Extensions: " + std::string(SDL_GetError()));
         return false;
     } else {
-        this->vkExtensionNames.resize(extensionCount);
-        return SDL_Vulkan_GetInstanceExtensions(this->sdlWindow, &extensionCount, this->vkExtensionNames.data());
+        this->vulkanExtensions.resize(extensionCount);
+        return SDL_Vulkan_GetInstanceExtensions(this->sdlWindow, &extensionCount, this->vulkanExtensions.data());
     }
 }
 
@@ -82,6 +82,8 @@ void GraphicsContext::initGraphics(const std::string & appName, const uint32_t v
     
     this->initSdl(appName);
     this->initVulkan(appName, version);
+    
+    this->queryPhysicalDevices();
 }
 
 bool GraphicsContext::isSdlActive() const {
@@ -120,4 +122,251 @@ void GraphicsContext::quitVulkan() {
 void GraphicsContext::quitGraphics() {
     this->quitVulkan();
     this->quitSdl();
+}
+
+void GraphicsContext::listVulkanExtensions() {
+    if (this->vulkanExtensions.empty()) return;
+
+    logInfo("Extensions:");
+    for (auto & extension : this->vulkanExtensions) {
+        logInfo("\t" + std::string(extension));
+    }
+}
+
+void GraphicsContext::listLayerNames() {
+    uint32_t layerCount = 0;
+    VkResult ret;
+
+    ret = vkEnumerateInstanceLayerProperties(&layerCount, nullptr);
+    ASSERT_VULKAN(ret);
+
+    std::vector<VkLayerProperties> availableLayers(layerCount);
+
+    if (ret == VK_SUCCESS) {
+        ret = vkEnumerateInstanceLayerProperties(&layerCount, availableLayers.data());
+        if (ret != VK_SUCCESS) {
+            logError("Failed to query Layer Properties!");
+            return;
+        }
+
+        if (availableLayers.empty()) return;
+
+        logInfo("Layers:");
+        for (auto & layer : availableLayers) {
+           logInfo("\t" + std::string(layer.layerName));
+        }
+    }
+}
+
+void GraphicsContext::listPhysicalDevices() {
+    if (this->physicalDevices.empty()) return;
+
+    VkPhysicalDeviceProperties physicalProperties;
+
+    logInfo("Physical Devices:");
+    for (auto & device : this->physicalDevices) {
+        vkGetPhysicalDeviceProperties(device, &physicalProperties);
+        logInfo("\t" + std::string(physicalProperties.deviceName) + 
+                "\t[Type: " + std::to_string(physicalProperties.deviceType) + "]");
+    }
+}
+
+const std::vector<VkExtensionProperties> GraphicsContext::queryDeviceExtensions(const VkPhysicalDevice & device) {
+    std::vector<VkExtensionProperties> extensions;
+    
+    if (!this->isGraphicsActive() || device == nullptr) return extensions;
+    
+    logError("bla");
+    
+    uint32_t deviceExtensionCount = 0;
+    
+    VkResult ret = vkEnumerateDeviceExtensionProperties(device, nullptr, &deviceExtensionCount, nullptr);
+    if (ret == VK_SUCCESS && deviceExtensionCount > 0) {
+        extensions.resize(deviceExtensionCount);
+        ret = vkEnumerateDeviceExtensionProperties(device, nullptr, &deviceExtensionCount, extensions.data());
+        if (ret != VK_SUCCESS) {
+            logError("Failed to query Device Extensions!");
+        }
+    }
+    
+    return extensions;
+}
+
+void GraphicsContext::queryPhysicalDevices() {
+    if (!this->isGraphicsActive()) return;
+    
+    uint32_t physicalDeviceCount = 0;
+    
+    VkResult ret = vkEnumeratePhysicalDevices(this->vulkanInstance, &physicalDeviceCount, nullptr);
+    if (ret != VK_SUCCESS) {
+        logError("Failed to query Physical Devices!");
+        return;
+    }
+    
+    if (physicalDeviceCount ==0) {
+        logError("No Physical Vulkan Device found!");
+        return;
+    }
+    
+    this->physicalDevices.resize(physicalDeviceCount);
+    ret = vkEnumeratePhysicalDevices(this->vulkanInstance, &physicalDeviceCount, this->physicalDevices.data());
+    if (ret != VK_SUCCESS) {
+        logError("Failed to query Physical Devices!");
+    }
+}
+
+const std::tuple<VkPhysicalDevice, int> GraphicsContext::pickBestPhysicalDeviceAndQueueIndex() {
+    std::tuple<VkPhysicalDevice, int> choice = std::make_tuple(nullptr, -1);
+
+    if (this->physicalDevices.empty()) return choice;
+
+    int highestScore = 0;
+    int i=0;
+    for (auto & device : this->physicalDevices) {
+        const std::tuple<int, int> scoreAndQueueIndex = this->ratePhysicalDevice(device);
+        if (std::get<0>(scoreAndQueueIndex) > highestScore && std::get<1>(scoreAndQueueIndex) != -1) {
+            highestScore = std::get<0>(scoreAndQueueIndex);
+            choice = std::make_tuple(device, std::get<1>(scoreAndQueueIndex));
+        }
+        i++;
+    }
+
+    return choice;
+}
+
+bool GraphicsContext::doesPhysicalDeviceSupportExtension(const VkPhysicalDevice & device, const std::string extension) {
+    std::vector<VkExtensionProperties> availableExtensions = this->queryDeviceExtensions(device);
+
+    for (auto & extProp : availableExtensions) {
+        const std::string extName = std::string(extProp.extensionName);
+        if (extName.compare(extension) == 0) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+const std::tuple<int,int> GraphicsContext::ratePhysicalDevice(const VkPhysicalDevice & device) {
+    // check if physical device supports swap chains and required surface format
+    if (!this->isGraphicsActive() || 
+        !this->doesPhysicalDeviceSupportExtension(device, "VK_KHR_swapchain") ||
+        !this->isPhysicalDeviceSurfaceFormatsSupported(device, this->swapChainImageFormat)) {
+            return std::make_tuple(0, -1);
+    };
+
+    VkPhysicalDeviceProperties deviceProperties;
+    VkPhysicalDeviceFeatures deviceFeatures;
+
+    vkGetPhysicalDeviceProperties(device, &deviceProperties);
+    vkGetPhysicalDeviceFeatures(device, &deviceFeatures);
+
+    int score = 0;
+    switch(deviceProperties.deviceType) {
+        case VK_PHYSICAL_DEVICE_TYPE_MAX_ENUM:
+            score = 1500;
+            break;
+        case VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU:
+            score = 1000;
+            break;
+        case VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU:
+            score = 500;
+            break;
+        case VK_PHYSICAL_DEVICE_TYPE_VIRTUAL_GPU:
+            score = 250;
+            break;
+        default:
+            break;
+    }
+
+    if (deviceFeatures.geometryShader) {
+        score += 5;
+    }
+
+    const std::vector<VkQueueFamilyProperties> queueFamiliesProperties = this->getPhysicalDeviceQueueFamilyProperties(device);
+
+    int queueChoice = -1;
+    int lastBestQueueScore = 0;
+    bool supportsGraphicsAndPresentationQueue = false;
+
+    int j=0;
+    for (auto & queueFamilyProperties : queueFamiliesProperties) {
+        int queueScore = 0;
+
+        if ((queueFamilyProperties.queueFlags & VK_QUEUE_GRAPHICS_BIT) != 0) {
+            VkBool32 supportsPresentation = false;
+            if (this->vulkanSurface != nullptr) vkGetPhysicalDeviceSurfaceSupportKHR(device, j, this->vulkanSurface, &supportsPresentation);
+            if (supportsPresentation) supportsGraphicsAndPresentationQueue = true;
+
+            queueScore += 10 * queueFamilyProperties.queueCount;
+
+            if (queueScore > lastBestQueueScore) {
+                lastBestQueueScore = queueScore;
+                queueChoice = j;
+            }
+        }
+
+        j++;
+    }
+
+    // we need a device with a graphics queue, alright
+    if (!supportsGraphicsAndPresentationQueue) return std::make_tuple(0, -1);
+
+    return std::make_tuple(score+lastBestQueueScore, queueChoice);
+}
+
+bool GraphicsContext::isPhysicalDeviceSurfaceFormatsSupported(const VkPhysicalDevice & device, const VkSurfaceFormatKHR & format) {
+    if (!this->isGraphicsActive()) return false;
+
+    const std::vector<VkSurfaceFormatKHR> availableSurfaceFormats = this->queryPhysicalDeviceSurfaceFormats(device);
+
+    for (auto & surfaceFormat : availableSurfaceFormats) {
+        if (format.format == surfaceFormat.format && format.colorSpace == surfaceFormat.colorSpace) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+const std::vector<VkSurfaceFormatKHR> GraphicsContext::queryPhysicalDeviceSurfaceFormats(const VkPhysicalDevice & device) {
+    std::vector<VkSurfaceFormatKHR> formats;
+
+    if (!this->isVulkanActive()) return formats;
+
+    uint32_t formatCount = 0;
+
+    VkResult ret = vkGetPhysicalDeviceSurfaceFormatsKHR(device, this->vulkanSurface, &formatCount, nullptr);
+    if (ret != VK_SUCCESS) {
+        logError("Failed to query Device Surface Formats!");
+        return formats;
+    }
+
+    if (formatCount > 0) {
+        formats.resize(formatCount);
+        ret = vkGetPhysicalDeviceSurfaceFormatsKHR(device, this->vulkanSurface, &formatCount, formats.data());
+        
+        if (ret != VK_SUCCESS) {
+            logError("Failed to query Device Surface Formats!");
+        }
+    }
+
+    return formats;
+}
+
+const std::vector<VkQueueFamilyProperties> GraphicsContext::getPhysicalDeviceQueueFamilyProperties(const VkPhysicalDevice & device) {
+    std::vector<VkQueueFamilyProperties> queueFamilyProperties;
+    if (device == nullptr) return queueFamilyProperties;
+
+    uint32_t deviceQueuerFamilyPropertiesCount = 0;    
+    vkGetPhysicalDeviceQueueFamilyProperties(device, &deviceQueuerFamilyPropertiesCount, nullptr);
+    if (deviceQueuerFamilyPropertiesCount > 0) {
+        vkGetPhysicalDeviceQueueFamilyProperties(device, &deviceQueuerFamilyPropertiesCount, queueFamilyProperties.data());
+    }
+
+    return queueFamilyProperties;
+}
+
+GraphicsContext::~GraphicsContext() {
+    this->quitGraphics();
 }

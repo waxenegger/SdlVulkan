@@ -10,8 +10,5 @@ void logError(std::string message) {
 }
 
 int main(int argc, char* argv []) {
-
-    glm::vec3 a(10);
-
     return start(argc, argv);
 }

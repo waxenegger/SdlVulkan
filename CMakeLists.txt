@@ -14,6 +14,7 @@ set(projectSources
   src/platform.cpp 
   src/desktop.cpp
   src/graphics.cpp
+  src/pipeline.cpp
 )
 
 # Include dirs.
