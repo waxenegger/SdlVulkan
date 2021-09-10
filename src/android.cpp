@@ -1,5 +1,7 @@
-#include "includes/shared.h"
 #include "includes/android.h"
+#include "includes/shared.h"
+
+#include <jni.h>
 
 void logInfo(std::string message) {
     LOG_INFO("%s", message.c_str());

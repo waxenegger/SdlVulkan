@@ -144,6 +144,8 @@ void Android_ActivityMutex_Lock(void);
 void Android_ActivityMutex_Unlock(void);
 void Android_ActivityMutex_Lock_Running(void);
 
+const char * SDL_AndroidGetAssetContent(const char * fileName);
+
 /* Ends C function definitions when using C++ */
 #ifdef __cplusplus
 /* *INDENT-OFF* */

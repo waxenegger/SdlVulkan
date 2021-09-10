@@ -15,4 +15,4 @@ libVkLayer_khronos_validation.so
 SPIRV-Tools-opt.lib
 shaderc_combined.lib
 *.kdev4
-
+assets/

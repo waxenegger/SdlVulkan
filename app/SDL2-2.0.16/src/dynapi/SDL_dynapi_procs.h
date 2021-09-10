@@ -80,6 +80,7 @@ SDL_DYNAPI_PROC(void*,SDL_AndroidGetActivity,(void),(),return)
 SDL_DYNAPI_PROC(const char*,SDL_AndroidGetInternalStoragePath,(void),(),return)
 SDL_DYNAPI_PROC(int,SDL_AndroidGetExternalStorageState,(void),(),return)
 SDL_DYNAPI_PROC(const char*,SDL_AndroidGetExternalStoragePath,(void),(),return)
+SDL_DYNAPI_PROC(const char*,SDL_AndroidGetAssetContent,(const char* a),(a),return)
 #endif
 
 SDL_DYNAPI_PROC(int,SDL_Init,(Uint32 a),(a),return)

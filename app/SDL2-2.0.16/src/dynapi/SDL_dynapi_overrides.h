@@ -51,6 +51,7 @@
 #define SDL_AndroidGetInternalStoragePath SDL_AndroidGetInternalStoragePath_REAL
 #define SDL_AndroidGetExternalStorageState SDL_AndroidGetExternalStorageState_REAL
 #define SDL_AndroidGetExternalStoragePath SDL_AndroidGetExternalStoragePath_REAL
+#define SDL_AndroidGetAssetContent SDL_AndroidGetAssetContent_REAL
 #define SDL_Init SDL_Init_REAL
 #define SDL_InitSubSystem SDL_InitSubSystem_REAL
 #define SDL_QuitSubSystem SDL_QuitSubSystem_REAL

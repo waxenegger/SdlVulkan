@@ -10,6 +10,7 @@
 
 #include <iostream>
 #include <vector>
+#include <array>
 #include <memory>
 #include <map>
 #include <fstream>
@@ -18,6 +19,10 @@
 #include <gtc/matrix_transform.hpp>
 #include <gtc/type_ptr.hpp>
 #include <gtx/string_cast.hpp>
+
+#include <assimp/Importer.hpp>
+#include <assimp/scene.h>
+#include <assimp/postprocess.h>
 
 int start(int argc, char* argv []);
 

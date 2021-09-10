@@ -801,6 +801,8 @@ public class SDLActivity extends Activity implements View.OnSystemUiVisibilityCh
     public static native void nativePermissionResult(int requestCode, boolean result);
     public static native void onNativeLocaleChanged();
 
+    public static native String nativeGetAssetContent(String name);
+
     /**
      * This method is called by SDL using JNI.
      */

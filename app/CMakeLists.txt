@@ -5,24 +5,23 @@ project(SdlVulkanAndroid CXX)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+set(CMAKE_DEBUG_POSTFIX "")
+
 # Set some helper variables.
 string(TOLOWER "${CMAKE_SYSTEM_NAME}" targetSystem)
 set(projectDir  "${CMAKE_CURRENT_LIST_DIR}")
 set(targetName  "SdlVulkanAndroid")
-set(binDir      "${projectDir}/bin")
-
-# Define executable output dir.
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${binDir}/${targetSystem}")
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_RELEASE "${binDir}/${targetSystem}")
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_MINSIZEREL "${binDir}/${targetSystem}")
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_DEBUG "${binDir}/${targetSystem}_debug")
 
 # Dependencies:
 set(sdlDir "${projectDir}/SDL2-2.0.16")
 add_subdirectory(${sdlDir} EXCLUDE_FROM_ALL)
 set(SDL2MAIN_LIBRARY SDL2main)
 set(SDL2_LIBRARY SDL2)
+
 set(VulkanDir "VulkanSDK/1.2.189.0/android")
+
+set(AssimpDir "assimp-5.0.1")
+add_subdirectory(${AssimpDir} EXCLUDE_FROM_ALL)
 
 # Joysticks were causing trouble on android.
 add_definitions(-DSDL_JOYSTICK=0)
@@ -31,8 +30,8 @@ add_definitions(-DSDL_JOYSTICK=0)
 
 # Sources (relative to the project root dir).
 set(projectSources
-  ../src/platform.cpp
   ../src/android.cpp
+  ../src/platform.cpp
   ../src/graphics.cpp
   ../src/pipeline.cpp
   ../src/shader.cpp
@@ -41,8 +40,10 @@ set(projectSources
 # Include dirs.
 set(projectIncludeDirs ${projectIncludeDirs}
   "${sdlDir}/include"
+  "${sdlDir}/src/core/android/include"
   ${VulkanDir}/include
   "${projectDir}/../glm"
+  ${ASSIMP_DIR}/include
 )
 
 find_library(${SDL2MAIN_LIBRARY}  ${SDL2_LIBRARY})
@@ -50,11 +51,13 @@ find_library(${SDL2MAIN_LIBRARY}  ${SDL2_LIBRARY})
 # Build the binary.
 add_library(${targetName} SHARED ${projectSources})
 
-target_link_libraries(${targetName}
+target_link_libraries(${targetName} 
   ${SDL2MAIN_LIBRARY}
   ${SDL2_LIBRARY}
   vulkan
   log
+  android
+  assimp
 )
 
 target_include_directories(${targetName}
