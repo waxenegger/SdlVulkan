@@ -250,7 +250,7 @@ const std::tuple<int,int> GraphicsContext::ratePhysicalDevice(const VkPhysicalDe
     // check if physical device supports swap chains and required surface format
     if (!this->isGraphicsActive() || 
         !this->doesPhysicalDeviceSupportExtension(device, "VK_KHR_swapchain") ||
-        !this->isPhysicalDeviceSurfaceFormatsSupported(device, this->swapChainImageFormat)) {
+        !this->isPhysicalDeviceSurfaceFormatsSupported(device, SWAP_CHAIN_IMAGE_FORMAT)) {
             return std::make_tuple(0, -1);
     };
 
@@ -366,6 +366,50 @@ const std::vector<VkQueueFamilyProperties> GraphicsContext::getPhysicalDeviceQue
 
     return queueFamilyProperties;
 }
+
+bool GraphicsContext::findDepthFormat(const VkPhysicalDevice & device, VkFormat & supportedFormat) {
+    return GraphicsContext::findSupportedFormat(device,
+    {VK_FORMAT_D32_SFLOAT, VK_FORMAT_D32_SFLOAT_S8_UINT, VK_FORMAT_D24_UNORM_S8_UINT},
+        VK_IMAGE_TILING_OPTIMAL,
+        VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT, supportedFormat
+    );
+}
+    
+bool GraphicsContext::findSupportedFormat(
+    const VkPhysicalDevice & device, const std::vector<VkFormat>& candidates, VkImageTiling tiling, 
+    VkFormatFeatureFlags features, VkFormat & supportedFormat) {
+    
+    
+    for (VkFormat format : candidates) {
+        VkFormatProperties props;
+        vkGetPhysicalDeviceFormatProperties(device, format, &props);
+
+        if (tiling == VK_IMAGE_TILING_LINEAR && (props.linearTilingFeatures & features) == features) {
+            supportedFormat = format;
+            return true;
+        } else if (tiling == VK_IMAGE_TILING_OPTIMAL && (props.optimalTilingFeatures & features) == features) {
+            supportedFormat = format;
+            return true;
+        }
+    }
+
+    return false;
+}
+
+bool GraphicsContext::findMemoryType(const VkPhysicalDevice & device, uint32_t typeFilter, VkMemoryPropertyFlags properties, uint32_t & memoryType) {
+    VkPhysicalDeviceMemoryProperties memProperties;
+    vkGetPhysicalDeviceMemoryProperties(device, &memProperties);
+
+    for (uint32_t i = 0; i < memProperties.memoryTypeCount; i++) {
+        if ((typeFilter & (1 << i)) && (memProperties.memoryTypes[i].propertyFlags & properties) == properties) {
+            memoryType = i;
+            return true;
+        }
+    }
+
+    return false;
+}
+
 
 GraphicsContext::GraphicsContext() {}
 

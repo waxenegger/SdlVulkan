@@ -3,6 +3,12 @@
 
 #include "shared.h"
 
+const VkSurfaceFormatKHR SWAP_CHAIN_IMAGE_FORMAT = {
+        VK_FORMAT_B8G8R8A8_SRGB,
+        VK_COLOR_SPACE_SRGB_NONLINEAR_KHR
+};
+
+
 class Shader final {
     private:
         std::string filename;
@@ -17,9 +23,13 @@ class Shader final {
         Shader& operator=(const Shader &) = delete;
         Shader(Shader &&) = delete;
         Shader & operator=(Shader) = delete;
+        
+        VkShaderStageFlagBits getShaderType();
+        VkShaderModule getShaderModule();
 
         Shader(const VkDevice device, const std::string & filename, const VkShaderStageFlagBits & shaderType);
         ~Shader();
+        
         bool isValid();
 };
 
@@ -35,12 +45,7 @@ class GraphicsContext final {
         };
         
         std::vector<VkPhysicalDevice> physicalDevices;
-        
-        const VkSurfaceFormatKHR swapChainImageFormat = {
-                VK_FORMAT_B8G8R8A8_SRGB,
-                VK_COLOR_SPACE_SRGB_NONLINEAR_KHR
-        };
-        
+                
         bool queryVulkanInstanceExtensions();
         const std::vector<VkExtensionProperties> queryDeviceExtensions(const VkPhysicalDevice & device);
         void queryPhysicalDevices();
@@ -76,7 +81,12 @@ class GraphicsContext final {
         void listVulkanExtensions();
         void listLayerNames();
         void listPhysicalDevices();
-                
+        
+        static bool findDepthFormat(const VkPhysicalDevice & device, VkFormat & supportedFormat);
+        static bool findSupportedFormat(const VkPhysicalDevice & device,
+            const std::vector<VkFormat>& candidates, VkImageTiling tiling, VkFormatFeatureFlags features, VkFormat & supportedFormat);        
+        static bool findMemoryType(const VkPhysicalDevice & device, uint32_t typeFilter, VkMemoryPropertyFlags properties, uint32_t & memoryType);
+        
         GraphicsContext();
         ~GraphicsContext();
 };
@@ -86,10 +96,19 @@ class GraphicsPipeline final {
         std::map<std::string, std::unique_ptr<Shader>> shaders;
         VkDevice device = nullptr;
         
+        VkPipelineLayout layout = nullptr;
+        VkPipeline pipeline = nullptr;
+        VkRenderPass renderPass = nullptr;
+        
         uint32_t graphicsQueueIndex = -1;
         VkQueue graphicsQueue = nullptr;
         uint32_t presentQueueIndex = -1;
         VkQueue presentQueue = nullptr;
+        
+        VkFormat depthFormat;
+        
+        void createRenderPass();
+        void destroyPipelineObjects();
 
     public:
         GraphicsPipeline(const GraphicsPipeline&) = delete;
@@ -98,6 +117,13 @@ class GraphicsPipeline final {
         GraphicsPipeline & operator=(GraphicsPipeline) = delete;
 
         void addShader(const std::string & file, const VkShaderStageFlagBits & shaderType);
+        
+        std::vector<VkPipelineShaderStageCreateInfo> getShaderStageCreateInfos();
+        
+        void createGraphicsPipeline(
+            const VkPipelineVertexInputStateCreateInfo & vertexInputCreateInfo, const VkDescriptorSetLayout & descriptorSetLayout, 
+            const VkExtent2D & swapChainExtent, const VkPushConstantRange & pushConstantRange, bool showWireFrame = false);
+        
         GraphicsPipeline(const VkPhysicalDevice physicalDevice, const int queueIndex);
         ~GraphicsPipeline();
 };

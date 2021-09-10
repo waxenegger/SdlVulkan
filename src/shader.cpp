@@ -33,7 +33,7 @@ VkShaderModule Shader::createShaderModule(const std::vector<char> & code) {
         logError("Failed to Create Shader Module!");
         return nullptr;
     }
-
+    
     return shaderModule;
 }
 
@@ -59,4 +59,12 @@ bool Shader::readFile(const std::string & filename, std::vector<char> & buffer) 
     file.close();
 
     return true;
+}
+
+VkShaderStageFlagBits Shader::getShaderType() {
+    return this->getShaderType();
+}
+
+VkShaderModule Shader::getShaderModule() {
+    return this->shaderModule;
 }
