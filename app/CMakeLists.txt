@@ -18,6 +18,12 @@ add_subdirectory(${sdlDir} EXCLUDE_FROM_ALL)
 set(SDL2MAIN_LIBRARY SDL2main)
 set(SDL2_LIBRARY SDL2)
 
+set(SDL2_ttf_DIR "${projectDir}/SDL2_ttf-2.0.15")
+find_library(SDL_ttf SDL_ttf)
+
+set(SDL2_image_DIR "${projectDir}/SDL2_image-2.0.5")
+find_library(SDL_image SDL_image)
+
 set(VulkanDir "VulkanSDK/1.2.189.0/android")
 
 set(AssimpDir "assimp-5.0.1")
@@ -35,12 +41,15 @@ set(projectSources
   ../src/graphics.cpp
   ../src/pipeline.cpp
   ../src/shader.cpp
+  ../src/models.cpp
 )
 
 # Include dirs.
 set(projectIncludeDirs ${projectIncludeDirs}
   "${sdlDir}/include"
   "${sdlDir}/src/core/android/include"
+  ${SDL2_ttf_DIR}/include
+  ${SDL2_image_DIR}/include  
   ${VulkanDir}/include
   "${projectDir}/../glm"
   ${ASSIMP_DIR}/include
@@ -54,6 +63,8 @@ add_library(${targetName} SHARED ${projectSources})
 target_link_libraries(${targetName} 
   ${SDL2MAIN_LIBRARY}
   ${SDL2_LIBRARY}
+  SDL2_ttf
+  SDL2_image
   vulkan
   log
   android

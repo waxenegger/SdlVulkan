@@ -5,8 +5,6 @@
 
 #define APP_NAME "SdlVulkanApp"
 
-#define __ANDROID__
-
 #define LOG_INFO(...) __android_log_print(ANDROID_LOG_INFO, APP_NAME,  __VA_ARGS__)
 #define LOG_ERROR(...) __android_log_print(ANDROID_LOG_ERROR, APP_NAME,  __VA_ARGS__)
 

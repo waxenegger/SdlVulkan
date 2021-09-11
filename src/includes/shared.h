@@ -4,6 +4,8 @@
 #include "logging.h"
 
 #include <SDL.h>
+#include <SDL_ttf.h>
+#include <SDL_image.h>
 
 #include <SDL_vulkan.h>
 #include <vulkan/vulkan.h>
@@ -14,6 +16,7 @@
 #include <memory>
 #include <map>
 #include <fstream>
+#include <filesystem>
 
 #include <glm.hpp>
 #include <gtc/matrix_transform.hpp>

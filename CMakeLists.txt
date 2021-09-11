@@ -11,6 +11,13 @@ set(SDL2_DIR "app/SDL2-2.0.16")
 add_subdirectory(${SDL2_DIR} EXCLUDE_FROM_ALL)
 find_library(SDL2main SDL2)
 
+
+set(SDL2_ttf_DIR "app/SDL2_ttf-2.0.15")
+find_library(SDL_ttf SDL_ttf)
+
+set(SDL2_image_DIR "app/SDL2_image-2.0.5")
+find_library(SDL_image SDL_image)
+
 set(Assimp_DIR "app/assimp-5.0.1")
 add_subdirectory(${Assimp_DIR} EXCLUDE_FROM_ALL)
 find_package(Assimp REQUIRED)
@@ -30,11 +37,14 @@ set(projectSources
     src/graphics.cpp
     src/pipeline.cpp
     src/shader.cpp
+    src/models.cpp
 )
 
 # Include dirs.
 set(projectIncludeDirs ${projectIncludeDirs}
     ${SDL2_DIR}/include
+    ${SDL2_ttf_DIR}/include
+    ${SDL2_image_DIR}/include
     "glm"
     ${VULKAN_DIR}/include
     ${ASSIMP_DIR}/include
@@ -46,6 +56,8 @@ add_executable(SdlVulkan ${projectSources})
 target_link_libraries(
     ${CMAKE_PROJECT_NAME} 
     SDL2main SDL2 
+    SDL2_ttf
+    SDL2_image
     Vulkan::Vulkan
     assimp
 )
