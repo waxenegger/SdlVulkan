@@ -323,7 +323,7 @@ public:
         // oh well.
         bool have_param = false, have_point = false;
         IfcVector3 point;
-        for(const Entry sel :entity.Trim1) {
+        for(const Entry & sel :entity.Trim1) {
             if (const ::Assimp::STEP::EXPRESS::REAL* const r = sel->ToPtr<::Assimp::STEP::EXPRESS::REAL>()) {
                 range.first = *r;
                 have_param = true;
@@ -340,7 +340,7 @@ public:
             }
         }
         have_param = false, have_point = false;
-        for(const Entry sel :entity.Trim2) {
+        for(const Entry & sel :entity.Trim2) {
             if (const ::Assimp::STEP::EXPRESS::REAL* const r = sel->ToPtr<::Assimp::STEP::EXPRESS::REAL>()) {
                 range.second = *r;
                 have_param = true;
@@ -512,7 +512,7 @@ IfcFloat Curve::GetParametricRangeDelta() const {
 
 // ------------------------------------------------------------------------------------------------
 size_t Curve::EstimateSampleCount(IfcFloat a, IfcFloat b) const {
-    (void)(a); (void)(b);  
+    (void)(a); (void)(b);
     ai_assert( InRange( a ) );
     ai_assert( InRange( b ) );
 

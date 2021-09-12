@@ -11,7 +11,7 @@ int start(int argc, char* argv []) {
     Assimp::Importer importer;
 
     #ifdef __ANDROID__
-        const char * res = SDL_AndroidGetAssetContent("woolly-mammoth-150k.obj");
+        const char * res = SDL_AndroidGetAssetContent("test.obj");
         const aiScene *scene = importer.ReadFileFromMemory(res, strlen(res),
             aiProcess_Triangulate | aiProcess_GenBoundingBoxes | aiProcess_CalcTangentSpace | aiProcess_FlipUVs | aiProcess_GenSmoothNormals,
             nullptr);

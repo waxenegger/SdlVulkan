@@ -7,23 +7,21 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 set(CMAKE_DEBUG_POSTFIX "")
 
-set(SDL2_DIR "app/SDL2-2.0.16")
+set(SDL2_DIR "app/SDL2/SDL2-2.0.16")
 add_subdirectory(${SDL2_DIR} EXCLUDE_FROM_ALL)
 find_library(SDL2main SDL2)
 
 
-set(SDL2_ttf_DIR "app/SDL2_ttf-2.0.15")
+set(SDL2_ttf_DIR "app/SDL2/SDL2_ttf-2.0.15")
 find_library(SDL_ttf SDL_ttf)
 
-set(SDL2_image_DIR "app/SDL2_image-2.0.5")
+set(SDL2_image_DIR "app/SDL2/SDL2_image-2.0.5")
 find_library(SDL_image SDL_image)
 
 set(Assimp_DIR "app/assimp-5.0.1")
 add_subdirectory(${Assimp_DIR} EXCLUDE_FROM_ALL)
 find_package(Assimp REQUIRED)
 
-
-#find_package(SDL2 REQUIRED)
 
 set(VulkanDir "VulkanSDK/1.2.189.0/x86_64")
 #set(VULKAN_DIR "VulkanSDK/1.2.189.0/win64")

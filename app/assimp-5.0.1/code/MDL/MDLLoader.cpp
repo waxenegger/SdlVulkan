@@ -1384,8 +1384,9 @@ void MDLImporter::InternReadFile_3DGS_MDL7( )
 
     // 3 meshes per group - that should be OK for most models
     avOutList = new std::vector<aiMesh*>[pcHeader->groups_num];
-    for (uint32_t i = 0; i < pcHeader->groups_num;++i)
+    for (uint32_t i = 0; i < pcHeader->groups_num;++i) {
         avOutList[i].reserve(3);
+    }
 
     // buffer to held the names of all groups in the file
 	const size_t buffersize( AI_MDL7_MAX_GROUPNAMESIZE*pcHeader->groups_num );

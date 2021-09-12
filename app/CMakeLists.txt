@@ -13,26 +13,24 @@ set(projectDir  "${CMAKE_CURRENT_LIST_DIR}")
 set(targetName  "SdlVulkanAndroid")
 
 # Dependencies:
-set(sdlDir "${projectDir}/SDL2-2.0.16")
-add_subdirectory(${sdlDir} EXCLUDE_FROM_ALL)
+set(VulkanDir "VulkanSDK/1.2.189.0/android")
+set(AssimpDir "${projectDir}/assimp-5.0.1")
+add_subdirectory(${AssimpDir})
+
+set(sdlDir "${projectDir}/SDL2/SDL2-2.0.16")
+add_subdirectory(${sdlDir})
 set(SDL2MAIN_LIBRARY SDL2main)
 set(SDL2_LIBRARY SDL2)
 
-set(SDL2_ttf_DIR "${projectDir}/SDL2_ttf-2.0.15")
-find_library(SDL_ttf SDL_ttf)
+set(SDL2ttfDir "${projectDir}/SDL2/SDL2_ttf-2.0.15")
+add_subdirectory(${SDL2ttfDir})
 
-set(SDL2_image_DIR "${projectDir}/SDL2_image-2.0.5")
-find_library(SDL_image SDL_image)
+set(SDL2imageDir "${projectDir}/SDL2/SDL2_image-2.0.5")
+add_subdirectory(${SDL2imageDir})
 
-set(VulkanDir "VulkanSDK/1.2.189.0/android")
-
-set(AssimpDir "assimp-5.0.1")
-add_subdirectory(${AssimpDir} EXCLUDE_FROM_ALL)
 
 # Joysticks were causing trouble on android.
 add_definitions(-DSDL_JOYSTICK=0)
-
-#find_library( log-lib log )
 
 # Sources (relative to the project root dir).
 set(projectSources
@@ -44,35 +42,40 @@ set(projectSources
   ../src/models.cpp
 )
 
+
 # Include dirs.
 set(projectIncludeDirs ${projectIncludeDirs}
   "${sdlDir}/include"
   "${sdlDir}/src/core/android/include"
-  ${SDL2_ttf_DIR}/include
-  ${SDL2_image_DIR}/include  
+  ${SDL2ttfDir}/include
+  ${SDL2imageDir}/include
   ${VulkanDir}/include
   "${projectDir}/../glm"
   ${ASSIMP_DIR}/include
 )
 
-find_library(${SDL2MAIN_LIBRARY}  ${SDL2_LIBRARY})
+
+#find_library( SDL2_TTF SDL2_ttf )
+#find_library( SDL2_IMAGE SDL2_image )
+#find_library( ${SDL2MAIN_LIBRARY} ${SDL2_LIBRARY} )
+#find_library( ASSIMP assimp )
 
 # Build the binary.
 add_library(${targetName} SHARED ${projectSources})
 
-target_link_libraries(${targetName} 
-  ${SDL2MAIN_LIBRARY}
-  ${SDL2_LIBRARY}
-  SDL2_ttf
-  SDL2_image
+target_link_libraries(${targetName}
   vulkan
   log
   android
   assimp
+  SDL2_image
+  SDL2_ttf
+  SDL2::SDL2
 )
 
 target_include_directories(${targetName}
   PUBLIC ${projectIncludeDirs}
 )
+
 
 

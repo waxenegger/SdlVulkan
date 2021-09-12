@@ -16,3 +16,4 @@ SPIRV-Tools-opt.lib
 shaderc_combined.lib
 *.kdev4
 assets/
+app/src/main/libs

@@ -686,7 +686,7 @@ bool XGLImporter::ReadMesh(TempScope& scope)
 
     // finally extract output meshes and add them to the scope
     typedef std::pair<unsigned int, TempMaterialMesh> pairt;
-    for(const pairt& p : bymat) {
+    for(const pairt p : bymat) {
         aiMesh* const m  = ToOutputMesh(p.second);
         scope.meshes_linear.push_back(m);
 
@@ -898,7 +898,7 @@ aiVector2D XGLImporter::ReadVec2()
             LogError("unexpected EOL, failed to parse vec2");
             return vec;
         }
-		
+
         v[i] = fast_atof(&s);
 
         SkipSpaces(&s);

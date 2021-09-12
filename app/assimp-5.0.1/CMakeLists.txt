@@ -86,7 +86,7 @@ OPTION( ASSIMP_BUILD_ZLIB
 )
 OPTION( ASSIMP_BUILD_ASSIMP_TOOLS
   "If the supplementary tools for Assimp are built in addition to the library."
-  ON
+  OFF
 )
 OPTION ( ASSIMP_BUILD_SAMPLES
   "If the official samples are built as well (needs Glut)."
@@ -94,7 +94,7 @@ OPTION ( ASSIMP_BUILD_SAMPLES
 )
 OPTION ( ASSIMP_BUILD_TESTS
   "If the test suite for Assimp is built in addition to the library."
-  ON
+  OFF
 )
 OPTION ( ASSIMP_COVERALLS
   "Enable this to measure test coverage."
@@ -122,7 +122,7 @@ OPTION ( BUILD_DOCS
 )
 OPTION( INJECT_DEBUG_POSTFIX
   "Inject debug postfix in .a/.so/.dll lib names"
-  ON
+  OFF
 )
 
 OPTION ( IGNORE_GIT_HASH
@@ -175,7 +175,7 @@ SET (ASSIMP_SOVERSION 5)
 SET( ASSIMP_PACKAGE_VERSION "0" CACHE STRING "the package-specific version used for uploading the sources" )
 if(NOT HUNTER_ENABLED)
   # Enable C++11 support globally
-  set_property( GLOBAL PROPERTY CXX_STANDARD 11 )
+  set_property( GLOBAL PROPERTY CXX_STANDARD 17 )
 endif()
 
 IF(NOT IGNORE_GIT_HASH)
@@ -347,8 +347,8 @@ ENDIF()
 # Only generate this target if no higher-level project already has
 IF (NOT TARGET uninstall)
   # add make uninstall capability
-  CONFIGURE_FILE("${CMAKE_CURRENT_SOURCE_DIR}/cmake-modules/cmake_uninstall.cmake.in" "${CMAKE_CURRENT_BINARY_DIR}/cmake_uninstall.cmake" IMMEDIATE @ONLY)
-  ADD_CUSTOM_TARGET(uninstall "${CMAKE_COMMAND}" -P "${CMAKE_CURRENT_BINARY_DIR}/cmake_uninstall.cmake")
+  #CONFIGURE_FILE("${CMAKE_CURRENT_SOURCE_DIR}/cmake-modules/cmake_uninstall.cmake.in" "${CMAKE_CURRENT_BINARY_DIR}/cmake_uninstall.cmake" IMMEDIATE @ONLY)
+  #ADD_CUSTOM_TARGET(uninstall "${CMAKE_COMMAND}" -P "${CMAKE_CURRENT_BINARY_DIR}/cmake_uninstall.cmake")
 ENDIF()
 
 IF(HUNTER_ENABLED)
@@ -456,7 +456,8 @@ ELSE(HUNTER_ENABLED)
     # compile from sources
     ADD_SUBDIRECTORY(contrib/zlib)
     SET(ZLIB_FOUND 1)
-    SET(ZLIB_LIBRARIES zlibstatic)
+    SET(ZLIB_LIBRARIES zlib)
+
     SET(ZLIB_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/contrib/zlib ${CMAKE_CURRENT_BINARY_DIR}/contrib/zlib)
     # need to ensure we don't link with system zlib or minizip as well.
     SET(ASSIMP_BUILD_MINIZIP 1)
