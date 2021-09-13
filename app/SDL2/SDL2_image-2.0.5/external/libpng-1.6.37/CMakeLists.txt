@@ -580,7 +580,11 @@ if(PNG_STATIC)
     # msvc does not append 'lib' - do it here to have consistent name
     set_target_properties(png_static PROPERTIES PREFIX "lib")
   endif()
-  target_link_libraries(png_static zlib ${M_LIBRARY})
+  if(ANDROID)
+    target_link_libraries(png_static zlibstatic ${M_LIBRARY})
+  else()
+    target_link_libraries(png_static zlib ${M_LIBRARY})
+  endif()
 endif()
 
 if(PNG_FRAMEWORK)
