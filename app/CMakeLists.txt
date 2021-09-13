@@ -13,7 +13,7 @@ set(projectDir  "${CMAKE_CURRENT_LIST_DIR}")
 set(targetName  "SdlVulkanAndroid")
 
 # Dependencies:
-set(VulkanDir "VulkanSDK/1.2.189.0/android")
+set(VulkanDir "${projectDir}/VulkanSDK/1.2.189.0/android")
 set(AssimpDir "${projectDir}/assimp-5.0.1")
 add_subdirectory(${AssimpDir})
 
@@ -50,7 +50,7 @@ set(projectIncludeDirs ${projectIncludeDirs}
   ${SDL2ttfDir}/include
   ${SDL2imageDir}/include
   ${VulkanDir}/include
-  "${projectDir}/../glm"
+  "${projectDir}/glm"
   ${ASSIMP_DIR}/include
 )
 

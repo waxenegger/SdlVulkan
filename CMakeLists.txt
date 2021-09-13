@@ -26,7 +26,7 @@ add_subdirectory(${Assimp_DIR} EXCLUDE_FROM_ALL)
 find_library(ASSIMP Assimp)
 
 
-set(VulkanDir "VulkanSDK/1.2.189.0/x86_64")
+set(VulkanDir "app/VulkanSDK/1.2.189.0/x86_64")
 #set(VULKAN_DIR "VulkanSDK/1.2.189.0/win64")
 find_package(Vulkan REQUIRED)
 
@@ -46,7 +46,7 @@ set(projectIncludeDirs ${projectIncludeDirs}
     ${SDL2_DIR}/include
     ${SDL2_ttf_DIR}/include
     ${SDL2_image_DIR}/include
-    "glm"
+    "app/glm"
     ${VULKAN_DIR}/include
     ${ASSIMP_DIR}/include
 )
