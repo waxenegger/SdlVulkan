@@ -17,6 +17,7 @@
 #include <map>
 #include <fstream>
 #include <filesystem>
+#include <string>
 
 #include <glm.hpp>
 #include <gtc/matrix_transform.hpp>

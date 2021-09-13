@@ -315,7 +315,7 @@ if(VITA)
 endif()
 
 # When defined, respect CMake's BUILD_SHARED_LIBS setting:
-set(SDL_STATIC_ENABLED_BY_DEFAULT ON)
+set(SDL_STATIC_ENABLED_BY_DEFAULT OFF)
 if (NOT DEFINED SDL_SHARED_ENABLED_BY_DEFAULT)
   # ...unless decided already (as for EMSCRIPTEN)
 
@@ -329,7 +329,7 @@ if (NOT DEFINED SDL_SHARED_ENABLED_BY_DEFAULT)
     # In this case, we assume the user wants a shared lib and don't build
     # the static one
     set(SDL_SHARED_ENABLED_BY_DEFAULT ON)
-    set(SDL_STATIC_ENABLED_BY_DEFAULT OFF)
+    set(SDL_STATIC_ENABLED_BY_DEFAULT ON)
   endif()
 endif()
 

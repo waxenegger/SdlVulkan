@@ -50,8 +50,9 @@ else()
 endif()
 
 # COMMAND LINE OPTIONS
-option(PNG_SHARED "Build shared lib" ON)
-option(PNG_STATIC "Build static lib" OFF)
+option(PNG_SHARED "Build shared lib" OFF)
+option(PNG_STATIC "Build static lib" ON)
+
 option(PNG_TESTS  "Build libpng tests" OFF)
 
 # Many more configuration options could be added here
@@ -526,7 +527,8 @@ include_directories(${CMAKE_CURRENT_SOURCE_DIR} ${ZLIB_INCLUDE_DIR})
 unset(PNG_LIB_TARGETS)
 
 if(PNG_SHARED)
-  add_library(png STATIC ${libpng_sources})
+    message("'ÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜ")
+  add_library(png SHARED ${libpng_sources})
   set(PNG_LIB_TARGETS png)
   set_target_properties(png PROPERTIES OUTPUT_NAME ${PNG_LIB_NAME})
   add_dependencies(png genfiles)
@@ -557,6 +559,7 @@ if(PNG_STATIC)
   # does not work without changing name
   set(PNG_LIB_NAME_STATIC png_static)
   add_library(png_static STATIC ${libpng_sources})
+  set(CMAKE_POSITION_INDEPENDENT_CODE ON)
   add_dependencies(png_static genfiles)
   # MSVC doesn't use a different file extension for shared vs. static
   # libs.  We are able to change OUTPUT_NAME to remove the _static
@@ -575,7 +578,7 @@ if(PNG_STATIC)
     # msvc does not append 'lib' - do it here to have consistent name
     set_target_properties(png_static PROPERTIES PREFIX "lib")
   endif()
-  target_link_libraries(png_static ${ZLIB_LIBRARY} ${M_LIBRARY})
+  target_link_libraries(png_static zlibstatic ${M_LIBRARY})
 endif()
 
 if(PNG_FRAMEWORK)

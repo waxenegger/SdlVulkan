@@ -61,11 +61,11 @@ set(SDL_TTF_VERSION "${SDL_TTF_MAJOR_VERSION}.${SDL_TTF_MINOR_VERSION}.${SDL_TTF
 
 ##### library generation #####
 add_library(SDL2_ttf SHARED SDL_ttf.c SDL_ttf.h)
+
 if (BUILD_SHARED_LIBS)
   target_link_libraries(SDL2_ttf PRIVATE SDL2::SDL2)
 else ()
-  target_link_libraries(SDL2_ttf SDL2::SDL2-static)
-  set_target_properties(SDL2_ttf PROPERTIES POSITION_INDEPENDENT_CODE ON)
+  target_link_libraries(SDL2_ttf PRIVATE SDL2::SDL2)
 endif ()
 target_link_libraries(SDL2_ttf PRIVATE Freetype::Freetype)
 target_include_directories(SDL2_ttf PUBLIC $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/SDL2>)

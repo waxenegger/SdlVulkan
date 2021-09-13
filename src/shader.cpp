@@ -62,7 +62,7 @@ bool Shader::readFile(const std::string & filename, std::vector<char> & buffer) 
 }
 
 VkShaderStageFlagBits Shader::getShaderType() {
-    return this->getShaderType();
+    return this->shaderType;
 }
 
 VkShaderModule Shader::getShaderModule() {

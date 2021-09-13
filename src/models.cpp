@@ -251,7 +251,7 @@ void Texture::setTextureImageView(VkImageView & imageView) {
 
 void Texture::load() {
     if (!this->loaded) {
-        this->textureSurface = IMG_Load(this->path.c_str());
+        this->textureSurface = IMG_Load(this->path.string().c_str());
         if (this->textureSurface != nullptr) {
             if (!this->readImageFormat()) {
                 std::cout << "Unsupported Texture Format: " << this->path << std::endl;
@@ -395,7 +395,7 @@ Model::Model(const std::string id, const  std::filesystem::path file) : Model(id
     this->file = file;
     Assimp::Importer importer;
 
-    const aiScene *scene = importer.ReadFile(this->file.c_str(),
+    const aiScene *scene = importer.ReadFile(this->file.string().c_str(),
             aiProcess_Triangulate | aiProcess_GenBoundingBoxes | aiProcess_CalcTangentSpace | aiProcess_FlipUVs | aiProcess_GenSmoothNormals);
 
     if (scene == nullptr) {
@@ -541,7 +541,7 @@ TextureInformation Model::addTextures(const aiMaterial * mat) {
         mat->GetTexture(aiTextureType_AMBIENT, 0, &str);
         
         if (str.length > 0) this->correctTexturePath(str.data);
-        textureInfo.ambientTextureLocation = this->file.parent_path() / std::filesystem::path(str.C_Str());
+        textureInfo.ambientTextureLocation = (this->file.parent_path() / std::filesystem::path(str.C_Str())).string();
     }
 
     if (mat->GetTextureCount(aiTextureType_DIFFUSE) > 0) {
@@ -549,7 +549,7 @@ TextureInformation Model::addTextures(const aiMaterial * mat) {
         mat->GetTexture(aiTextureType_DIFFUSE, 0, &str);
 
         if (str.length > 0) this->correctTexturePath(str.data);
-        textureInfo.diffuseTextureLocation = this->file.parent_path() / std::filesystem::path(str.C_Str());
+        textureInfo.diffuseTextureLocation = (this->file.parent_path() / std::filesystem::path(str.C_Str())).string();
     }
 
     if (mat->GetTextureCount(aiTextureType_SPECULAR) > 0) {
@@ -557,7 +557,7 @@ TextureInformation Model::addTextures(const aiMaterial * mat) {
         mat->GetTexture(aiTextureType_SPECULAR, 0, &str);
 
         if (str.length > 0) this->correctTexturePath(str.data);
-        textureInfo.specularTextureLocation = this->file.parent_path() / std::filesystem::path(str.C_Str());
+        textureInfo.specularTextureLocation = (this->file.parent_path().string() / std::filesystem::path(str.C_Str())).string();
     }
     
     if (mat->GetTextureCount(aiTextureType_NORMALS) > 0) {
@@ -565,7 +565,7 @@ TextureInformation Model::addTextures(const aiMaterial * mat) {
         mat->GetTexture(aiTextureType_NORMALS, 0, &str);
 
         if (str.length > 0) this->correctTexturePath(str.data);
-        textureInfo.normalTextureLocation = this->file.parent_path() / std::filesystem::path(str.C_Str());
+        textureInfo.normalTextureLocation = (this->file.parent_path().string() / std::filesystem::path(str.C_Str())).string();
     }
 
     return textureInfo;

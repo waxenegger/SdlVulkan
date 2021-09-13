@@ -13,10 +13,10 @@ find_library(SDL2main SDL2)
 
 
 set(SDL2_ttf_DIR "app/SDL2/SDL2_ttf-2.0.15")
-find_library(SDL_ttf SDL_ttf)
+add_subdirectory(${SDL2_ttf_DIR} EXCLUDE_FROM_ALL)
 
 set(SDL2_image_DIR "app/SDL2/SDL2_image-2.0.5")
-find_library(SDL_image SDL_image)
+add_subdirectory(${SDL2_image_DIR} EXCLUDE_FROM_ALL)
 
 set(Assimp_DIR "app/assimp-5.0.1")
 add_subdirectory(${Assimp_DIR} EXCLUDE_FROM_ALL)

@@ -1,7 +1,14 @@
 cmake_minimum_required(VERSION 3.1)
 project(jpeg C)
 
-add_library(jpeg STATIC)
+if(ANDROID)
+    add_library(jpeg STATIC)
+    set_property(TARGET jpeg PROPERTY POSITION_INDEPENDENT_CODE ON)
+else()
+    add_library(jpeg)
+endif()
+
+
 target_sources(jpeg PRIVATE
 		jaricom.c jcapimin.c jcapistd.c jcarith.c jccoefct.c jccolor.c
 		jcdctmgr.c jchuff.c jcinit.c jcmainct.c jcmarker.c jcmaster.c
@@ -17,7 +24,6 @@ if (ANDROID)
 else()
 	target_sources(jpeg PRIVATE jmemansi.c)
 endif()
-
 
 target_sources(jpeg PRIVATE jidctint.c jidctfst.c)
 
