@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.1)
 project(jpeg C)
 
-if(ANDROID)
+if(ANDROID OR WIN32)
     add_library(jpeg STATIC)
     set_property(TARGET jpeg PROPERTY POSITION_INDEPENDENT_CODE ON)
 else()

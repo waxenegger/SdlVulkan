@@ -11,16 +11,19 @@ set(SDL2_DIR "app/SDL2/SDL2-2.0.16")
 add_subdirectory(${SDL2_DIR} EXCLUDE_FROM_ALL)
 find_library(SDL2main SDL2)
 
+set(SDL_STATIC_ENABLED_BY_DEFAULT, ON)
 
 set(SDL2_ttf_DIR "app/SDL2/SDL2_ttf-2.0.15")
 add_subdirectory(${SDL2_ttf_DIR} EXCLUDE_FROM_ALL)
+find_library(SDL2_TTF SDL2_ttf)
 
 set(SDL2_image_DIR "app/SDL2/SDL2_image-2.0.5")
 add_subdirectory(${SDL2_image_DIR} EXCLUDE_FROM_ALL)
+find_library(SDL2_IMAGE SDL2_image)
 
 set(Assimp_DIR "app/assimp-5.0.1")
 add_subdirectory(${Assimp_DIR} EXCLUDE_FROM_ALL)
-find_package(Assimp REQUIRED)
+find_library(ASSIMP Assimp)
 
 
 set(VulkanDir "VulkanSDK/1.2.189.0/x86_64")
@@ -52,8 +55,9 @@ include_directories(${projectIncludeDirs})
 add_executable(SdlVulkan ${projectSources})
 
 target_link_libraries(
-    ${CMAKE_PROJECT_NAME} 
-    SDL2main SDL2 
+    ${CMAKE_PROJECT_NAME}
+    SDL2main
+     ${SDL2_LIBRARIES}
     SDL2_ttf
     SDL2_image
     Vulkan::Vulkan

@@ -6,12 +6,16 @@ endif()
 cmake_minimum_required(VERSION 3.0)
 project(SDL_ttf C)
 
+add_subdirectory(external/freetype-2.10.4)
+include_directories(external/freetype-2.10.4/include)
+find_library(FREETYPE freetype)
+
 if (ANDROID)
 
     option(TTF_WITH_HARFBUZZ "use harfbuzz to improve text shaping" OFF)
 
     add_library(SDL2_ttf SHARED)
-    target_sources(SDL2_ttf PRIVATE SDL_ttf.c)
+    target_sources(SDL2_ttf PRIVATE SDL_ttf.c SDL_ttf.h)
 
     if (TTF_WITH_HARFBUZZ)
         set(HARFBUZZ_INCLUDE_DIRS ../../external/harfbuzz-2.8.0/src)
@@ -32,23 +36,21 @@ if (ANDROID)
         set(FT_WITH_HARFBUZZ OFF CACHE BOOL "" FORCE)
     endif()
 
-    add_subdirectory(external/freetype-2.10.4)
-    include_directories(external/freetype-2.10.4/include)
-
-    target_include_directories(SDL2_ttf PUBLIC .)
-    target_link_libraries(SDL2_ttf PUBLIC freetype SDL2)
+    #target_include_directories(SDL2_ttf PUBLIC .)
+    target_include_directories(SDL2_ttf PUBLIC $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/SDL2>)
+    target_link_libraries(SDL2_ttf PRIVATE freetype SDL2::SDL2)
 
 else()
-
 
 include(GNUInstallDirs)
 include(CMakePackageConfigHelpers)
 
-if (NOT (TARGET SDL2 OR TARGET SDL2-static))
-  find_package(SDL2 REQUIRED)
-endif()
+#if (NOT (TARGET SDL2 OR TARGET SDL2-static))
+#  find_package(SDL2 REQUIRED)
+#endif()
 if (NOT (TARGET Freetype::Freetype))
-  find_package(Freetype REQUIRED)
+  #find_package(Freetype REQUIRED)
+    find_library(FREETYPE Freetype)
 endif()
 find_package(PkgConfig QUIET)
 
@@ -60,14 +62,18 @@ set(SDL_TTF_BINARY_AGE 15)
 set(SDL_TTF_VERSION "${SDL_TTF_MAJOR_VERSION}.${SDL_TTF_MINOR_VERSION}.${SDL_TTF_MICRO_VERSION}")
 
 ##### library generation #####
-add_library(SDL2_ttf SHARED SDL_ttf.c SDL_ttf.h)
+add_library(SDL2_ttf STATIC SDL_ttf.c SDL_ttf.h)
+
+	if(WIN32)
+	  target_compile_definitions(SDL2_ttf PRIVATE -DDLL_EXPORT)
+	endif()
 
 if (BUILD_SHARED_LIBS)
   target_link_libraries(SDL2_ttf PRIVATE SDL2::SDL2)
 else ()
-  target_link_libraries(SDL2_ttf PRIVATE SDL2::SDL2)
+  target_link_libraries(SDL2_ttf PRIVATE SDL2::SDL2-static)
 endif ()
-target_link_libraries(SDL2_ttf PRIVATE Freetype::Freetype)
+target_link_libraries(SDL2_ttf PRIVATE freetype)
 target_include_directories(SDL2_ttf PUBLIC $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/SDL2>)
 
 install(

@@ -257,6 +257,7 @@ set(SDL_CFLAGS "")
 # When building shared lib for Windows with MinGW,
 # avoid the DLL having a "lib" prefix
 if(WINDOWS)
+
   set(CMAKE_SHARED_LIBRARY_PREFIX "")
 endif()
 
@@ -315,7 +316,14 @@ if(VITA)
 endif()
 
 # When defined, respect CMake's BUILD_SHARED_LIBS setting:
-set(SDL_STATIC_ENABLED_BY_DEFAULT OFF)
+if (ANDROID)
+	set(SDL_SHARED_ENABLED_BY_DEFAULT ON)
+	set(SDL_STATIC_ENABLED_BY_DEFAULT OFF)
+else()
+	set(SDL_STATIC_ENABLED_BY_DEFAULT ON)
+	set(SDL_SHARED_ENABLED_BY_DEFAULT OFF)
+endif()
+
 if (NOT DEFINED SDL_SHARED_ENABLED_BY_DEFAULT)
   # ...unless decided already (as for EMSCRIPTEN)
 
@@ -2620,7 +2628,10 @@ if(ANDROID)
   endif()
 endif()
 
+
+
 if(SDL_STATIC)
+
   set (BUILD_SHARED_LIBS FALSE)
   add_library(SDL2-static STATIC ${SOURCE_FILES})
   # alias target for in-tree builds
