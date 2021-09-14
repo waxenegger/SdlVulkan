@@ -25,11 +25,13 @@ set(Assimp_DIR "app/assimp-5.0.1")
 add_subdirectory(${Assimp_DIR} EXCLUDE_FROM_ALL)
 find_library(ASSIMP Assimp)
 
-
-set(VulkanDir "app/VulkanSDK/1.2.189.0/x86_64")
-#set(VULKAN_DIR "VulkanSDK/1.2.189.0/win64")
-find_package(Vulkan REQUIRED)
-
+if (WIN32)
+    set(VULKAN_DIR "app/VulkanSDK/1.2.189.0/win64")
+    set(VULKAN_LIBRARIES ${PROJECT_SOURCE_DIR}/app/VulkanSDK/1.2.189.0/win64/lib/vulkan-1.lib)
+else()
+    set(VULKAN_DIR "app/VulkanSDK/1.2.189.0/x86_64")
+    set(VULKAN_LIBRARIES vulkan)
+endif()
 
 # Sources
 set(projectSources
@@ -60,6 +62,6 @@ target_link_libraries(
      ${SDL2_LIBRARIES}
     SDL2_ttf
     SDL2_image
-    Vulkan::Vulkan
+    ${VULKAN_LIBRARIES}
     assimp
 )
