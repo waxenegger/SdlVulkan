@@ -74,7 +74,7 @@ VkImageView Helper::createImageView(const VkDevice logicalDevice, VkImage image,
     viewInfo.subresourceRange.baseArrayLayer = 0;
     viewInfo.subresourceRange.layerCount = layerCount;
 
-    VkImageView imageView;
+    VkImageView imageView = nullptr;
     VkResult ret = vkCreateImageView(logicalDevice, &viewInfo, nullptr, &imageView);
     if (ret != VK_SUCCESS) {
         logError("Failed to Create Image View!");

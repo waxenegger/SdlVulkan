@@ -393,8 +393,6 @@ void Renderer::initRenderer() {
     if (!this->createCommandPool()) return;
     if (!this->createSyncObjects()) return;
     if (!this->createDescriptorPool()) return;
-    
-    
 }
 
 void Renderer::destroyRendererObjects() {
@@ -442,10 +440,7 @@ void Renderer::destroyRendererObjects() {
 }
 
 void Renderer::destroySwapChainObjects() {
-    if (!this->isReady()) {
-        logError("Renderer has not been initialized!");
-        return;
-    }
+    if (this->logicalDevice == nullptr) return;
 
     vkDeviceWaitIdle(this->logicalDevice);
     
@@ -463,6 +458,9 @@ void Renderer::destroySwapChainObjects() {
             this->depthImagesMemory[j] = nullptr;            
         }
     }
+    this->depthImages.clear();
+    this->depthImagesView.clear();
+    this->depthImagesMemory.clear();
 
     for (auto & framebuffer : this->swapChainFramebuffers) {
         if (framebuffer != nullptr) {
@@ -470,6 +468,7 @@ void Renderer::destroySwapChainObjects() {
             framebuffer = nullptr;
         }
     }
+    this->swapChainFramebuffers.clear();
 
     if (this->commandPool != nullptr) {
         vkResetCommandPool(this->logicalDevice, this->commandPool, VK_COMMAND_POOL_RESET_RELEASE_RESOURCES_BIT);
@@ -493,15 +492,12 @@ void Renderer::destroySwapChainObjects() {
     }
     
     for (uint16_t j=0;j<this->swapChainImages.size();j++) {
-        if (this->swapChainImageViews[j] == nullptr) {
+        if (this->swapChainImageViews[j] != nullptr) {
             vkDestroyImageView(this->logicalDevice, this->swapChainImageViews[j], nullptr);
             this->swapChainImageViews[j] = nullptr;
         }
-        if (this->swapChainImages[j] == nullptr) {
-            vkDestroyImage(this->logicalDevice, this->swapChainImages[j], nullptr);
-            this->swapChainImages[j] = nullptr;
-        }        
     }
+    this->swapChainImageViews.clear();
 
     if (this->swapChain != nullptr) {
         vkDestroySwapchainKHR(this->logicalDevice, this->swapChain, nullptr);
@@ -548,7 +544,6 @@ Renderer::~Renderer() {
     
     if (this->logicalDevice != nullptr) {
         vkDestroyDevice(this->logicalDevice, nullptr);
-        this->logicalDevice = nullptr;
     }
     logInfo("Destroyed Renderer");
 }
