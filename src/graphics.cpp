@@ -120,8 +120,10 @@ void GraphicsContext::quitVulkan() {
 }
 
 void GraphicsContext::quitGraphics() {
+    logInfo("Shutting down Graphics Context...");
     this->quitVulkan();
     this->quitSdl();
+    logInfo("Shut down Graphics Context");
 }
 
 void GraphicsContext::listVulkanExtensions() {

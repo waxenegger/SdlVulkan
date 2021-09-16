@@ -4,6 +4,8 @@
 #include "shared.h"
 #include "models.h"
 
+constexpr uint32_t VULKAN_VERSION = VK_MAKE_VERSION(1,1,0);
+
 static constexpr int MAX_TEXTURES = 50;
 static constexpr int MAX_FRAMES_IN_FLIGHT = 3;
 
@@ -60,7 +62,7 @@ class GraphicsContext final {
         const std::vector<VkQueueFamilyProperties> getPhysicalDeviceQueueFamilyProperties(const VkPhysicalDevice & device);
         const std::tuple<int,int> ratePhysicalDevice(const VkPhysicalDevice & device);
         
-        void createVulkanInstance(const std::string & appName, const uint32_t version);
+        void createVulkanInstance(const std::string & appName, const uint32_t version = VULKAN_VERSION);
 
         void quitSdl();
         void quitVulkan();
@@ -190,10 +192,15 @@ class Renderer final {
         bool isReady();
         bool hasAtLeastOneActivePipeline();
         bool canRender();
-    
-        void initRenderer();
-        void updateRenderer();
 
+                
+        VkDevice getLogicalDevice();
+        
+        void initRenderer();
+        bool updateRenderer();
+        
+        void drawFrame();
+        
         ~Renderer();
 };
 
@@ -202,7 +209,7 @@ class Helper final {
     public:
         Helper(const Helper&) = delete;
         Helper& operator=(const Helper &) = delete;
-        Helper(GraphicsPipeline &&) = delete;
+        Helper(Helper &&) = delete;
         Helper & operator=(Helper) = delete;
 
         static VkPresentModeKHR pickBestDeviceSwapMode(const std::vector<VkPresentModeKHR> & availableSwapModes);
@@ -210,6 +217,30 @@ class Helper final {
         static bool createImage(const VkPhysicalDevice & physicalDevice, const VkDevice & logicalDevice, 
             int32_t width, uint32_t height, VkFormat format, VkImageTiling tiling, VkImageUsageFlags usage, VkMemoryPropertyFlags properties, 
             VkImage& image, VkDeviceMemory& imageMemory, uint16_t arrayLayers = 1);
+};
+
+class Engine final {
+    private:
+        GraphicsContext * graphics = new GraphicsContext();
+        Models * models = new Models();
+        Renderer * renderer = nullptr;
+
+
+    public:
+        Engine(const Helper&) = delete;
+        Engine& operator=(const Engine &) = delete;
+        Engine(Engine &&) = delete;
+        Engine & operator=(Engine) = delete;
+        
+        bool isReady();
+        
+        void createDefaultRenderer();
+        void loop();
+
+        void loadModels();
+        
+        Engine(const std::string & appName, const uint32_t version = VULKAN_VERSION);
+        ~Engine();
 };
 
 

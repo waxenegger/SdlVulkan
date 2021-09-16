@@ -826,9 +826,13 @@ void Models::setMaterialInformation(MaterialInformation & material) {
 
 
 void Models::cleanUpTextures(const VkDevice & device) {
+    logInfo("Destroying Model Textures...");
+
     for (auto & texture : this->textures) {
         texture.second->cleanUpTexture(device);
     }
+    
+    logInfo("Destroyed Model Textures");
 }
 
 Models::~Models() {

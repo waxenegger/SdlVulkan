@@ -50,7 +50,7 @@ bool Renderer::isReady() {
 
 bool Renderer::hasAtLeastOneActivePipeline() {
     //TODO: implement
-    return true;
+    return false;
 }
 
 
@@ -376,25 +376,25 @@ bool Renderer::createDepthResources() {
             return false;
         }
     
-        this->depthImagesView[i] = Helper::createImageView(this->logicalDevice, this->depthImages[i], depthFormat, VK_IMAGE_ASPECT_DEPTH_BIT);
-        if (this->depthImagesView[i] == nullptr) {
-            logError("Faild to create Depth Image View!");
-            return false;        
+        VkImageView imgView = Helper::createImageView(this->logicalDevice, this->depthImages[i], depthFormat, VK_IMAGE_ASPECT_DEPTH_BIT);
+        if (imgView == nullptr) {
+            logError("Failed to Create Depth Image View!");
+            return false;
         }
+
+        this->depthImagesView[i] = imgView;
     }
     
     return true;
 }
 
 void Renderer::initRenderer() {
-    if (!this->createSwapChain()) return;
-    if (!this->createImageViews()) return;
-    if (!this->createRenderPass()) return;
+    if (!this->updateRenderer()) return;
     if (!this->createCommandPool()) return;
     if (!this->createSyncObjects()) return;
     if (!this->createDescriptorPool()) return;
     
-    this->updateRenderer();
+    
 }
 
 void Renderer::destroyRendererObjects() {
@@ -405,31 +405,40 @@ void Renderer::destroyRendererObjects() {
     }
 
     for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
-        if (this->renderFinishedSemaphores.size() == MAX_FRAMES_IN_FLIGHT) {
+        if (i < this->renderFinishedSemaphores.size()) {
             if (this->renderFinishedSemaphores[i] != nullptr) {
                 vkDestroySemaphore(this->logicalDevice, this->renderFinishedSemaphores[i], nullptr);
             }
-            this->renderFinishedSemaphores.clear();
         }
 
-        if (this->imageAvailableSemaphores.size() == MAX_FRAMES_IN_FLIGHT) {
+        if (i < this->imageAvailableSemaphores.size()) {
             if (this->imageAvailableSemaphores[i] != nullptr) {
                 vkDestroySemaphore(this->logicalDevice, this->imageAvailableSemaphores[i], nullptr);
             }
-            this->imageAvailableSemaphores.clear();
         }
         
-        if (this->imagesInFlight.size() == MAX_FRAMES_IN_FLIGHT) {
-            this->imagesInFlight.clear();
+        if (i < this->imagesInFlight.size()) {
+            if (this->imagesInFlight[i] != nullptr) {
+                vkDestroyFence(this->logicalDevice, this->imagesInFlight[i], nullptr);
+            }
         }
 
-        if (this->inFlightFences.size() == MAX_FRAMES_IN_FLIGHT) {
+        if (i < this->inFlightFences.size()) {
             if (this->inFlightFences[i] != nullptr) {
                 vkDestroyFence(this->logicalDevice, this->inFlightFences[i], nullptr);
             }
-            this->inFlightFences.clear();
         }
-    }    
+    }
+            
+    this->renderFinishedSemaphores.clear();
+    this->imageAvailableSemaphores.clear();
+    this->imagesInFlight.clear();
+    this->inFlightFences.clear();
+
+    if (this->logicalDevice != nullptr && this->commandPool != nullptr) {
+        vkDestroyCommandPool(this->logicalDevice, this->commandPool, nullptr);
+        this->commandPool = nullptr;
+    }
 }
 
 void Renderer::destroySwapChainObjects() {
@@ -483,11 +492,15 @@ void Renderer::destroySwapChainObjects() {
         this->renderPass = nullptr;
     }
     
-    for (auto & imageView : this->swapChainImageViews) {
-        if (imageView == nullptr) {
-            vkDestroyImageView(this->logicalDevice, imageView, nullptr);
-            imageView = nullptr;
+    for (uint16_t j=0;j<this->swapChainImages.size();j++) {
+        if (this->swapChainImageViews[j] == nullptr) {
+            vkDestroyImageView(this->logicalDevice, this->swapChainImageViews[j], nullptr);
+            this->swapChainImageViews[j] = nullptr;
         }
+        if (this->swapChainImages[j] == nullptr) {
+            vkDestroyImage(this->logicalDevice, this->swapChainImages[j], nullptr);
+            this->swapChainImages[j] = nullptr;
+        }        
     }
 
     if (this->swapChain != nullptr) {
@@ -497,33 +510,46 @@ void Renderer::destroySwapChainObjects() {
 
 }
 
-void Renderer::updateRenderer() {
+VkDevice Renderer::getLogicalDevice() {
+    return this->logicalDevice;
+}
+
+
+void Renderer::drawFrame() {
+    // TODO: implement
+}
+
+
+bool Renderer::updateRenderer() {
     if (!this->isReady()) {
         logError("Renderer has not been initialized!");
-        return;
+        return false;
     }
 
     this->destroySwapChainObjects();
     
-    if (!this->createSwapChain()) return;
-    if (!this->createImageViews()) return;
-    if (!this->createRenderPass()) return;
+    if (!this->createSwapChain()) return false;
+    if (!this->createImageViews()) return false;
+    if (!this->createRenderPass()) return false;
 
     //TODO: delegate
     //if (!this->createGraphicsPipeline()) return;
     
-    if (!this->createDepthResources()) return;
-    if (!this->createFramebuffers()) return;
-
+    if (!this->createDepthResources()) return false;
+    if (!this->createFramebuffers()) return false;
+    
+    return true;
 }
 
 
 Renderer::~Renderer() {
+    logInfo("Destroying Renderer...");
     this->destroyRendererObjects();
     
     if (this->logicalDevice != nullptr) {
         vkDestroyDevice(this->logicalDevice, nullptr);
         this->logicalDevice = nullptr;
     }
+    logInfo("Destroyed Renderer");
 }
 

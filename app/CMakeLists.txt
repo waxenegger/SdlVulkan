@@ -42,6 +42,7 @@ set(projectSources
   ../src/models.cpp
   ../src/renderer.cpp
   ../src/helper.cpp
+  ../src/engine.cpp
 )
 
 
