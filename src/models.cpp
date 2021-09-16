@@ -393,10 +393,21 @@ Model::Model(const std::vector< ModelVertex >& vertices, const std::vector< uint
 
 Model::Model(const std::string id, const  std::filesystem::path file) : Model(id) {
     this->file = file;
+
     Assimp::Importer importer;
 
-    const aiScene *scene = importer.ReadFile(this->file.string().c_str(),
+    #ifdef __ANDROID__
+        const char * res = SDL_AndroidGetAssetContent(file.filename());
+        const aiScene *scene = importer.ReadFileFromMemory(res, strlen(res),
+            aiProcess_Triangulate | aiProcess_GenBoundingBoxes | aiProcess_CalcTangentSpace | aiProcess_FlipUVs | aiProcess_GenSmoothNormals,
+            nullptr);
+        free((void *) res);
+    #endif
+
+    #ifndef __ANDROID__
+        const aiScene *scene = importer.ReadFile(this->file.string().c_str(),    
             aiProcess_Triangulate | aiProcess_GenBoundingBoxes | aiProcess_CalcTangentSpace | aiProcess_FlipUVs | aiProcess_GenSmoothNormals);
+    #endif
 
     if (scene == nullptr) {
         std::cerr << importer.GetErrorString() << std::endl;
@@ -577,8 +588,9 @@ Model::Model(std::string id) {
 
 Model::~Model() {}
 
-void Models::addModel(Model* model)
+void Models::addModel(const std::string id, const  std::filesystem::path file)
 {
+    std::unique_ptr<Model> model = std::make_unique<Model>(id, file);
     if (!model->hasBeenLoaded()) return;
 
     auto & meshes = model->getMeshes();
@@ -587,7 +599,7 @@ void Models::addModel(Model* model)
         TextureInformation info =  m.getTextureInformation();
     }
     
-    this->models.push_back(std::unique_ptr<Model>(model));    
+    this->models.push_back(std::move(model));
 }
 
 void Models::addTextModel(std::string id, std::string font, std::string text, uint16_t size) {
@@ -624,8 +636,8 @@ void Models::addTextModel(std::string id, std::string font, std::string text, ui
                     texInfo.diffuseTextureLocation = m->getId();
                     m->getMeshes()[0].setTextureInformation(texInfo);
 
-                    this->textures[m->getId()] = std::move(tex);                    
-                    this->addModel(m.release());
+                    this->textures[m->getId()] = std::move(tex);    
+                    this->models.push_back(std::move(m));
                     
                     succeeded = true;
                 }

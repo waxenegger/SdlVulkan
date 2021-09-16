@@ -41,6 +41,8 @@ set(projectSources
     src/pipeline.cpp
     src/shader.cpp
     src/models.cpp
+    src/renderer.cpp
+    src/helper.cpp
 )
 
 # Include dirs.

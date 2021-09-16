@@ -410,6 +410,67 @@ bool GraphicsContext::findMemoryType(const VkPhysicalDevice & device, uint32_t t
     return false;
 }
 
+bool GraphicsContext::getSurfaceCapabilities(const VkPhysicalDevice & physicalDevice, VkSurfaceCapabilitiesKHR & surfaceCapabilities) const {
+    if (!this->isVulkanActive()) {
+        logError("Vulkan Context not available!");
+        return false;
+    }
+
+    const VkResult ret = vkGetPhysicalDeviceSurfaceCapabilitiesKHR(physicalDevice, this->vulkanSurface, &surfaceCapabilities);
+    if (ret != VK_SUCCESS) {
+        logError("Failed to get Device Surface Capabilites!");
+        return false;
+    }
+
+    return true;
+}
+
+
+VkExtent2D GraphicsContext::getSwapChainExtent(VkSurfaceCapabilitiesKHR & surfaceCapabilities) const {
+    VkExtent2D extent { 640,480 };
+    if (!this->isVulkanActive()) return extent;
+
+    if (surfaceCapabilities.currentExtent.width != UINT32_MAX) {
+        extent.width = surfaceCapabilities.currentExtent.width;
+        extent.height = surfaceCapabilities.currentExtent.height;
+
+        return extent;
+    }
+
+    int width = 0;
+    int height = 0;
+    SDL_Vulkan_GetDrawableSize(this->sdlWindow, &width, &height);
+    
+    extent.width = std::max(
+        surfaceCapabilities.minImageExtent.width,
+        std::min(surfaceCapabilities.maxImageExtent.width,
+        static_cast<uint32_t>(width)));
+    extent.height = std::max(
+        surfaceCapabilities.minImageExtent.height,
+        std::min(surfaceCapabilities.maxImageExtent.height,
+        static_cast<uint32_t>(height)));
+    
+    return extent;
+}
+
+std::vector<VkPresentModeKHR> GraphicsContext::queryDeviceSwapModes(const VkPhysicalDevice & physicalDevice) const {
+    uint32_t swapModesCount = 0;
+    std::vector<VkPresentModeKHR> swapModes;
+
+    if (!this->isVulkanActive()) return swapModes;
+
+    VkResult ret = vkGetPhysicalDeviceSurfacePresentModesKHR(physicalDevice, this->vulkanSurface, &swapModesCount, nullptr);
+    if (ret == VK_SUCCESS && swapModesCount > 0) {
+        swapModes.resize(swapModesCount);
+        ret = vkGetPhysicalDeviceSurfacePresentModesKHR(physicalDevice, this->vulkanSurface, &swapModesCount, swapModes.data());
+    }
+
+    return swapModes;
+}
+
+VkSurfaceKHR GraphicsContext::getVulkanSurface() const {
+    return this->vulkanSurface;
+}
 
 GraphicsContext::GraphicsContext() {}
 

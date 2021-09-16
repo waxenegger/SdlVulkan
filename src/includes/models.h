@@ -175,7 +175,7 @@ class Models final {
         std::vector<std::unique_ptr<Model>> models;
 
     public:
-        void addModel(Model * model);
+        void addModel(const std::string id, const std::filesystem::path file);
         void addTextModel(std::string id, std::string font, std::string text, uint16_t size);
         void clear();
         void setMaterialInformation(MaterialInformation & material);

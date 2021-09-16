@@ -1,51 +1,6 @@
 #include "includes/graphics.h"
 
-GraphicsPipeline::GraphicsPipeline(const VkPhysicalDevice physicalDevice, const int queueIndex) {
-    std::vector<VkDeviceQueueCreateInfo> queueCreateInfos;
-
-    VkDeviceQueueCreateInfo queueCreateInfo;
-    queueCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
-    queueCreateInfo.flags = 0;
-    queueCreateInfo.pNext = nullptr;
-    queueCreateInfo.queueFamilyIndex = queueIndex;
-    queueCreateInfo.queueCount = 2;
-    const float priority = 1.0f;
-    queueCreateInfo.pQueuePriorities = &priority;
-
-    queueCreateInfos.push_back(queueCreateInfo);
-
-    const std::vector<const char * > extensionsToEnable = { 
-        "VK_KHR_swapchain"
-    };
-
-    VkPhysicalDeviceFeatures deviceFeatures {};
-    deviceFeatures.samplerAnisotropy = VK_TRUE;
-    deviceFeatures.multiDrawIndirect = VK_TRUE;
-    deviceFeatures.fillModeNonSolid = VK_TRUE;
-
-    VkDeviceCreateInfo createInfo {};
-    createInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
-    createInfo.pQueueCreateInfos = queueCreateInfos.data();
-    createInfo.queueCreateInfoCount = queueCreateInfos.size();
-    createInfo.pEnabledFeatures = &deviceFeatures;
-    createInfo.ppEnabledExtensionNames = extensionsToEnable.data();
-    createInfo.enabledExtensionCount = extensionsToEnable.size();
-
-    const VkResult ret = vkCreateDevice(physicalDevice, &createInfo, nullptr, &this->device);
-    if (ret != VK_SUCCESS) {
-        logError("Failed to create Logical Device!");
-        return;
-    }
-
-    this->graphicsQueueIndex = this->presentQueueIndex = queueCreateInfos[0].queueFamilyIndex;
-
-    vkGetDeviceQueue(this->device, this->graphicsQueueIndex , 0, &this->graphicsQueue);
-    vkGetDeviceQueue(this->device, this->presentQueueIndex , 0, &this->presentQueue);
-    
-     if (!GraphicsContext::findDepthFormat(physicalDevice, this->depthFormat)) {
-        logError("Failed to find Depth Format");
-     }
-}
+GraphicsPipeline::GraphicsPipeline(const VkDevice & device, const int & queueIndex) : device(device) {}
 
 void GraphicsPipeline::addShader(const std::string & filename, const VkShaderStageFlagBits & shaderType) {
     const std::map<std::string, std::unique_ptr<Shader>>::iterator existingShader = this->shaders.find(filename);
@@ -58,17 +13,11 @@ void GraphicsPipeline::addShader(const std::string & filename, const VkShaderSta
     if (newShader->isValid()) this->shaders[filename] = std::move(newShader);
 }
 
-void GraphicsPipeline::createGraphicsPipeline(
+void GraphicsPipeline::initGraphicsPipeline(const VkRenderPass & renderPass,
     const VkPipelineVertexInputStateCreateInfo & vertexInputCreateInfo, const VkDescriptorSetLayout & descriptorSetLayout, 
     const VkExtent2D & swapChainExtent, const VkPushConstantRange & pushConstantRange, bool showWireFrame) {
     
-    // preequisites ... 
-    // 1. we delete existing objects
-    // 2. we create a render pass
     this->destroyPipelineObjects();
-    this->createRenderPass();
-    
-    if (this->renderPass == nullptr) return;
         
     VkPipelineInputAssemblyStateCreateInfo inputAssembly{};
     inputAssembly.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
@@ -169,7 +118,7 @@ void GraphicsPipeline::createGraphicsPipeline(
     pipelineInfo.pColorBlendState = &colorBlending;
     pipelineInfo.pDepthStencilState = &depthStencil;
     pipelineInfo.layout = this->layout;
-    pipelineInfo.renderPass = this->renderPass;
+    pipelineInfo.renderPass = renderPass;
     pipelineInfo.subpass = 0;
     pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
 
@@ -179,69 +128,6 @@ void GraphicsPipeline::createGraphicsPipeline(
         return;
     }
 }
-
-void GraphicsPipeline::createRenderPass() {
-    if (this->device == nullptr) return;
-
-    VkAttachmentDescription colorAttachment{};
-    colorAttachment.format = SWAP_CHAIN_IMAGE_FORMAT.format;
-    colorAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
-    colorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-    colorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-    colorAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-    colorAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-    colorAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-    colorAttachment.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
-
-    VkAttachmentDescription depthAttachment{};
-    depthAttachment.format = this->depthFormat;
-    depthAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
-    depthAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-    depthAttachment.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-    depthAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-    depthAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-    depthAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-    depthAttachment.finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-
-    VkAttachmentReference colorAttachmentRef{};
-    colorAttachmentRef.attachment = 0;
-    colorAttachmentRef.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-    
-    VkAttachmentReference depthAttachmentRef{};
-    depthAttachmentRef.attachment = 1;
-    depthAttachmentRef.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-
-    VkSubpassDescription subpass{};
-    subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
-    subpass.colorAttachmentCount = 1;
-    subpass.pColorAttachments = &colorAttachmentRef;
-    subpass.pDepthStencilAttachment = &depthAttachmentRef;
-
-    VkSubpassDependency dependency{};
-    dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
-    dependency.dstSubpass = 0;
-    dependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
-    dependency.srcAccessMask = 0;
-    dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
-    dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
-
-    std::array<VkAttachmentDescription, 2> attachments = {colorAttachment, depthAttachment};
-    
-    VkRenderPassCreateInfo renderPassInfo{};
-    renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
-    renderPassInfo.attachmentCount = static_cast<uint32_t>(attachments.size());
-    renderPassInfo.pAttachments = attachments.data();
-    renderPassInfo.subpassCount = 1;
-    renderPassInfo.pSubpasses = &subpass;
-    renderPassInfo.dependencyCount = 1;
-    renderPassInfo.pDependencies = &dependency;
-
-    VkResult ret = vkCreateRenderPass(this->device, &renderPassInfo, nullptr, &this->renderPass);
-    if (ret != VK_SUCCESS) {
-       logError("Failed to Create Render Pass!");
-    }
-}
-
 
 std::vector<VkPipelineShaderStageCreateInfo> GraphicsPipeline::getShaderStageCreateInfos() {
     std::vector<VkPipelineShaderStageCreateInfo> shaderCreateInfos;
@@ -274,20 +160,10 @@ void GraphicsPipeline::destroyPipelineObjects() {
         vkDestroyPipelineLayout(this->device, this->layout, nullptr);
         this->layout = nullptr;
     }
-    
-    if (this->renderPass != nullptr) {
-        vkDestroyRenderPass(this->device, this->renderPass, nullptr);
-        this->renderPass = nullptr;
-    }
 }
 
 GraphicsPipeline::~GraphicsPipeline() {
     this->shaders.clear();
     
     this->destroyPipelineObjects();
-
-    if (this->device != nullptr) {
-        vkDestroyDevice(this->device, nullptr);
-        this->device = nullptr;
-    }
 }
