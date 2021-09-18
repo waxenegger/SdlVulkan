@@ -264,7 +264,7 @@ bool GraphicsPipeline::createSsboBufferFromModel(const VkPhysicalDevice & physic
         if (!Helper::createBuffer(physicalDevice, this->device, bufferSize,
                 VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
                 stagingBuffer, stagingBufferMemory)) {
-            std::cerr << "Failed to get Create Staging Buffer" << std::endl;
+            logError("Failed to get Create Staging Buffer");
             return false;
         }
 
@@ -276,7 +276,7 @@ bool GraphicsPipeline::createSsboBufferFromModel(const VkPhysicalDevice & physic
         if (!Helper::createBuffer(physicalDevice, this->device, bufferSize,
                 VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
                 this->ssboBuffer, this->ssboBufferMemory)) {
-            std::cerr << "Failed to get Create SSBO Buffer" << std::endl;
+            logError("Failed to get Create SSBO Buffer");
             return false;
         }
 
@@ -288,7 +288,7 @@ bool GraphicsPipeline::createSsboBufferFromModel(const VkPhysicalDevice & physic
         if (!Helper::createBuffer(physicalDevice, this->device, bufferSize,
                 VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
                 this->ssboBuffer, this->ssboBufferMemory)) {
-            std::cerr << "Failed to get Create Vertex Buffer" << std::endl;
+            logError("Failed to get Create Vertex Buffer");
             return false;
         }
 
@@ -322,7 +322,7 @@ bool GraphicsPipeline::createTextureSampler(const VkPhysicalDevice & physicalDev
 
     VkResult ret = vkCreateSampler(this->device, &samplerInfo, nullptr, &sampler);
     if (ret != VK_SUCCESS) {
-        std::cerr << "Failed to Create Texture Sampler!" << std::endl;
+        logError("Failed to Create Texture Sampler!");
         return false;
     }
 

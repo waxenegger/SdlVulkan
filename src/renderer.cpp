@@ -516,7 +516,7 @@ VkCommandBuffer Renderer::createCommandBuffer(uint16_t commandBufferIndex) {
 
     VkResult ret = vkAllocateCommandBuffers(this->logicalDevice, &allocInfo, &commandBuffer);
     if (ret != VK_SUCCESS) {
-        std::cerr << "Failed to Allocate Command Buffer!" << std::endl;
+        logError("Failed to Allocate Command Buffer!");
         return nullptr;
     }
 
@@ -526,7 +526,7 @@ VkCommandBuffer Renderer::createCommandBuffer(uint16_t commandBufferIndex) {
 
     ret = vkBeginCommandBuffer(commandBuffer, &beginInfo);
     if (ret != VK_SUCCESS) {
-        std::cerr << "Failed to begin Recording Command Buffer!" << std::endl;
+        logError("Failed to begin Recording Command Buffer!");
         return nullptr;
     }
 
@@ -559,7 +559,7 @@ VkCommandBuffer Renderer::createCommandBuffer(uint16_t commandBufferIndex) {
 
     ret = vkEndCommandBuffer(commandBuffer);
     if (ret != VK_SUCCESS) {
-        std::cerr << "Failed to end  Recording Command Buffer!" << std::endl;
+        logError("Failed to end  Recording Command Buffer!");
         return nullptr;
     }
 
@@ -605,7 +605,7 @@ void Renderer::drawFrame() {
         this->logicalDevice, this->swapChain, UINT64_MAX, this->imageAvailableSemaphores[this->currentFrame], VK_NULL_HANDLE, &imageIndex);
     
     if (ret != VK_SUCCESS) {
-        std::cerr << "Failed to Acquire Next Image" << std::endl;
+        logError("Failed to Acquire Next Image");
         this->requiresRenderUpdate = true;
         return;
     }
@@ -639,7 +639,7 @@ void Renderer::drawFrame() {
     if (this->imagesInFlight[imageIndex] != VK_NULL_HANDLE) {
         ret = vkWaitForFences(this->logicalDevice, 1, &this->imagesInFlight[imageIndex], VK_TRUE, UINT64_MAX);
         if (ret != VK_SUCCESS) {
-             std::cerr << "vkWaitForFences 2 Failed" << std::endl;
+             logError("vkWaitForFences 2 Failed");
         }
     }
     this->imagesInFlight[imageIndex] = this->inFlightFences[this->currentFrame];
@@ -662,12 +662,12 @@ void Renderer::drawFrame() {
 
     ret = vkResetFences(this->logicalDevice, 1, &this->inFlightFences[this->currentFrame]);
     if (ret != VK_SUCCESS) {
-        std::cerr << "Failed to Reset Fence!" << std::endl;
+        logError("Failed to Reset Fence!");
     }
 
     ret = vkQueueSubmit(this->graphicsQueue, 1, &submitInfo, this->inFlightFences[this->currentFrame]);
     if (ret != VK_SUCCESS) {
-        std::cerr << "Failed to Submit Draw Command Buffer!" << std::endl;
+        logError("Failed to Submit Draw Command Buffer!");
     }
     
     VkPresentInfoKHR presentInfo{};
@@ -685,7 +685,7 @@ void Renderer::drawFrame() {
     ret = vkQueuePresentKHR(presentQueue, &presentInfo);
 
     if (ret != VK_SUCCESS) {
-        std::cerr << "Failed to Present Swap Chain Image!" << std::endl;
+        logError("Failed to Present Swap Chain Image!");
         return;
     }
     

@@ -254,11 +254,11 @@ void Texture::load() {
         this->textureSurface = IMG_Load(this->path.string().c_str());
         if (this->textureSurface != nullptr) {
             if (!this->readImageFormat()) {
-                std::cout << "Unsupported Texture Format: " << this->path << std::endl;
+                logInfo("Unsupported Texture Format: " + this->path.string());
             } else if (this->getSize() != 0) {
                 this->valid = true;
             }
-        } else std::cout << "Failed to load texture: " << this->path << std::endl;
+        } else logInfo("Failed to load texture: " + this->path.string());
         this->loaded = true;
     }
 }
@@ -354,7 +354,7 @@ bool Texture::readImageFormat() {
 
         // attempt twice with different pixel format
         if (tmpSurface == nullptr) {
-            std::cerr << "Conversion Failed. Try something else for: " << this->path << std::endl;
+            logError("Conversion Failed. Try something else for: " + this->path.string());
 
             tmpSurface = SDL_CreateRGBSurface(
                 0, this->textureSurface->w, this->textureSurface->h, 32, 0x000000ff, 0x0000ff00, 0x00ff0000, 0xff000000);                
@@ -372,11 +372,11 @@ bool Texture::readImageFormat() {
                 SDL_FreeSurface(this->textureSurface);
                 this->textureSurface = tmpSurface;
             } else {
-                std::cerr << "SDL_BlitSurface Failed (on conversion): " << SDL_GetError() << std::endl;
+                logError("SDL_BlitSurface Failed (on conversion): " + std::string(SDL_GetError()));
                 return false;
             }
         } else {
-            std::cerr << "SDL_CreateRGBSurface Failed (on conversion): " << SDL_GetError() << std::endl;
+            logError("SDL_CreateRGBSurface Failed (on conversion): " + std::string(SDL_GetError()));
             return false;
         }
     } else return false;
@@ -410,7 +410,7 @@ Model::Model(const std::string id, const  std::filesystem::path file) : Model(id
     #endif
 
     if (scene == nullptr) {
-        std::cerr << importer.GetErrorString() << std::endl;
+        logError(importer.GetErrorString());
         return;
     }
 
@@ -418,7 +418,7 @@ Model::Model(const std::string id, const  std::filesystem::path file) : Model(id
         this->processNode(scene->mRootNode, scene);
         
         this->loaded = true;
-    } else std::cerr << "Model does not contain meshes" << std::endl;
+    } else logError("Model does not contain meshes");
 }
 
 void Model::processNode(const aiNode * node, const aiScene *scene) {
@@ -656,7 +656,7 @@ void Models::addTextModel(std::string id, std::string font, std::string text, ui
         if (succeeded) return;
     }
     
-    std::cerr << "Failed to add Text Model" << std::endl;
+    logError("Failed to add Text Model");
 }
 
 Model * Models::createPlaneModel(std::string id, VkExtent2D extent) {
@@ -748,9 +748,9 @@ BufferSummary Models::getModelsBufferSizes(bool printInfo) {
     }
     
     if (printInfo) {
-        std::cout << "Models Vertex Buffer Size: " << bufferSizes.vertexBufferSize / MEGA_BYTE << " MB" << std::endl;
-        std::cout << "Models Index Buffer Size: " << bufferSizes.indexBufferSize / MEGA_BYTE << " MB" << std::endl;
-        std::cout << "Models SSBO Buffer Size: " << bufferSizes.ssboBufferSize / MEGA_BYTE << " MB" << std::endl;
+        logInfo("Models Vertex Buffer Size: " + std::to_string(bufferSizes.vertexBufferSize / MEGA_BYTE) + " MB");
+        logInfo("Models Index Buffer Size: " + std::to_string(bufferSizes.indexBufferSize / MEGA_BYTE) + " MB");
+        logInfo("Models SSBO Buffer Size: " + std::to_string(bufferSizes.ssboBufferSize / MEGA_BYTE) + " MB");
     }
     
     return bufferSizes;
