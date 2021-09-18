@@ -3,6 +3,44 @@
 
 #include "shared.h"
 
+enum ModelsContentType {
+    VERTEX, INDEX, SSBO
+};
+
+struct BufferSummary {
+    VkDeviceSize vertexBufferSize = 0;
+    VkDeviceSize indexBufferSize = 0;
+    VkDeviceSize ssboBufferSize = 0;
+};
+
+struct MeshProperties final {
+    public:
+        int ambientTexture = -1;
+        int diffuseTexture = -1;
+        int specularTexture = -1;
+        int normalTexture = -1;
+        glm::vec3 ambientColor = glm::vec3(0.1f);
+        float emissiveFactor = 0.1f;
+        glm::vec3 diffuseColor = glm::vec3(0.8f);
+        float opacity = 1.0f;
+        glm::vec3 specularColor = glm::vec3(0.3f);
+        float shininess = 10.0f;
+};
+
+struct ModelUniforms final {
+    public:
+        glm::mat4 viewMatrix;
+        glm::mat4 projectionMatrix;
+        glm::vec4 camera;
+        glm::vec4 sun;
+};
+
+struct ModelProperties final {
+    public:
+        glm::mat4 matrix = glm::mat4(1);
+};
+
+
 class SimpleVertex final {
     private:
         glm::vec3 position;
@@ -171,10 +209,12 @@ class Model final {
 
 class Models final {
     private:
+        static Models * instance;
         std::map<std::string, std::unique_ptr<Texture>> textures;
         std::vector<std::unique_ptr<Model>> models;
 
     public:
+        static Models * INSTANCE();
         void addModel(const std::string id, const std::filesystem::path file);
         void addTextModel(std::string id, std::string font, std::string text, uint16_t size);
         void clear();
@@ -191,6 +231,7 @@ class Models final {
         std::vector<std::unique_ptr<Model>> & getModels();
         Model * findModel(std::string id);
         static Model * createPlaneModel(std::string id, VkExtent2D extent);
+        BufferSummary getModelsBufferSizes(bool printInfo = false);
         ~Models();
 
 };

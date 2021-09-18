@@ -3,6 +3,7 @@
 
 #include "shared.h"
 #include "models.h"
+#include "threading.h"
 
 constexpr uint32_t VULKAN_VERSION = VK_MAKE_VERSION(1,1,0);
 
@@ -30,13 +31,13 @@ class Shader final {
         Shader(Shader &&) = delete;
         Shader & operator=(Shader) = delete;
         
-        VkShaderStageFlagBits getShaderType();
-        VkShaderModule getShaderModule();
+        VkShaderStageFlagBits getShaderType() const;
+        VkShaderModule getShaderModule() const;
 
         Shader(const VkDevice device, const std::string & filename, const VkShaderStageFlagBits & shaderType);
         ~Shader();
         
-        bool isValid();
+        bool isValid() const;
 };
 
 class GraphicsContext final {
@@ -105,11 +106,30 @@ class GraphicsContext final {
 
 class GraphicsPipeline final {
     private:
-        std::map<std::string, std::unique_ptr<Shader>> shaders;
+        std::map<std::string, const Shader *> shaders;
         const VkDevice & device = nullptr;
+        
+        VkDescriptorSetLayout descriptorSetLayout;
+                
+        VkDescriptorPool descriptorPool = nullptr;
+        std::vector<VkDescriptorSet> descriptorSets;
+
+        std::vector<VkBuffer> uniformBuffers;
+        std::vector<VkDeviceMemory> uniformBuffersMemory;
+
+        VkSampler textureSampler = nullptr;
+        
+        VkBuffer ssboBuffer = nullptr;
+        VkDeviceMemory ssboBufferMemory = nullptr;
         
         VkPipelineLayout layout = nullptr;
         VkPipeline pipeline = nullptr;
+
+        bool createDescriptorSetLayout();
+        bool createDescriptorPool(const size_t size = MAX_FRAMES_IN_FLIGHT);
+        bool createDescriptorSets(const size_t size = MAX_FRAMES_IN_FLIGHT);
+        bool createSsboBufferFromModel(const VkPhysicalDevice & physicalDevice, const VkCommandPool & commandpool, const VkQueue & graphicsQueue, VkDeviceSize bufferSize, bool makeHostWritable = false);
+        bool createTextureSampler(const VkPhysicalDevice & physicalDevice, VkSampler & sampler, VkSamplerAddressMode addressMode);
         
         void destroyPipelineObjects();
 
@@ -123,11 +143,16 @@ class GraphicsPipeline final {
         
         std::vector<VkPipelineShaderStageCreateInfo> getShaderStageCreateInfos();
         
-        void initGraphicsPipeline(const VkRenderPass & renderPass,
-            const VkPipelineVertexInputStateCreateInfo & vertexInputCreateInfo, const VkDescriptorSetLayout & descriptorSetLayout, 
+
+        bool createGraphicsPipeline(
+            const size_t size, const VkPhysicalDevice & physicalDevice, const VkRenderPass & renderPass, const VkCommandPool & commandpool, const VkQueue & graphicsQueue, 
             const VkExtent2D & swapChainExtent, const VkPushConstantRange & pushConstantRange, bool showWireFrame = false);
+        bool updateGraphicsPipeline(const VkRenderPass & renderPass, const VkExtent2D & swapChainExtent, const VkPushConstantRange & pushConstantRange, bool showWireFrame = false);
+        void updateUniformBuffers(const ModelUniforms & modelUniforms, const uint32_t & currentImage);
         
-        GraphicsPipeline(const VkDevice & device, const int & queueIndex);
+        void draw(const VkCommandBuffer & commandBuffer);
+        
+        GraphicsPipeline(const VkDevice & device);
         ~GraphicsPipeline();
 };
 
@@ -138,8 +163,10 @@ class Renderer final {
         VkDevice logicalDevice = nullptr;
 
         VkCommandPool commandPool = nullptr;
-        VkDescriptorPool descriptorPool = nullptr;
+        CommandBufferQueue workerQueue;
 
+        std::vector<VkCommandBuffer> commandBuffers;
+        
         const int queueIndex = -1;
         
         uint32_t graphicsQueueIndex = -1;
@@ -147,8 +174,12 @@ class Renderer final {
         uint32_t presentQueueIndex = -1;
         VkQueue presentQueue = nullptr;
 
-        std::vector<std::unique_ptr<GraphicsPipeline>> pipelines;
+        std::vector<GraphicsPipeline *> pipelines;
         
+        uint16_t frameCount = 0;
+        size_t currentFrame = 0;
+        
+        bool requiresRenderUpdate = false;
         bool showWireFrame = false;
          
         VkRenderPass renderPass = nullptr;
@@ -172,11 +203,20 @@ class Renderer final {
         bool createImageViews();
         bool createFramebuffers();
         bool createDepthResources();
+        
+        bool createDescriptorSets();
 
         bool createCommandPool();
         bool createSyncObjects();
-        bool createDescriptorPool();
-    
+        
+        bool createCommandBuffers();
+        void startCommandBufferQueue();
+        void stopCommandBufferQueue();
+        void destroyCommandBuffer(VkCommandBuffer commandBuffer);
+        VkCommandBuffer createCommandBuffer(uint16_t commandBufferIndex);
+        
+        void updateUniformBuffer(uint32_t currentImage);
+        
         void destroySwapChainObjects();        
         void destroyRendererObjects();
 
@@ -187,18 +227,27 @@ class Renderer final {
         Renderer & operator=(Renderer) = delete;
         Renderer(const GraphicsContext * graphicsContext, const VkPhysicalDevice & physicalDevice, const int & queueIndex);
         
-        void addPipeline(const VkPipelineVertexInputStateCreateInfo & vertexInputCreateInfo, const VkDescriptorSetLayout & descriptorSetLayout, const VkPushConstantRange & pushConstantRange);
+        void addPipeline(GraphicsPipeline * pipeline);
         
         bool isReady();
         bool hasAtLeastOneActivePipeline();
         bool canRender();
-
                 
         VkDevice getLogicalDevice();
+        VkPhysicalDevice getPhysicalDevice();
         
         void initRenderer();
         bool updateRenderer();
         
+        bool doesShowWireFrame();
+        void setShowWireFrame(bool & showWireFrame);
+
+        VkRenderPass getRenderPass();
+        VkExtent2D getSwapChainExtent();
+        
+        VkCommandPool getCommandPool();
+        VkQueue getGraphicsQueue();
+
         void drawFrame();
         
         ~Renderer();
@@ -213,19 +262,29 @@ class Helper final {
         Helper & operator=(Helper) = delete;
 
         static VkPresentModeKHR pickBestDeviceSwapMode(const std::vector<VkPresentModeKHR> & availableSwapModes);
-        static VkImageView createImageView(const VkDevice logicalDevice, VkImage image, VkFormat format, VkImageAspectFlags aspectFlags, uint32_t layerCount = 1);
+        static VkImageView createImageView(const VkDevice & logicalDevice, VkImage image, VkFormat format, VkImageAspectFlags aspectFlags, uint32_t layerCount = 1);
+        static bool createBuffer(const VkPhysicalDevice & physicalDevice, const VkDevice & logicalDevice, 
+                                 const VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer& buffer, VkDeviceMemory& bufferMemory);
         static bool createImage(const VkPhysicalDevice & physicalDevice, const VkDevice & logicalDevice, 
             int32_t width, uint32_t height, VkFormat format, VkImageTiling tiling, VkImageUsageFlags usage, VkMemoryPropertyFlags properties, 
             VkImage& image, VkDeviceMemory& imageMemory, uint16_t arrayLayers = 1);
+        static void copyBuffer(const VkDevice & logicalDevice, const VkCommandPool & commandPool, const VkQueue & graphicsQueue, 
+            VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size);
+        static void copyBufferToImage(const VkDevice & logicalDevice, const VkCommandPool & commandPool, const VkQueue & graphicsQueue, VkBuffer & buffer, VkImage & image, uint32_t width, uint32_t height, uint16_t layerCount = 1);
+        static VkCommandBuffer beginSingleTimeCommands(const VkDevice & logicalDevice, const VkCommandPool & commandPool);
+        static void endSingleTimeCommands(const VkDevice & logicalDevice, const VkCommandPool & commandPool, const VkQueue & graphicsQueue, VkCommandBuffer & commandBuffer);
+        static void copyModelsContentIntoBuffer(void* data, ModelsContentType modelsContentType, VkDeviceSize maxSize);
 };
 
 class Engine final {
     private:
         GraphicsContext * graphics = new GraphicsContext();
-        Models * models = new Models();
+        Models * models = Models::INSTANCE();
         Renderer * renderer = nullptr;
 
-
+        void createRenderer();
+        void createModelPipeline();
+        
     public:
         Engine(const Helper&) = delete;
         Engine& operator=(const Engine &) = delete;
@@ -234,7 +293,7 @@ class Engine final {
         
         bool isReady();
         
-        void createDefaultRenderer();
+        void init();
         void loop();
 
         void loadModels();

@@ -60,20 +60,17 @@ bool Renderer::canRender() {
         this->imageAvailableSemaphores.size() == MAX_FRAMES_IN_FLIGHT && this->renderFinishedSemaphores.size() == MAX_FRAMES_IN_FLIGHT && this->inFlightFences.size() == MAX_FRAMES_IN_FLIGHT &&
         this->swapChainFramebuffers.size() == this->swapChainImages.size() && this->depthImages.size() == this->swapChainImages.size() && 
         this->depthImagesMemory.size() == this->swapChainImages.size() && this->depthImagesView.size() == this->swapChainImages.size() && 
-        this->commandPool != nullptr && this->descriptorPool != nullptr;
+        this->commandPool != nullptr;
 }
 
 
-void Renderer::addPipeline(const VkPipelineVertexInputStateCreateInfo & vertexInputCreateInfo, const VkDescriptorSetLayout & descriptorSetLayout, const VkPushConstantRange & pushConstantRange) {
+void Renderer::addPipeline(GraphicsPipeline * pipeline) {
     if (!this->isReady()) {
         logError("Render has not been properly initialized!");
         return;   
     }
     
-    std::unique_ptr<GraphicsPipeline> pipeline = std::make_unique<GraphicsPipeline>(this->logicalDevice, this->queueIndex);
-    pipeline->initGraphicsPipeline(this->renderPass, vertexInputCreateInfo, descriptorSetLayout, this->swapChainExtent, pushConstantRange, this->showWireFrame);
-    
-    this->pipelines.push_back(std::move(pipeline));
+    this->pipelines.push_back(pipeline);
 }
 
 bool Renderer::createRenderPass() {
@@ -295,34 +292,12 @@ bool Renderer::createCommandPool() {
     return true;
 }
 
-bool Renderer::createDescriptorPool() {
-    if (!this->isReady()) {
-        logError("Renderer has not been initialized!");
-        return false;
-    }
+VkCommandPool Renderer::getCommandPool() {
+    return this->commandPool;
+}
 
-    std::array<VkDescriptorPoolSize, 3> poolSizes{};
-
-    poolSizes[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-    poolSizes[0].descriptorCount = static_cast<uint32_t>(this->swapChainImages.size());
-    poolSizes[1].type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-    poolSizes[1].descriptorCount = static_cast<uint32_t>(this->swapChainImages.size());
-    poolSizes[2].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-    poolSizes[2].descriptorCount = static_cast<uint32_t>(MAX_TEXTURES * this->swapChainImages.size());
-
-    VkDescriptorPoolCreateInfo poolInfo{};
-    poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-    poolInfo.poolSizeCount = static_cast<uint32_t>(poolSizes.size());
-    poolInfo.pPoolSizes = poolSizes.data();
-    poolInfo.maxSets = static_cast<uint32_t>(swapChainImages.size());
-
-    VkResult ret = vkCreateDescriptorPool(this->logicalDevice, &poolInfo, nullptr, &this->descriptorPool);
-    if (ret != VK_SUCCESS) {
-       logError("Failed to Create Descriptor Pool!");
-       return false;
-    }
-    
-    return true;
+VkQueue Renderer::getGraphicsQueue() {
+    return this->graphicsQueue;
 }
 
 bool Renderer::createFramebuffers() {
@@ -392,16 +367,11 @@ void Renderer::initRenderer() {
     if (!this->updateRenderer()) return;
     if (!this->createCommandPool()) return;
     if (!this->createSyncObjects()) return;
-    if (!this->createDescriptorPool()) return;
 }
 
 void Renderer::destroyRendererObjects() {
     this->destroySwapChainObjects();
     
-    if (this->descriptorPool != nullptr) {
-        vkDestroyDescriptorPool(this->logicalDevice, this->descriptorPool, nullptr);
-    }
-
     for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
         if (i < this->renderFinishedSemaphores.size()) {
             if (this->renderFinishedSemaphores[i] != nullptr) {
@@ -510,11 +480,237 @@ VkDevice Renderer::getLogicalDevice() {
     return this->logicalDevice;
 }
 
-
-void Renderer::drawFrame() {
-    // TODO: implement
+VkPhysicalDevice Renderer::getPhysicalDevice() {
+    return this->physicalDevice;
 }
 
+void Renderer::startCommandBufferQueue() {
+    if (!this->canRender() || this->workerQueue.isRunning()) return;
+    
+    this->workerQueue.startQueue(
+        std::bind(&Renderer::createCommandBuffer, this, std::placeholders::_1),
+        std::bind(&Renderer::destroyCommandBuffer , this, std::placeholders::_1), 
+        this->swapChainFramebuffers.size());
+}
+
+void Renderer::stopCommandBufferQueue() {
+    this->workerQueue.stopQueue();
+}
+
+void Renderer::destroyCommandBuffer(VkCommandBuffer commandBuffer) {
+    if (!this->isReady()) return; 
+    
+    vkFreeCommandBuffers(this->logicalDevice, this->commandPool, 1, &commandBuffer);
+}
+
+VkCommandBuffer Renderer::createCommandBuffer(uint16_t commandBufferIndex) {
+    if (this->requiresRenderUpdate) return nullptr;
+    
+    VkCommandBuffer commandBuffer = nullptr;
+    
+    VkCommandBufferAllocateInfo allocInfo{};
+    allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+    allocInfo.commandPool = this->commandPool;
+    allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+    allocInfo.commandBufferCount = 1;
+
+    VkResult ret = vkAllocateCommandBuffers(this->logicalDevice, &allocInfo, &commandBuffer);
+    if (ret != VK_SUCCESS) {
+        std::cerr << "Failed to Allocate Command Buffer!" << std::endl;
+        return nullptr;
+    }
+
+    VkCommandBufferBeginInfo beginInfo{};
+    beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+    beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+
+    ret = vkBeginCommandBuffer(commandBuffer, &beginInfo);
+    if (ret != VK_SUCCESS) {
+        std::cerr << "Failed to begin Recording Command Buffer!" << std::endl;
+        return nullptr;
+    }
+
+    if (this->requiresRenderUpdate) return nullptr;
+    
+    VkRenderPassBeginInfo renderPassInfo{};
+    renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+    renderPassInfo.renderPass = this->renderPass;
+    renderPassInfo.framebuffer = this->swapChainFramebuffers[commandBufferIndex];
+    renderPassInfo.renderArea.offset = {0, 0};
+    renderPassInfo.renderArea.extent = this->swapChainExtent;
+
+    std::array<VkClearValue, 2> clearValues{};
+    clearValues[0].color = {{0.0f, 0.0f, 0.0f, 1.0f}};
+    clearValues[1].depthStencil = {1.0f, 0};
+
+    renderPassInfo.clearValueCount = static_cast<uint32_t>(clearValues.size());
+    renderPassInfo.pClearValues = clearValues.data();
+    
+    if (this->requiresRenderUpdate) return nullptr;
+    
+    vkCmdBeginRenderPass(commandBuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
+        
+    for (GraphicsPipeline * pipeline : this->pipelines) {
+        if (!this->requiresRenderUpdate) {
+            pipeline->draw(commandBuffer);
+        }
+    }
+    vkCmdEndRenderPass(commandBuffer);
+
+    ret = vkEndCommandBuffer(commandBuffer);
+    if (ret != VK_SUCCESS) {
+        std::cerr << "Failed to end  Recording Command Buffer!" << std::endl;
+        return nullptr;
+    }
+
+    return commandBuffer;
+}
+
+void Renderer::updateUniformBuffer(uint32_t currentImage) {
+    ModelUniforms modelUniforms {};
+    //modelUniforms.camera = glm::vec4(Camera::instance()->getPosition(),1);
+    modelUniforms.sun = glm::vec4(0.0f, 100.0f, 100.0f, 1);
+    //modelUniforms.viewMatrix = Camera::instance()->getViewMatrix();
+    //modelUniforms.projectionMatrix = Camera::instance()->getProjectionMatrix();
+
+    for (GraphicsPipeline * pipeline : this->pipelines) {
+        if (pipeline != nullptr) pipeline->updateUniformBuffers(modelUniforms, currentImage);
+    }
+}
+
+bool Renderer::createCommandBuffers() {
+    this->commandBuffers.resize(this->swapChainFramebuffers.size());
+    
+    this->startCommandBufferQueue();
+
+    return true;
+}
+
+void Renderer::drawFrame() {
+    std::chrono::high_resolution_clock::time_point frameStart = std::chrono::high_resolution_clock::now();
+    
+    if (this->requiresRenderUpdate) {
+        this->updateRenderer();
+        return;
+    }
+
+    VkResult ret = vkWaitForFences(this->logicalDevice, 1, &this->inFlightFences[this->currentFrame], VK_TRUE, UINT64_MAX);
+    if (ret != VK_SUCCESS) {
+        this->requiresRenderUpdate = true;
+        return;
+    }
+    
+    uint32_t imageIndex;
+    ret = vkAcquireNextImageKHR(
+        this->logicalDevice, this->swapChain, UINT64_MAX, this->imageAvailableSemaphores[this->currentFrame], VK_NULL_HANDLE, &imageIndex);
+    
+    if (ret != VK_SUCCESS) {
+        std::cerr << "Failed to Acquire Next Image" << std::endl;
+        this->requiresRenderUpdate = true;
+        return;
+    }
+
+    if (this->commandBuffers[imageIndex] != nullptr) {
+        this->workerQueue.queueCommandBufferForDeletion(this->commandBuffers[imageIndex]);
+    }
+
+    VkCommandBuffer latestCommandBuffer = this->workerQueue.getNextCommandBuffer(imageIndex);
+    std::chrono::high_resolution_clock::time_point nextBufferFetchStart = std::chrono::high_resolution_clock::now();
+    while (latestCommandBuffer == nullptr) {
+        std::chrono::duration<double, std::milli> fetchPeriod = std::chrono::high_resolution_clock::now() - nextBufferFetchStart;
+        if (fetchPeriod.count() > 2000) {
+            std::cout << "Could not get new buffer for quite a while!" << std::endl;
+            break;
+        }
+        latestCommandBuffer = this->workerQueue.getNextCommandBuffer(imageIndex);
+    }
+    std::chrono::duration<double, std::milli> timer = std::chrono::high_resolution_clock::now() - nextBufferFetchStart;
+    //if (timer.count() < 50) {
+    //    std::this_thread::sleep_for(std::chrono::duration<double, std::milli>(50 - timer.count()));
+    //}
+    //timer = std::chrono::high_resolution_clock::now() - nextBufferFetchStart;
+    //std::cout << "Fetch Time: " << timer.count() << " | " << this->workerQueue.getNumberOfItems(imageIndex) << std::endl;
+    
+    if (latestCommandBuffer == nullptr) return;
+    this->commandBuffers[imageIndex] = latestCommandBuffer;
+
+    this->updateUniformBuffer(imageIndex);
+        
+    if (this->imagesInFlight[imageIndex] != VK_NULL_HANDLE) {
+        ret = vkWaitForFences(this->logicalDevice, 1, &this->imagesInFlight[imageIndex], VK_TRUE, UINT64_MAX);
+        if (ret != VK_SUCCESS) {
+             std::cerr << "vkWaitForFences 2 Failed" << std::endl;
+        }
+    }
+    this->imagesInFlight[imageIndex] = this->inFlightFences[this->currentFrame];
+
+    VkSubmitInfo submitInfo{};
+    submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+
+    VkSemaphore waitSemaphores[] = {this->imageAvailableSemaphores[this->currentFrame]};
+    VkPipelineStageFlags waitStages[] = {VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT};
+    submitInfo.waitSemaphoreCount = 1;
+    submitInfo.pWaitSemaphores = waitSemaphores;
+    submitInfo.pWaitDstStageMask = waitStages;
+
+    submitInfo.commandBufferCount = this->commandBuffers.empty() ? 0 : 1;
+    submitInfo.pCommandBuffers = &this->commandBuffers[imageIndex];
+
+    VkSemaphore signalSemaphores[] = {this->renderFinishedSemaphores[this->currentFrame]};
+    submitInfo.signalSemaphoreCount = 1;
+    submitInfo.pSignalSemaphores = signalSemaphores;
+
+    ret = vkResetFences(this->logicalDevice, 1, &this->inFlightFences[this->currentFrame]);
+    if (ret != VK_SUCCESS) {
+        std::cerr << "Failed to Reset Fence!" << std::endl;
+    }
+
+    ret = vkQueueSubmit(this->graphicsQueue, 1, &submitInfo, this->inFlightFences[this->currentFrame]);
+    if (ret != VK_SUCCESS) {
+        std::cerr << "Failed to Submit Draw Command Buffer!" << std::endl;
+    }
+    
+    VkPresentInfoKHR presentInfo{};
+    presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
+
+    presentInfo.waitSemaphoreCount = 1;
+    presentInfo.pWaitSemaphores = signalSemaphores;
+
+    VkSwapchainKHR swapChains[] = {this->swapChain};
+    presentInfo.swapchainCount = 1;
+    presentInfo.pSwapchains = swapChains;
+
+    presentInfo.pImageIndices = &imageIndex;
+
+    ret = vkQueuePresentKHR(presentQueue, &presentInfo);
+
+    if (ret != VK_SUCCESS) {
+        std::cerr << "Failed to Present Swap Chain Image!" << std::endl;
+        return;
+    }
+    
+    this->currentFrame = (this->currentFrame + 1) % MAX_FRAMES_IN_FLIGHT;
+    ++this->frameCount;
+
+    std::chrono::high_resolution_clock::time_point now = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<double, std::milli> time_span = now -frameStart;
+}
+
+bool Renderer::doesShowWireFrame() {
+    return this->showWireFrame;
+}
+
+void Renderer::setShowWireFrame(bool & showWireFrame) {
+    this->showWireFrame = showWireFrame;
+}
+
+VkRenderPass Renderer::getRenderPass() {
+    return this->renderPass;
+}
+
+VkExtent2D Renderer::getSwapChainExtent() {
+    return this->swapChainExtent;
+}
 
 bool Renderer::updateRenderer() {
     if (!this->isReady()) {

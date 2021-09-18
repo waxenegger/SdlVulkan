@@ -588,6 +588,13 @@ Model::Model(std::string id) {
 
 Model::~Model() {}
 
+Models * Models::INSTANCE() {
+    if (Models::instance == nullptr) {
+        Models::instance = new Models();
+    }
+    return Models::instance;
+}
+
 void Models::addModel(const std::string id, const  std::filesystem::path file)
 {
     std::unique_ptr<Model> model = std::make_unique<Model>(id, file);
@@ -725,6 +732,31 @@ VkImageView Models::findTextureImageViewById(int id) {
     return nullptr;
 }
 
+BufferSummary Models::getModelsBufferSizes(bool printInfo) {
+    BufferSummary bufferSizes;
+    
+    for (auto & model : this->models) {
+        auto meshes = model->getMeshes();
+        for (Mesh & mesh : meshes) {
+            VkDeviceSize vertexSize = mesh.getVertices().size();
+            VkDeviceSize indexSize = mesh.getIndices().size();
+
+            bufferSizes.vertexBufferSize += vertexSize * sizeof(class ModelVertex);
+            bufferSizes.indexBufferSize += indexSize * sizeof(uint32_t);
+            bufferSizes.ssboBufferSize += sizeof(struct MeshProperties);
+        }
+    }
+    
+    if (printInfo) {
+        std::cout << "Models Vertex Buffer Size: " << bufferSizes.vertexBufferSize / MEGA_BYTE << " MB" << std::endl;
+        std::cout << "Models Index Buffer Size: " << bufferSizes.indexBufferSize / MEGA_BYTE << " MB" << std::endl;
+        std::cout << "Models SSBO Buffer Size: " << bufferSizes.ssboBufferSize / MEGA_BYTE << " MB" << std::endl;
+    }
+    
+    return bufferSizes;
+}
+
+
 void Models::processTextures(Mesh & mesh) {
     TextureInformation textureInfo = mesh.getTextureInformation();
     
@@ -839,6 +871,7 @@ Models::~Models() {
     this->clear();
 }
 
+Models * Models::instance = nullptr;
 const std::string Models::AMBIENT_TEXTURE = "ambient";
 const std::string Models::DIFFUSE_TEXTURE = "diffuse";
 const std::string Models::SPECULAR_TEXTURE = "specular";

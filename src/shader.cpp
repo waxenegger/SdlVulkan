@@ -38,7 +38,7 @@ VkShaderModule Shader::createShaderModule(const std::vector<char> & code) {
 }
 
 
-bool Shader::isValid() {
+bool Shader::isValid() const {
         return this->shaderModule != nullptr;
 }
 
@@ -61,10 +61,10 @@ bool Shader::readFile(const std::string & filename, std::vector<char> & buffer) 
     return true;
 }
 
-VkShaderStageFlagBits Shader::getShaderType() {
+VkShaderStageFlagBits Shader::getShaderType() const {
     return this->shaderType;
 }
 
-VkShaderModule Shader::getShaderModule() {
+VkShaderModule Shader::getShaderModule() const {
     return this->shaderModule;
 }

@@ -19,6 +19,10 @@
 #include <filesystem>
 #include <string>
 
+#include <thread>
+#include <mutex>
+#include <queue>
+
 #include <glm.hpp>
 #include <gtc/matrix_transform.hpp>
 #include <gtc/type_ptr.hpp>
@@ -29,5 +33,7 @@
 #include <assimp/postprocess.h>
 
 int start(int argc, char* argv []);
+
+static constexpr uint32_t MEGA_BYTE = 1000 * 1000;
 
 #endif
