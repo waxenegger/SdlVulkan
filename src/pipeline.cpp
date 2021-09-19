@@ -336,7 +336,7 @@ bool GraphicsPipeline::createDescriptorPool(size_t size) {
     poolSizes[1].type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
     poolSizes[1].descriptorCount = static_cast<uint32_t>(size);
     poolSizes[2].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-    poolSizes[2].descriptorCount = static_cast<uint32_t>(MAX_TEXTURES * size);
+    poolSizes[2].descriptorCount = static_cast<uint32_t>(size * Models::INSTANCE()->getTextures().size());
 
     VkDescriptorPoolCreateInfo poolInfo{};
     poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
@@ -638,14 +638,11 @@ void GraphicsPipeline::drawModels(const VkCommandBuffer & commandBuffer, const b
             VkDeviceSize vertexSize = mesh.getVertices().size();
             VkDeviceSize indexSize = mesh.getIndices().size();
             
-            // TODO: fix by adding components
-            //auto allComponents = this->components.getAllComponentsForModel(model->getId());
-            //for (auto & comp : allComponents) {
-            //    if (!comp->isVisible()) continue;
+            auto allComponents = Components::INSTANCE()->getAllComponentsForModel(model->getId());
+            for (auto & comp : allComponents) {
+                if (!comp->isVisible()) continue;
                 
-                //ModelProperties props = { comp->getModelMatrix()};
-                ModelProperties props = {};
-                
+                ModelProperties props = { comp->getModelMatrix()};
                 vkCmdPushConstants(
                     commandBuffer, this->layout,
                     VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(struct ModelProperties), &props);
@@ -655,7 +652,7 @@ void GraphicsPipeline::drawModels(const VkCommandBuffer & commandBuffer, const b
                 } else {
                     vkCmdDraw(commandBuffer, vertexSize, 1, 0, firstInstanceMesh);
                 }
-            //}
+            }
                         
             lastIndexOffset += indexSize;
             lastVertexOffset += vertexSize;
@@ -701,11 +698,31 @@ GraphicsPipeline::~GraphicsPipeline() {
     
     this->destroyPipelineObjects();
     
+    if (this->textureSampler != nullptr) {
+        vkDestroySampler(this->device, this->textureSampler, nullptr);
+    }
+    
     if (this->descriptorSetLayout != nullptr) {
         vkDestroyDescriptorSetLayout(this->device, this->descriptorSetLayout, nullptr);
     }
 
     if (this->descriptorPool != nullptr) {
         vkDestroyDescriptorPool(this->device, this->descriptorPool, nullptr);
+    }
+    
+    if (this->vertexBuffer != nullptr) vkDestroyBuffer(this->device, this->vertexBuffer, nullptr);
+    if (this->vertexBufferMemory != nullptr) vkFreeMemory(this->device, this->vertexBufferMemory, nullptr);
+
+    if (this->indexBuffer != nullptr) vkDestroyBuffer(this->device, this->indexBuffer, nullptr);
+    if (this->indexBufferMemory != nullptr) vkFreeMemory(this->device, this->indexBufferMemory, nullptr);
+
+    if (this->ssboBuffer != nullptr) vkDestroyBuffer(this->device, this->ssboBuffer, nullptr);
+    if (this->ssboBufferMemory != nullptr) vkFreeMemory(this->device, this->ssboBufferMemory, nullptr);
+    
+    for (size_t i = 0; i < this->uniformBuffers.size(); i++) {
+        if (this->uniformBuffers[i] != nullptr) vkDestroyBuffer(this->device, this->uniformBuffers[i], nullptr);
+    }
+    for (size_t i = 0; i < this->uniformBuffersMemory.size(); i++) {
+        if (this->uniformBuffersMemory[i] != nullptr) vkFreeMemory(this->device, this->uniformBuffersMemory[i], nullptr);
     }
 }

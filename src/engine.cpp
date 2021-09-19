@@ -40,17 +40,24 @@ bool Engine::isReady() {
 void Engine::loop() {
     if (!this->isReady()) return;
     
+    SDL_StartTextInput();
+
+    this->startInputCapture();
+    
     logInfo("Starting Render Loop...");
 
-    while(true) {
+    while(!this->quit) {
         this->renderer->drawFrame();
     }
+    
+    SDL_StopTextInput();
     
     logInfo("Ended Render Loop");
 }
 
 void Engine::loadModels() {
-    this->models->addModel("TestModel", Engine::getAppPath(MODELS) / "rock.obj");
+    this->models->addModel("rock", Engine::getAppPath(MODELS) / "rock.obj");
+    this->components->initWithModelIds(this->models->getModelIds());
 }
 
 void Engine::init() {
@@ -61,6 +68,11 @@ void Engine::init() {
 
     renderer->initRenderer();    
     this->createModelPipeline();
+    
+    VkExtent2D windowSize = this->renderer->getSwapChainExtent();
+    this->camera->setAspectRatio(static_cast<float>(windowSize.width) / windowSize.height);
+    
+    this->renderer->updateRenderer();
 }
 
 void Engine::createRenderer() {
@@ -99,7 +111,7 @@ void Engine::createModelPipeline() {
     pushConstantRange.size = sizeof(struct ModelProperties);
     
     if (pipeline->createGraphicsPipeline(
-        MAX_FRAMES_IN_FLIGHT, this->renderer->getPhysicalDevice(), this->renderer->getRenderPass(), this->renderer->getCommandPool(), this->renderer->getGraphicsQueue(),
+        this->renderer->getImageCount() , this->renderer->getPhysicalDevice(), this->renderer->getRenderPass(), this->renderer->getCommandPool(), this->renderer->getGraphicsQueue(),
         this->renderer->getSwapChainExtent(), pushConstantRange, this->renderer->doesShowWireFrame())) {
         
         this->renderer->addPipeline(pipeline.release());
@@ -108,22 +120,136 @@ void Engine::createModelPipeline() {
     }
 }
 
-Engine::~Engine() {
-    if (this->models != nullptr) {
-        if (this->renderer != nullptr && this->renderer->getLogicalDevice() != nullptr) {
-            this->models->cleanUpTextures(this->renderer->getLogicalDevice());
+void Engine::startInputCapture() {
+    std::thread inputThread([this]() {
+        
+        SDL_Event e;
+        bool isFullScreen = false;
+        bool needsRestoreAfterFullScreen = false;
+
+        float walkingSpeed = 0.5;
+        
+        while(!this->quit) {
+            while (SDL_PollEvent(&e) != 0) {
+                switch(e.type) {
+                    case SDL_WINDOWEVENT:
+                        if (e.window.event == SDL_WINDOWEVENT_RESIZED ||
+                            e.window.event == SDL_WINDOWEVENT_MAXIMIZED ||
+                            e.window.event == SDL_WINDOWEVENT_MINIMIZED ||
+                            e.window.event == SDL_WINDOWEVENT_RESTORED) {
+                                if (isFullScreen) SDL_SetWindowFullscreen(this->graphics->getSdlWindow(), SDL_TRUE);
+                        }
+                        break;
+                    case SDL_KEYDOWN:
+                        switch (e.key.keysym.scancode) {
+                            case SDL_SCANCODE_W:
+                                this->camera->move(Camera::KeyPress::UP, true, walkingSpeed);
+                                break;
+                            case SDL_SCANCODE_S:
+                                this->camera->move(Camera::KeyPress::DOWN, true, walkingSpeed);
+                                break;
+                            case SDL_SCANCODE_A:
+                                this->camera->move(Camera::KeyPress::LEFT, true, walkingSpeed);
+                                break;
+                            case SDL_SCANCODE_D:
+                                this->camera->move(Camera::KeyPress::RIGHT, true, walkingSpeed);
+                                break;
+                            case SDL_SCANCODE_F:
+                                this->renderer->setShowWireFrame(!this->renderer->doesShowWireFrame());
+                                break;                                
+                            case SDL_SCANCODE_F12:
+                                isFullScreen = !isFullScreen;
+                                if (isFullScreen) {
+                                    if (SDL_GetWindowFlags(this->graphics->getSdlWindow()) & SDL_WINDOW_MAXIMIZED) {
+                                        SDL_SetWindowFullscreen(this->graphics->getSdlWindow(), SDL_TRUE);
+                                    } else {
+                                        needsRestoreAfterFullScreen = true;
+                                        SDL_MaximizeWindow(this->graphics->getSdlWindow());
+                                    }
+                                } else {
+                                    SDL_SetWindowFullscreen(this->graphics->getSdlWindow(), SDL_FALSE);
+                                    if (needsRestoreAfterFullScreen) {
+                                        SDL_RestoreWindow(this->graphics->getSdlWindow());
+                                        needsRestoreAfterFullScreen = false;
+                                    }
+                                }
+                                break;
+                            case SDL_SCANCODE_Q:
+                                quit = true;
+                                break;
+                            default:
+                                break;
+                        };
+                        break;
+                    case SDL_KEYUP:
+                        switch (e.key.keysym.scancode) {
+                            case SDL_SCANCODE_W:
+                                this->camera->move(Camera::KeyPress::UP);
+                                break;
+                            case SDL_SCANCODE_S:
+                                this->camera->move(Camera::KeyPress::DOWN);
+                                break;
+                            case SDL_SCANCODE_A:
+                                this->camera->move(Camera::KeyPress::LEFT);
+                                break;
+                            case SDL_SCANCODE_D:
+                                this->camera->move(Camera::KeyPress::RIGHT);
+                                break;
+                            default:
+                                break;
+                        };
+                        break;
+                    case SDL_MOUSEMOTION:
+                        if (SDL_GetRelativeMouseMode() == SDL_TRUE) {
+                            this->camera->updateDirection(
+                                static_cast<float>(e.motion.xrel),
+                                static_cast<float>(e.motion.yrel), 0.005f);
+                        }
+                        break;
+                    case SDL_MOUSEWHEEL:
+                    {
+                        const Sint32 delta = e.wheel.y * (e.wheel.direction == SDL_MOUSEWHEEL_NORMAL ? 1 : -1);
+                        float newFovy = this->camera->getFovY() - delta * 2;
+                        if (newFovy < 1) newFovy = 1;
+                        else if (newFovy > 45) newFovy = 45;
+                        this->camera->setFovY(newFovy);
+                        break;
+                    }                            
+                    case SDL_MOUSEBUTTONUP:
+                        SDL_SetRelativeMouseMode(SDL_GetRelativeMouseMode() == SDL_TRUE ? SDL_FALSE : SDL_TRUE);
+                        break;
+                    case SDL_QUIT:
+                        quit = true;
+                        break;
+                }
+            }
         }
-        delete this->models;
-        this->models = nullptr;
-    }
-    
+    });
+    inputThread.detach();
+}
+
+
+
+Engine::~Engine() {    
     if (this->renderer != nullptr) {
         delete this->renderer;
         this->renderer = nullptr;
     }
     
+    if (this->models != nullptr) {
+        delete this->models;
+        this->models = nullptr;
+    }
+
     if (this->graphics != nullptr) {        
         delete this->graphics;
         this->graphics = nullptr;
+    }
+    
+    Camera::INSTANCE()->destroy();
+    
+    if (this->components != nullptr) {
+        delete this->components;
+        this->components = nullptr;
     }
 }

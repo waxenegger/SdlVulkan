@@ -3,12 +3,14 @@
 
 #include "shared.h"
 #include "models.h"
+#include "components.h"
+#include "world.h"
 #include "threading.h"
 
 constexpr uint32_t VULKAN_VERSION = VK_MAKE_VERSION(1,1,0);
 
-static constexpr int MAX_TEXTURES = 50;
-static constexpr int MAX_FRAMES_IN_FLIGHT = 3;
+static constexpr uint32_t MAX_BUFFERING = 2;
+static constexpr uint64_t IMAGE_ACQUIRE_TIMEOUT = 5 * 1000;
 
 const VkSurfaceFormatKHR SWAP_CHAIN_IMAGE_FORMAT = {
         VK_FORMAT_B8G8R8A8_SRGB,
@@ -95,6 +97,7 @@ class GraphicsContext final {
         static bool findMemoryType(const VkPhysicalDevice & device, uint32_t typeFilter, VkMemoryPropertyFlags properties, uint32_t & memoryType);
         
         VkSurfaceKHR getVulkanSurface() const;
+        SDL_Window * getSdlWindow();
         
         VkExtent2D getSwapChainExtent(VkSurfaceCapabilitiesKHR & surfaceCapabilities) const;
         bool getSurfaceCapabilities(const VkPhysicalDevice & physicalDevice, VkSurfaceCapabilitiesKHR & surfaceCapabilities) const;
@@ -133,11 +136,11 @@ class GraphicsPipeline final {
         VkPipeline pipeline = nullptr;
 
         bool createDescriptorSetLayout();
-        bool createDescriptorPool(const size_t size = MAX_FRAMES_IN_FLIGHT);
-        bool createDescriptorSets(const size_t size = MAX_FRAMES_IN_FLIGHT);
+        bool createDescriptorPool(const size_t size);
+        bool createDescriptorSets(const size_t size);
         bool createSsboBufferFromModel(const VkPhysicalDevice & physicalDevice, const VkCommandPool & commandpool, const VkQueue & graphicsQueue, VkDeviceSize bufferSize, bool makeHostWritable = false);
         bool createTextureSampler(const VkPhysicalDevice & physicalDevice, VkSampler & sampler, VkSamplerAddressMode addressMode);
-        bool createUniformBuffers(const VkPhysicalDevice & physicalDevice, size_t size = MAX_FRAMES_IN_FLIGHT);
+        bool createUniformBuffers(const VkPhysicalDevice & physicalDevice, size_t size);
         bool createBuffersFromModel(const VkPhysicalDevice & physicalDevice, const VkCommandPool & commandpool, const VkQueue & graphicsQueue);
         void prepareModelTextures(const VkPhysicalDevice & physicalDevice, const VkCommandPool & commandpool, const VkQueue & graphicsQueue, const VkExtent2D & swapChainExtent);
         void destroyPipelineObjects();
@@ -179,6 +182,7 @@ class Renderer final {
         std::vector<VkCommandBuffer> commandBuffers;
         
         const int queueIndex = -1;
+        uint32_t imageCount = MAX_BUFFERING;
         
         uint32_t graphicsQueueIndex = -1;
         VkQueue graphicsQueue = nullptr;
@@ -246,12 +250,14 @@ class Renderer final {
                 
         VkDevice getLogicalDevice();
         VkPhysicalDevice getPhysicalDevice();
+        uint32_t getImageCount();
         
         void initRenderer();
         bool updateRenderer();
         
+        void forceRenderUpdate();
         bool doesShowWireFrame();
-        void setShowWireFrame(bool & showWireFrame);
+        void setShowWireFrame(bool showWireFrame);
 
         VkRenderPass getRenderPass();
         VkExtent2D getSwapChainExtent();
@@ -295,7 +301,11 @@ class Engine final {
         static std::filesystem::path base;
         GraphicsContext * graphics = new GraphicsContext();
         Models * models = Models::INSTANCE();
+        Components * components = Components::INSTANCE();
+        Camera * camera = Camera::INSTANCE();
         Renderer * renderer = nullptr;
+        
+        bool quit = false;
 
         void createRenderer();
         void createModelPipeline();
@@ -310,6 +320,8 @@ class Engine final {
         
         void init();
         void loop();
+        
+        void startInputCapture();
 
         void loadModels();
         

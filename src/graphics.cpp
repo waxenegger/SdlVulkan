@@ -7,6 +7,9 @@ void GraphicsContext::initSdl(const std::string & appName) {
     if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_EVENTS) < 0) {
         logError("Could not initialize SDL! Error: " + std::string(SDL_GetError()));
     }
+    
+    TTF_Init();
+
     this->sdlWindow =
             SDL_CreateWindow(appName.c_str(), SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, 640, 480, SDL_WINDOW_VULKAN | SDL_WINDOW_RESIZABLE);
     if (this->sdlWindow == nullptr) {
@@ -104,6 +107,8 @@ void GraphicsContext::quitSdl() {
         this->sdlWindow = nullptr;
     }
     
+    TTF_Quit();
+
     SDL_Quit();
 }
 
@@ -472,6 +477,10 @@ std::vector<VkPresentModeKHR> GraphicsContext::queryDeviceSwapModes(const VkPhys
 
 VkSurfaceKHR GraphicsContext::getVulkanSurface() const {
     return this->vulkanSurface;
+}
+
+SDL_Window * GraphicsContext::getSdlWindow() {
+    return this->sdlWindow;
 }
 
 GraphicsContext::GraphicsContext() {}

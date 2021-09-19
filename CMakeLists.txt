@@ -44,6 +44,8 @@ set(projectSources
     src/renderer.cpp
     src/helper.cpp
     src/engine.cpp
+    src/components.cpp
+    src/camera.cpp
 )
 
 # Include dirs.

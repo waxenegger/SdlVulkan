@@ -63,9 +63,9 @@ bool Renderer::hasAtLeastOneActivePipeline() {
 
 
 bool Renderer::canRender() {
-    return this->isReady() && this->hasAtLeastOneActivePipeline() && this->swapChain != nullptr && this->swapChainImages.size() == MAX_FRAMES_IN_FLIGHT && 
+    return this->isReady() && this->hasAtLeastOneActivePipeline() && this->swapChain != nullptr && this->swapChainImages.size() == this->imageCount && 
         this->swapChainImages.size() == this->swapChainImageViews.size() && this->imagesInFlight.size() == this->swapChainImages.size() &&
-        this->imageAvailableSemaphores.size() == MAX_FRAMES_IN_FLIGHT && this->renderFinishedSemaphores.size() == MAX_FRAMES_IN_FLIGHT && this->inFlightFences.size() == MAX_FRAMES_IN_FLIGHT &&
+        this->imageAvailableSemaphores.size() == this->imageCount && this->renderFinishedSemaphores.size() == this->imageCount && this->inFlightFences.size() == this->imageCount &&
         this->swapChainFramebuffers.size() == this->swapChainImages.size() && this->depthImages.size() == this->swapChainImages.size() && 
         this->depthImagesMemory.size() == this->swapChainImages.size() && this->depthImagesView.size() == this->swapChainImages.size() && 
         this->commandPool != nullptr;
@@ -171,16 +171,15 @@ bool Renderer::createSwapChain() {
 
     this->swapChainExtent = this->graphicsContext->getSwapChainExtent(surfaceCapabilities);
 
-    uint32_t imageCount = MAX_FRAMES_IN_FLIGHT;
-    if (surfaceCapabilities.maxImageCount > 0 && imageCount > surfaceCapabilities.maxImageCount) {
-        imageCount = surfaceCapabilities.maxImageCount;
+    if (surfaceCapabilities.maxImageCount > 0 && this->imageCount > surfaceCapabilities.maxImageCount) {
+        this->imageCount = surfaceCapabilities.maxImageCount;
     }
 
     VkSwapchainCreateInfoKHR createInfo {};
     createInfo.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
     createInfo.pNext = nullptr;
     createInfo.surface = this->graphicsContext->getVulkanSurface();
-    createInfo.minImageCount = imageCount;
+    createInfo.minImageCount = this->imageCount;
     createInfo.imageFormat = SWAP_CHAIN_IMAGE_FORMAT.format;
     createInfo.imageColorSpace = SWAP_CHAIN_IMAGE_FORMAT.colorSpace;
     createInfo.imageExtent = this->swapChainExtent;
@@ -195,7 +194,7 @@ bool Renderer::createSwapChain() {
     const uint32_t queueFamilyIndices[] = { this->graphicsQueueIndex, this->presentQueueIndex };
     if (this->graphicsQueueIndex != this->presentQueueIndex) {
         createInfo.imageSharingMode = VK_SHARING_MODE_CONCURRENT;
-        createInfo.queueFamilyIndexCount = imageCount;
+        createInfo.queueFamilyIndexCount = this->imageCount;
         createInfo.pQueueFamilyIndices = queueFamilyIndices;
     } else {
         createInfo.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
@@ -209,16 +208,16 @@ bool Renderer::createSwapChain() {
         return false;
     }
 
-    ret = vkGetSwapchainImagesKHR(this->logicalDevice, this->swapChain, &imageCount, nullptr);
+    ret = vkGetSwapchainImagesKHR(this->logicalDevice, this->swapChain, &this->imageCount, nullptr);
     if (ret != VK_SUCCESS) {
         logError("Failed to Get Swap Chain Image Count!");
         return false;
     }
 
-    logInfo("Buffering: " + std::to_string(imageCount));
-    this->swapChainImages.resize(imageCount);
+    logInfo("Buffering: " + std::to_string(this->imageCount));
+    this->swapChainImages.resize(this->imageCount);
 
-    ret = vkGetSwapchainImagesKHR(this->logicalDevice, this->swapChain, &imageCount, this->swapChainImages.data());
+    ret = vkGetSwapchainImagesKHR(this->logicalDevice, this->swapChain, &this->imageCount, this->swapChainImages.data());
     if (ret != VK_SUCCESS) {
         logError("Failed to Create Swap Chain Images!");
         return false;
@@ -255,9 +254,9 @@ bool Renderer::createSyncObjects() {
         return false;
     }
 
-    this->imageAvailableSemaphores.resize(MAX_FRAMES_IN_FLIGHT);
-    this->renderFinishedSemaphores.resize(MAX_FRAMES_IN_FLIGHT);
-    this->inFlightFences.resize(MAX_FRAMES_IN_FLIGHT);
+    this->imageAvailableSemaphores.resize(this->imageCount);
+    this->renderFinishedSemaphores.resize(this->imageCount);
+    this->inFlightFences.resize(this->imageCount);
     this->imagesInFlight.resize(this->swapChainImages.size(), VK_NULL_HANDLE);
 
     VkSemaphoreCreateInfo semaphoreInfo{};
@@ -267,7 +266,7 @@ bool Renderer::createSyncObjects() {
     fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
     fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
 
-    for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
+    for (size_t i = 0; i < this->imageCount; i++) {
 
         if (vkCreateSemaphore(this->logicalDevice, &semaphoreInfo, nullptr, &this->imageAvailableSemaphores[i]) != VK_SUCCESS ||
             vkCreateSemaphore(this->logicalDevice, &semaphoreInfo, nullptr, &this->renderFinishedSemaphores[i]) != VK_SUCCESS ||
@@ -388,8 +387,7 @@ void Renderer::destroyRendererObjects() {
     }
     this->pipelines.clear();
 
-    
-    for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
+    for (size_t i = 0; i < this->imageCount; i++) {
         if (i < this->renderFinishedSemaphores.size()) {
             if (this->renderFinishedSemaphores[i] != nullptr) {
                 vkDestroySemaphore(this->logicalDevice, this->renderFinishedSemaphores[i], nullptr);
@@ -402,12 +400,6 @@ void Renderer::destroyRendererObjects() {
             }
         }
         
-        if (i < this->imagesInFlight.size()) {
-            if (this->imagesInFlight[i] != nullptr) {
-                vkDestroyFence(this->logicalDevice, this->imagesInFlight[i], nullptr);
-            }
-        }
-
         if (i < this->inFlightFences.size()) {
             if (this->inFlightFences[i] != nullptr) {
                 vkDestroyFence(this->logicalDevice, this->inFlightFences[i], nullptr);
@@ -423,6 +415,10 @@ void Renderer::destroyRendererObjects() {
     if (this->logicalDevice != nullptr && this->commandPool != nullptr) {
         vkDestroyCommandPool(this->logicalDevice, this->commandPool, nullptr);
         this->commandPool = nullptr;
+    }
+    
+    if (this->logicalDevice != nullptr) {
+        Models::INSTANCE()->cleanUpTextures(this->logicalDevice);
     }
 }
 
@@ -573,10 +569,10 @@ VkCommandBuffer Renderer::createCommandBuffer(uint16_t commandBufferIndex) {
 
 void Renderer::updateUniformBuffer(uint32_t currentImage) {
     ModelUniforms modelUniforms {};
-    //modelUniforms.camera = glm::vec4(Camera::instance()->getPosition(),1);
+    modelUniforms.camera = glm::vec4(Camera::INSTANCE()->getPosition(),1);
     modelUniforms.sun = glm::vec4(0.0f, 100.0f, 100.0f, 1);
-    //modelUniforms.viewMatrix = Camera::instance()->getViewMatrix();
-    //modelUniforms.projectionMatrix = Camera::instance()->getProjectionMatrix();
+    modelUniforms.viewMatrix = Camera::INSTANCE()->getViewMatrix();
+    modelUniforms.projectionMatrix = Camera::INSTANCE()->getProjectionMatrix();
 
     for (GraphicsPipeline * pipeline : this->pipelines) {
         if (pipeline != nullptr) pipeline->updateUniformBuffers(modelUniforms, currentImage);
@@ -607,10 +603,12 @@ void Renderer::drawFrame() {
     
     uint32_t imageIndex;
     ret = vkAcquireNextImageKHR(
-        this->logicalDevice, this->swapChain, UINT64_MAX, this->imageAvailableSemaphores[this->currentFrame], VK_NULL_HANDLE, &imageIndex);
+        this->logicalDevice, this->swapChain, IMAGE_ACQUIRE_TIMEOUT, this->imageAvailableSemaphores[this->currentFrame], VK_NULL_HANDLE, &imageIndex);
     
     if (ret != VK_SUCCESS) {
-        logError("Failed to Acquire Next Image");
+        if (ret != VK_ERROR_OUT_OF_DATE_KHR) {
+            logError("Failed to Acquire Next Image");
+        }
         this->requiresRenderUpdate = true;
         return;
     }
@@ -690,11 +688,13 @@ void Renderer::drawFrame() {
     ret = vkQueuePresentKHR(presentQueue, &presentInfo);
 
     if (ret != VK_SUCCESS) {
-        logError("Failed to Present Swap Chain Image!");
+        if (ret != VK_ERROR_OUT_OF_DATE_KHR) {
+            logError("Failed to Present Swap Chain Image!");
+        }
         return;
     }
     
-    this->currentFrame = (this->currentFrame + 1) % MAX_FRAMES_IN_FLIGHT;
+    this->currentFrame = (this->currentFrame + 1) % this->imageCount;
     ++this->frameCount;
 
     std::chrono::high_resolution_clock::time_point now = std::chrono::high_resolution_clock::now();
@@ -705,8 +705,9 @@ bool Renderer::doesShowWireFrame() {
     return this->showWireFrame;
 }
 
-void Renderer::setShowWireFrame(bool & showWireFrame) {
+void Renderer::setShowWireFrame(bool showWireFrame) {
     this->showWireFrame = showWireFrame;
+    this->requiresRenderUpdate = true;
 }
 
 VkRenderPass Renderer::getRenderPass() {
@@ -747,8 +748,17 @@ bool Renderer::updateRenderer() {
     return true;
 }
 
+uint32_t Renderer::getImageCount() {
+    return this->imageCount;
+}
+
+void Renderer::forceRenderUpdate() {
+    this->requiresRenderUpdate = true;
+}
 
 Renderer::~Renderer() {
+    this->stopCommandBufferQueue();
+
     logInfo("Destroying Renderer...");
     this->destroyRendererObjects();
     
