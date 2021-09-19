@@ -601,9 +601,69 @@ std::vector<VkPipelineShaderStageCreateInfo> GraphicsPipeline::getShaderStageCre
     return shaderCreateInfos;
 }
 
-void GraphicsPipeline::draw(const VkCommandBuffer & commandBuffer) {
-    
+void GraphicsPipeline::draw(const VkCommandBuffer & commandBuffer, const uint16_t commandBufferIndex) {
+    if (this->isReady()) {
+        if (this->vertexBuffer != nullptr) {
+            vkCmdBindDescriptorSets(
+                commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, 
+                this->layout, 0, 1, &this->descriptorSets[commandBufferIndex], 0, nullptr);
+            
+            vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, this->pipeline);
+
+            VkBuffer vertexBuffers[] = {this->vertexBuffer};
+            VkDeviceSize offsets[] = {0};
+            vkCmdBindVertexBuffers(commandBuffer, 0, 1, vertexBuffers, offsets);
+        }
+            
+        if (this->indexBuffer != nullptr) {
+            vkCmdBindIndexBuffer(commandBuffer, this->indexBuffer, 0, VK_INDEX_TYPE_UINT32);
+            this->drawModels(commandBuffer, true);
+        } else {
+            this->drawModels(commandBuffer, false);       
+        }
+    }
 }
+
+void GraphicsPipeline::drawModels(const VkCommandBuffer & commandBuffer, const bool useIndices) {
+    VkDeviceSize lastVertexOffset = 0;
+    VkDeviceSize lastIndexOffset = 0;
+    uint32_t firstInstanceMesh = 0;
+
+    auto & allModels = Models::INSTANCE()->getModels();
+    
+    for (auto & model :  allModels) {
+        auto meshes = model->getMeshes();
+        
+        for (Mesh & mesh : meshes) {
+            VkDeviceSize vertexSize = mesh.getVertices().size();
+            VkDeviceSize indexSize = mesh.getIndices().size();
+            
+            // TODO: fix by adding components
+            //auto allComponents = this->components.getAllComponentsForModel(model->getId());
+            //for (auto & comp : allComponents) {
+            //    if (!comp->isVisible()) continue;
+                
+                //ModelProperties props = { comp->getModelMatrix()};
+                ModelProperties props = {};
+                
+                vkCmdPushConstants(
+                    commandBuffer, this->layout,
+                    VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(struct ModelProperties), &props);
+
+                if (useIndices) {                
+                    vkCmdDrawIndexed(commandBuffer, indexSize , 1, lastIndexOffset, lastVertexOffset, firstInstanceMesh);
+                } else {
+                    vkCmdDraw(commandBuffer, vertexSize, 1, 0, firstInstanceMesh);
+                }
+            //}
+                        
+            lastIndexOffset += indexSize;
+            lastVertexOffset += vertexSize;
+            firstInstanceMesh++;
+        }
+    }
+}
+
 
 void GraphicsPipeline::updateUniformBuffers(const ModelUniforms & modelUniforms, const uint32_t & currentImage) {
     void* data;

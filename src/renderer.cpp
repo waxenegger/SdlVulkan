@@ -557,7 +557,7 @@ VkCommandBuffer Renderer::createCommandBuffer(uint16_t commandBufferIndex) {
         
     for (GraphicsPipeline * pipeline : this->pipelines) {
         if (!this->requiresRenderUpdate) {
-            pipeline->draw(commandBuffer);
+            pipeline->draw(commandBuffer, commandBufferIndex);
         }
     }
     vkCmdEndRenderPass(commandBuffer);
@@ -723,7 +723,11 @@ bool Renderer::updateRenderer() {
         return false;
     }
 
+    this->stopCommandBufferQueue();
+    
     this->destroySwapChainObjects();
+
+    this->requiresRenderUpdate = false;
     
     if (!this->createSwapChain()) return false;
     if (!this->createImageViews()) return false;

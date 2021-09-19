@@ -19,7 +19,7 @@ const VkSurfaceFormatKHR SWAP_CHAIN_IMAGE_FORMAT = {
 class Shader final {
     private:
         std::string filename;
-        const VkShaderStageFlagBits & shaderType;
+        VkShaderStageFlagBits shaderType;
         VkShaderModule shaderModule = nullptr;
         VkDevice device;
         
@@ -34,7 +34,7 @@ class Shader final {
         VkShaderStageFlagBits getShaderType() const;
         VkShaderModule getShaderModule() const;
 
-        Shader(const VkDevice device, const std::string & filename, const VkShaderStageFlagBits & shaderType);
+        Shader(const VkDevice device, const std::string & filename, const VkShaderStageFlagBits shaderType);
         ~Shader();
         
         bool isValid() const;
@@ -160,7 +160,8 @@ class GraphicsPipeline final {
         bool updateGraphicsPipeline(const VkRenderPass & renderPass, const VkExtent2D & swapChainExtent, bool showWireFrame = false);
         void updateUniformBuffers(const ModelUniforms & modelUniforms, const uint32_t & currentImage);
         
-        void draw(const VkCommandBuffer & commandBuffer);
+        void draw(const VkCommandBuffer & commandBuffer, const uint16_t commandBufferIndex);
+        void drawModels(const VkCommandBuffer & commandBuffer, const bool useIndices);
         
         GraphicsPipeline(const VkDevice & device);
         ~GraphicsPipeline();
