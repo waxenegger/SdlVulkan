@@ -107,18 +107,25 @@ class GraphicsContext final {
 class GraphicsPipeline final {
     private:
         std::map<std::string, const Shader *> shaders;
-        const VkDevice & device = nullptr;
+        const VkDevice device = nullptr;
         
-        VkDescriptorSetLayout descriptorSetLayout;
+        VkDescriptorSetLayout descriptorSetLayout = nullptr;
                 
         VkDescriptorPool descriptorPool = nullptr;
         std::vector<VkDescriptorSet> descriptorSets;
 
         std::vector<VkBuffer> uniformBuffers;
         std::vector<VkDeviceMemory> uniformBuffersMemory;
+        
+        VkPushConstantRange pushConstantRange;
 
         VkSampler textureSampler = nullptr;
         
+        VkBuffer vertexBuffer = nullptr;
+        VkDeviceMemory vertexBufferMemory = nullptr;
+        VkBuffer indexBuffer = nullptr;
+        VkDeviceMemory indexBufferMemory = nullptr;
+
         VkBuffer ssboBuffer = nullptr;
         VkDeviceMemory ssboBufferMemory = nullptr;
         
@@ -130,7 +137,9 @@ class GraphicsPipeline final {
         bool createDescriptorSets(const size_t size = MAX_FRAMES_IN_FLIGHT);
         bool createSsboBufferFromModel(const VkPhysicalDevice & physicalDevice, const VkCommandPool & commandpool, const VkQueue & graphicsQueue, VkDeviceSize bufferSize, bool makeHostWritable = false);
         bool createTextureSampler(const VkPhysicalDevice & physicalDevice, VkSampler & sampler, VkSamplerAddressMode addressMode);
-        
+        bool createUniformBuffers(const VkPhysicalDevice & physicalDevice, size_t size = MAX_FRAMES_IN_FLIGHT);
+        bool createBuffersFromModel(const VkPhysicalDevice & physicalDevice, const VkCommandPool & commandpool, const VkQueue & graphicsQueue);
+        void prepareModelTextures(const VkPhysicalDevice & physicalDevice, const VkCommandPool & commandpool, const VkQueue & graphicsQueue, const VkExtent2D & swapChainExtent);
         void destroyPipelineObjects();
 
     public:
@@ -143,11 +152,12 @@ class GraphicsPipeline final {
         
         std::vector<VkPipelineShaderStageCreateInfo> getShaderStageCreateInfos();
         
+        bool isReady();
 
         bool createGraphicsPipeline(
             const size_t size, const VkPhysicalDevice & physicalDevice, const VkRenderPass & renderPass, const VkCommandPool & commandpool, const VkQueue & graphicsQueue, 
             const VkExtent2D & swapChainExtent, const VkPushConstantRange & pushConstantRange, bool showWireFrame = false);
-        bool updateGraphicsPipeline(const VkRenderPass & renderPass, const VkExtent2D & swapChainExtent, const VkPushConstantRange & pushConstantRange, bool showWireFrame = false);
+        bool updateGraphicsPipeline(const VkRenderPass & renderPass, const VkExtent2D & swapChainExtent, bool showWireFrame = false);
         void updateUniformBuffers(const ModelUniforms & modelUniforms, const uint32_t & currentImage);
         
         void draw(const VkCommandBuffer & commandBuffer);
@@ -274,10 +284,14 @@ class Helper final {
         static VkCommandBuffer beginSingleTimeCommands(const VkDevice & logicalDevice, const VkCommandPool & commandPool);
         static void endSingleTimeCommands(const VkDevice & logicalDevice, const VkCommandPool & commandPool, const VkQueue & graphicsQueue, VkCommandBuffer & commandBuffer);
         static void copyModelsContentIntoBuffer(void* data, ModelsContentType modelsContentType, VkDeviceSize maxSize);
+        static bool transitionImageLayout(
+            const VkDevice & logicalDevice, const VkCommandPool & commandPool, const VkQueue & graphicsQueue, 
+            VkImage image, VkImageLayout oldLayout, VkImageLayout newLayout, uint16_t layerCount = 1);
 };
 
 class Engine final {
     private:
+        static std::filesystem::path base;
         GraphicsContext * graphics = new GraphicsContext();
         Models * models = Models::INSTANCE();
         Renderer * renderer = nullptr;
@@ -298,9 +312,10 @@ class Engine final {
 
         void loadModels();
         
-        Engine(const std::string & appName, const uint32_t version = VULKAN_VERSION);
+        Engine(const std::string & appName, const std::string root = "", const uint32_t version = VULKAN_VERSION);
         ~Engine();
+        
+        static std::filesystem::path getAppPath(APP_PATHS appPath);
 };
-
 
 #endif

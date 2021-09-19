@@ -36,4 +36,9 @@ int start(int argc, char* argv []);
 
 static constexpr uint32_t MEGA_BYTE = 1000 * 1000;
 
+
+enum APP_PATHS {
+    ROOT, SHADERS, MODELS, FONTS, MAPS
+};
+
 #endif

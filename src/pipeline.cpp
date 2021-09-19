@@ -15,18 +15,173 @@ void GraphicsPipeline::addShader(const std::string & filename, const VkShaderSta
     if (newShader->isValid()) this->shaders[filename] = newShader.release();
 }
 
+bool GraphicsPipeline::createBuffersFromModel(const VkPhysicalDevice & physicalDevice, const VkCommandPool & commandpool, const VkQueue & graphicsQueue) {
+    BufferSummary bufferSizes = Models::INSTANCE()->getModelsBufferSizes(true);
+     
+    if (bufferSizes.vertexBufferSize == 0) return true;
+
+    if (this->vertexBuffer != nullptr) vkDestroyBuffer(this->device, this->vertexBuffer, nullptr);
+    if (this->vertexBufferMemory != nullptr) vkFreeMemory(this->device, this->vertexBufferMemory, nullptr);
+
+    VkBuffer stagingBuffer;
+    VkDeviceMemory stagingBufferMemory;
+    if (!Helper::createBuffer(physicalDevice, this->device, bufferSizes.vertexBufferSize,
+            VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+            stagingBuffer, stagingBufferMemory)) {
+        logError("Failed to get Create Staging Buffer");
+        return false;
+    }
+
+    void* data = nullptr;
+    vkMapMemory(this->device, stagingBufferMemory, 0, bufferSizes.vertexBufferSize, 0, &data);
+    Helper::copyModelsContentIntoBuffer(data, VERTEX, bufferSizes.vertexBufferSize);
+    vkUnmapMemory(this->device, stagingBufferMemory);
+
+    if (!Helper::createBuffer(physicalDevice, this->device, bufferSizes.vertexBufferSize,
+            VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+            this->vertexBuffer, this->vertexBufferMemory)) {
+        logError("Failed to get Create Vertex Buffer");
+        return false;
+    }
+
+    Helper::copyBuffer(this->device, commandpool, graphicsQueue, stagingBuffer,this->vertexBuffer, bufferSizes.vertexBufferSize);
+
+    vkDestroyBuffer(this->device, stagingBuffer, nullptr);
+    vkFreeMemory(this->device, stagingBufferMemory, nullptr);
+    
+    // meshes (SSBOs)
+    if (!this->createSsboBufferFromModel(physicalDevice, commandpool, graphicsQueue, bufferSizes.ssboBufferSize)) {
+        logError("Failed to create SSBO from Models");
+        return false;        
+    }
+
+    // indices
+    if (bufferSizes.indexBufferSize == 0) return true;
+
+    if (this->indexBuffer != nullptr) vkDestroyBuffer(this->device, this->indexBuffer, nullptr);
+    if (this->indexBufferMemory != nullptr) vkFreeMemory(this->device, this->indexBufferMemory, nullptr);
+
+    if (!Helper::createBuffer(physicalDevice, this->device, bufferSizes.indexBufferSize,
+            VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+            stagingBuffer, stagingBufferMemory)) {
+        logError("Failed to get Create Staging Buffer");
+        return false;
+    }
+
+    data = nullptr;
+    vkMapMemory(this->device, stagingBufferMemory, 0, bufferSizes.indexBufferSize, 0, &data);
+    Helper::copyModelsContentIntoBuffer(data, INDEX, bufferSizes.indexBufferSize);
+    vkUnmapMemory(this->device, stagingBufferMemory);
+
+    if (!Helper::createBuffer(physicalDevice, this->device, bufferSizes.indexBufferSize,
+            VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+            this->indexBuffer, this->indexBufferMemory)) {
+        logError("Failed to get Create Vertex Buffer");
+        return false;
+    }
+    
+    Helper::copyBuffer(this->device, commandpool, graphicsQueue, stagingBuffer,this->indexBuffer, bufferSizes.indexBufferSize);
+
+    vkDestroyBuffer(this->device, stagingBuffer, nullptr);
+    vkFreeMemory(this->device, stagingBufferMemory, nullptr);
+    
+    return true;
+}
+
+void GraphicsPipeline::prepareModelTextures(const VkPhysicalDevice & physicalDevice, const VkCommandPool & commandpool, const VkQueue & graphicsQueue, const VkExtent2D & swapChainExtent) {
+    auto & textures = Models::INSTANCE()->getTextures();
+    
+    // put in one dummy one to satify shader if we have none...
+    if (textures.empty()) {
+        std::unique_ptr<Texture> emptyTexture = std::make_unique<Texture>(true, swapChainExtent);
+        emptyTexture->setId(0);
+        if (emptyTexture->isValid()) {
+            textures["dummy"] = std::move(emptyTexture);
+            logInfo("Added Dummy Texture");
+        }
+    }
+
+    for (auto & texture : textures) {
+        VkDeviceSize imageSize = texture.second->getSize();
+        
+        VkBuffer stagingBuffer = nullptr;
+        VkDeviceMemory stagingBufferMemory = nullptr;
+        if (!Helper::createBuffer(physicalDevice, this->device,
+            imageSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, stagingBuffer, stagingBufferMemory)) {
+                logError("Failed to Create Texture Staging Buffer");
+                return;
+        }
+
+        void* data;
+        vkMapMemory(device, stagingBufferMemory, 0, imageSize, 0, &data);
+        memcpy(data, texture.second->getPixels(), static_cast<size_t>(imageSize));
+        vkUnmapMemory(device, stagingBufferMemory);
+        
+        VkImage textureImage = nullptr;
+        VkDeviceMemory textureImageMemory = nullptr;
+        
+        if (!Helper::createImage(physicalDevice, this->device,
+            texture.second->getWidth(), texture.second->getHeight(), 
+            texture.second->getImageFormat(), 
+            VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, 
+            textureImage, textureImageMemory)) {
+                logError("Failed to Create Texture Image");
+                return;
+        }
+
+        Helper::transitionImageLayout(this->device, commandpool, graphicsQueue, textureImage, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+        Helper::copyBufferToImage(this->device, commandpool, graphicsQueue,
+            stagingBuffer, textureImage, static_cast<uint32_t>(texture.second->getWidth()), static_cast<uint32_t>(texture.second->getHeight()));
+        Helper::transitionImageLayout(this->device, commandpool, graphicsQueue, textureImage, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+
+        vkDestroyBuffer(this->device, stagingBuffer, nullptr);
+        vkFreeMemory(this->device, stagingBufferMemory, nullptr);
+        
+        if (textureImage != nullptr) texture.second->setTextureImage(textureImage);
+        if (textureImageMemory != nullptr) texture.second->setTextureImageMemory(textureImageMemory);
+        
+        
+        VkImageView textureImageView = Helper::createImageView(this->device, textureImage, texture.second->getImageFormat(), VK_IMAGE_ASPECT_COLOR_BIT);
+        if (textureImageView != nullptr) texture.second->setTextureImageView(textureImageView);
+        
+        texture.second->freeSurface();
+    }
+    
+    logInfo("Number of Textures: " + std::to_string(textures.size()));
+}
+
+
 bool GraphicsPipeline::createGraphicsPipeline(
     const size_t size, const VkPhysicalDevice & physicalDevice, const VkRenderPass & renderPass, const VkCommandPool & commandpool, const VkQueue & graphicsQueue,
     const VkExtent2D & swapChainExtent, const VkPushConstantRange & pushConstantRange, bool showWireFrame) {
     
+    if (!this->createBuffersFromModel(physicalDevice, commandpool, graphicsQueue)) {
+        logError("Failed to create Buffers from Models");        
+    }
+    
+    this->prepareModelTextures(physicalDevice, commandpool, graphicsQueue, swapChainExtent);
+
+    if (this->vertexBuffer == nullptr) return true;
+    
+    this->pushConstantRange = pushConstantRange;
     
     if (!this->createTextureSampler(physicalDevice, this->textureSampler, VK_SAMPLER_ADDRESS_MODE_REPEAT)) {
         logError("Failed to create Pipeline Texture Sampler");
         return false;        
     }
+        
+    if (!this->createUniformBuffers(physicalDevice, size)) {
+        logError("Failed to create Pipeline Uniform Buffers");
+        return false;        
+    }    
     
     if (!this->createDescriptorPool(size)) {
         logError("Failed to create Pipeline Descriptor Pool");
+        return false;
+    }
+
+    if (!this->createDescriptorSetLayout()) {
+        logError("Failed to create Pipeline Descriptor Set Layout");
         return false;
     }
 
@@ -34,27 +189,18 @@ bool GraphicsPipeline::createGraphicsPipeline(
         logError("Failed to create Pipeline Descriptor Sets");
         return false;
     }
-    
-    if (!this->createDescriptorSetLayout()) {
-        logError("Failed to create Pipeline Descriptor Set Layout");
-        return false;
-    }
 
-    const BufferSummary bufferSizes = Models::INSTANCE()->getModelsBufferSizes(true);
-    if (!this->createSsboBufferFromModel(physicalDevice, commandpool, graphicsQueue, bufferSizes.ssboBufferSize)) {
-        logError("Failed to create SSBO from Models");
-        return false;        
-    }
-    
-    if (!this->updateGraphicsPipeline(renderPass, swapChainExtent, pushConstantRange, showWireFrame)) return false;
+    if (!this->updateGraphicsPipeline(renderPass, swapChainExtent, showWireFrame)) return false;
     
     return true;
 }
 
-bool GraphicsPipeline::updateGraphicsPipeline(const VkRenderPass & renderPass, const VkExtent2D & swapChainExtent, const VkPushConstantRange & pushConstantRange, bool showWireFrame) {
+bool GraphicsPipeline::updateGraphicsPipeline(const VkRenderPass & renderPass, const VkExtent2D & swapChainExtent, bool showWireFrame) {
     if (this->device == nullptr || this->descriptorSetLayout == nullptr) return false;
         
     this->destroyPipelineObjects();
+
+    if (this->vertexBuffer == nullptr) return true;
     
     VkPipelineVertexInputStateCreateInfo vertexInputCreateInfo = {};
     vertexInputCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
@@ -142,7 +288,7 @@ bool GraphicsPipeline::updateGraphicsPipeline(const VkRenderPass & renderPass, c
     pipelineLayoutInfo.pSetLayouts = &this->descriptorSetLayout;
     pipelineLayoutInfo.setLayoutCount = 1;
     
-    if (pushConstantRange.size > 0) {
+    if (this->pushConstantRange.size > 0) {
         pipelineLayoutInfo.pushConstantRangeCount = 1;
         pipelineLayoutInfo.pPushConstantRanges = &pushConstantRange;
     }
@@ -210,6 +356,8 @@ bool GraphicsPipeline::createDescriptorPool(size_t size) {
 bool GraphicsPipeline::createDescriptorSetLayout() {
     if (this->device == nullptr) return false;
     
+    if (this->vertexBuffer == nullptr) return true;
+    
     std::vector<VkDescriptorSetLayoutBinding> layoutBindings;
 
     VkDescriptorSetLayoutBinding modelUniformLayoutBinding{};
@@ -253,7 +401,8 @@ bool GraphicsPipeline::createDescriptorSetLayout() {
 
 bool GraphicsPipeline::createSsboBufferFromModel(const VkPhysicalDevice & physicalDevice, const VkCommandPool & commandpool, const VkQueue & graphicsQueue, VkDeviceSize bufferSize, bool makeHostWritable)
 {
-    if (this->device == nullptr || bufferSize == 0) return true;
+    if (this->device == nullptr) return false;
+    if (bufferSize == 0) return true;
 
     if (this->ssboBuffer != nullptr) vkDestroyBuffer(this->device, this->ssboBuffer, nullptr);
     if (this->ssboBufferMemory != nullptr) vkFreeMemory(this->device, this->ssboBufferMemory, nullptr);
@@ -329,8 +478,26 @@ bool GraphicsPipeline::createTextureSampler(const VkPhysicalDevice & physicalDev
     return true;
 }
 
+bool GraphicsPipeline::createUniformBuffers(const VkPhysicalDevice & physicalDevice, size_t size) {
+    VkDeviceSize bufferSize = sizeof(struct ModelUniforms);
+
+    this->uniformBuffers.resize(size);
+    this->uniformBuffersMemory.resize(size);
+
+    for (size_t i = 0; i < this->uniformBuffers.size(); i++) {
+        Helper::createBuffer(physicalDevice, this->device,
+            bufferSize, 
+            VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, 
+            this->uniformBuffers[i], this->uniformBuffersMemory[i]);
+    }
+
+    return true;
+}
+
 bool GraphicsPipeline::createDescriptorSets(size_t size) {
     if (this->device == nullptr) return false;
+    
+    if (this->vertexBuffer == nullptr) return true;
     
     std::vector<VkDescriptorSetLayout> layouts(size, this->descriptorSetLayout);
     VkDescriptorSetAllocateInfo allocInfo{};
@@ -457,10 +624,10 @@ void GraphicsPipeline::destroyPipelineObjects() {
         vkDestroyPipelineLayout(this->device, this->layout, nullptr);
         this->layout = nullptr;
     }
-    
-    if (this->descriptorPool != nullptr) {
-        vkDestroyDescriptorPool(this->device, this->descriptorPool, nullptr);
-    }
+}
+
+bool GraphicsPipeline::isReady() {
+    return this->pipeline != nullptr;
 }
 
 GraphicsPipeline::~GraphicsPipeline() {
@@ -473,4 +640,12 @@ GraphicsPipeline::~GraphicsPipeline() {
     this->shaders.clear();
     
     this->destroyPipelineObjects();
+    
+    if (this->descriptorSetLayout != nullptr) {
+        vkDestroyDescriptorSetLayout(this->device, this->descriptorSetLayout, nullptr);
+    }
+
+    if (this->descriptorPool != nullptr) {
+        vkDestroyDescriptorPool(this->device, this->descriptorPool, nullptr);
+    }
 }

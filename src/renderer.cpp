@@ -49,8 +49,16 @@ bool Renderer::isReady() {
 }
 
 bool Renderer::hasAtLeastOneActivePipeline() {
-    //TODO: implement
-    return false;
+    bool isReady = false;
+    
+    for (GraphicsPipeline * pipeline : this->pipelines) {
+        if (pipeline != nullptr && pipeline->isReady()) {
+            isReady = true;
+            break;
+        }
+    }
+    
+    return isReady;
 }
 
 
@@ -372,6 +380,15 @@ void Renderer::initRenderer() {
 void Renderer::destroyRendererObjects() {
     this->destroySwapChainObjects();
     
+    for (GraphicsPipeline * pipeline : this->pipelines) {
+        if (pipeline != nullptr) {
+            delete pipeline;
+            pipeline = nullptr;
+        }
+    }
+    this->pipelines.clear();
+
+    
     for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
         if (i < this->renderFinishedSemaphores.size()) {
             if (this->renderFinishedSemaphores[i] != nullptr) {
@@ -444,18 +461,6 @@ void Renderer::destroySwapChainObjects() {
         vkResetCommandPool(this->logicalDevice, this->commandPool, VK_COMMAND_POOL_RESET_RELEASE_RESOURCES_BIT);
     }
 
-    // TODO: delegate
-    /*
-    if (this->graphicsPipeline != nullptr) {
-        vkDestroyPipeline(this->device, this->graphicsPipeline, nullptr);
-        this->graphicsPipeline = nullptr;
-    }
-    if (this->graphicsPipelineLayout != nullptr) {
-        vkDestroyPipelineLayout(this->device, this->graphicsPipelineLayout, nullptr);
-        this->graphicsPipelineLayout = nullptr;
-    }
-    */
-    
     if (this->renderPass != nullptr) {
         vkDestroyRenderPass(this->logicalDevice, this->renderPass, nullptr);
         this->renderPass = nullptr;
@@ -724,11 +729,16 @@ bool Renderer::updateRenderer() {
     if (!this->createImageViews()) return false;
     if (!this->createRenderPass()) return false;
 
-    //TODO: delegate
-    //if (!this->createGraphicsPipeline()) return;
-    
+    for (GraphicsPipeline * pipeline : this->pipelines) {
+        if (pipeline != nullptr) {
+            pipeline->updateGraphicsPipeline(this->renderPass, this->getSwapChainExtent(), this->showWireFrame);
+        }
+    }
+
     if (!this->createDepthResources()) return false;
     if (!this->createFramebuffers()) return false;
+    
+    if (!this->createCommandBuffers()) return false;
     
     return true;
 }
