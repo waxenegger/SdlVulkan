@@ -40,7 +40,7 @@ std::filesystem::path Engine::getAppPath(APP_PATHS appPath) {
 
 
 bool Engine::isReady() {
-    return this->graphics->isGraphicsActive() && this->renderer != nullptr && this->renderer->canRender();
+    return this->graphics->isGraphicsActive() && this->renderer != nullptr && this->renderer->isReady();
 }
 
 void Engine::loop() {
@@ -61,9 +61,26 @@ void Engine::loop() {
     logInfo("Ended Render Loop");
 }
 
-void Engine::loadModels() {
+void Engine::preloadModels() {
+    this->models->addModel("cyborg", Engine::getAppPath(MODELS) / "cyborg.obj");
     this->models->addModel("rock", Engine::getAppPath(MODELS) / "rock.obj");
     this->components->initWithModelIds(this->models->getModelIds());
+}
+
+void Engine::updateModels(const std::string id, const std::filesystem::path file) {
+    if (this->renderer == nullptr || !renderer->isReady()) return;
+
+    logInfo("Adding Model...");
+    
+    this->renderer->stopCommandBufferQueue();
+    
+    Models::INSTANCE()->removeDummyTexture(this->renderer->getLogicalDevice());
+
+    this->models->addModel(id, Engine::getAppPath(MODELS) / file);
+    
+    this->updateModelPipeline();
+    
+    this->renderer->updateRenderer();
 }
 
 void Engine::init() {
@@ -102,14 +119,14 @@ void Engine::createRenderer() {
 }
 
 void Engine::createModelPipeline() {
-    if (this->renderer == nullptr || !renderer->isReady()) return;
+    if (this->renderer == nullptr || !renderer->isReady()) return;    
 
     logInfo("Creating Model Pipeline...");
 
     std::unique_ptr<GraphicsPipeline> pipeline = std::make_unique<GraphicsPipeline>(this->renderer->getLogicalDevice());
 
-    pipeline->addShader(Engine::getAppPath(SHADERS) / "models-vert.spv", VK_SHADER_STAGE_VERTEX_BIT);
-    pipeline->addShader(Engine::getAppPath(SHADERS) / "models-frag.spv", VK_SHADER_STAGE_FRAGMENT_BIT);
+    pipeline->addShader((Engine::getAppPath(SHADERS) / "models-vert.spv").string(), VK_SHADER_STAGE_VERTEX_BIT);
+    pipeline->addShader((Engine::getAppPath(SHADERS) / "models-frag.spv").string(), VK_SHADER_STAGE_FRAGMENT_BIT);
 
     VkPushConstantRange pushConstantRange{};
     pushConstantRange.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
@@ -123,6 +140,27 @@ void Engine::createModelPipeline() {
         this->renderer->addPipeline(pipeline.release());
     
         logInfo("Added Model Pipeline");
+    }
+}
+
+void Engine::updateModelPipeline() {
+    if (this->renderer == nullptr || !renderer->isReady() || !renderer->hasAtLeastOneActivePipeline()) return;    
+
+    logInfo("Updating Model Pipeline...");
+
+    GraphicsPipeline * pipeline = this->renderer->getPipeline(0);
+    pipeline->destroyPipelineObjects();
+
+    VkPushConstantRange pushConstantRange{};
+    pushConstantRange.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+    pushConstantRange.offset = 0;
+    pushConstantRange.size = sizeof(struct ModelProperties);
+    
+    if (pipeline->createGraphicsPipeline(
+        this->renderer->getImageCount() , this->renderer->getPhysicalDevice(), this->renderer->getRenderPass(), this->renderer->getCommandPool(), this->renderer->getGraphicsQueue(),
+        this->renderer->getSwapChainExtent(), pushConstantRange, this->renderer->doesShowWireFrame())) {
+    
+        logInfo("Updated Model Pipeline");
     }
 }
 
@@ -162,7 +200,21 @@ void Engine::startInputCapture() {
                                 break;
                             case SDL_SCANCODE_F:
                                 this->renderer->setShowWireFrame(!this->renderer->doesShowWireFrame());
-                                break;                                
+                                break;             
+                            case SDL_SCANCODE_M:
+                            {
+                                this->updateModels("rock", Engine::getAppPath(MODELS) / "rock.obj");
+                                Component * rock = Components::INSTANCE()->addComponentFromModel("rock instance", "rock");
+                                rock->setPosition(0.0f,0.0f,-10.0f);
+                                break;
+                            }
+                            case SDL_SCANCODE_C:
+                            {
+                                this->updateModels("cyborg", Engine::getAppPath(MODELS) / "cyborg.obj");
+                                Component * c = Components::INSTANCE()->addComponentFromModel("cyborg instance", "cyborg");
+                                c->setPosition(0.0f,0.0f,-11.0f);
+                                break;
+                            }
                             case SDL_SCANCODE_F12:
                                 isFullScreen = !isFullScreen;
                                 if (isFullScreen) {

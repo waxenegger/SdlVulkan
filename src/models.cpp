@@ -856,6 +856,13 @@ void Models::setMaterialInformation(MaterialInformation & material) {
     }
 }
 
+void Models::removeDummyTexture(const VkDevice & device) {
+    std::map<std::string, std::unique_ptr<Texture>>::iterator val = this->textures.find("dummy");
+    if (val != this->textures.end()) {
+        val->second->cleanUpTexture(device);
+    }
+    this->textures.erase("dummy");
+}
 
 void Models::cleanUpTextures(const VkDevice & device) {
     logInfo("Destroying Model Textures...");

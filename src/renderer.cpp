@@ -61,6 +61,11 @@ bool Renderer::hasAtLeastOneActivePipeline() {
     return isReady;
 }
 
+GraphicsPipeline * Renderer::getPipeline(uint index) {
+    if (index >= this->pipelines.size()) return nullptr;
+    
+    return this->pipelines[index];
+}
 
 bool Renderer::canRender() {
     return this->isReady() && this->hasAtLeastOneActivePipeline() && this->swapChain != nullptr && this->swapChainImages.size() == this->imageCount && 
@@ -75,11 +80,26 @@ bool Renderer::canRender() {
 void Renderer::addPipeline(GraphicsPipeline * pipeline) {
     if (!this->isReady()) {
         logError("Render has not been properly initialized!");
-        return;   
+        return;
     }
-    
+        
     this->pipelines.push_back(pipeline);
 }
+
+void Renderer::removePipeline(const uint optIndexToRemove) {
+    if (!this->isReady()) {
+        logError("Render has not been properly initialized!");
+        return;
+    }
+        
+    if (optIndexToRemove < 0|| optIndexToRemove >= this->pipelines.size()) return;
+    
+    this->stopCommandBufferQueue();
+    vkDeviceWaitIdle(this->logicalDevice);
+
+    delete this->pipelines[optIndexToRemove];
+}
+
 
 bool Renderer::createRenderPass() {
     if (!this->isReady()) {
@@ -385,8 +405,8 @@ void Renderer::destroyRendererObjects() {
             pipeline = nullptr;
         }
     }
-    this->pipelines.clear();
-
+    pipelines.clear();
+    
     for (size_t i = 0; i < this->imageCount; i++) {
         if (i < this->renderFinishedSemaphores.size()) {
             if (this->renderFinishedSemaphores[i] != nullptr) {
@@ -455,6 +475,12 @@ void Renderer::destroySwapChainObjects() {
 
     if (this->commandPool != nullptr) {
         vkResetCommandPool(this->logicalDevice, this->commandPool, VK_COMMAND_POOL_RESET_RELEASE_RESOURCES_BIT);
+    }
+
+    for (GraphicsPipeline * pipeline : this->pipelines) {
+        if (pipeline != nullptr) {
+            pipeline->destroyPipelineObjects();
+        }
     }
 
     if (this->renderPass != nullptr) {
@@ -556,6 +582,7 @@ VkCommandBuffer Renderer::createCommandBuffer(uint16_t commandBufferIndex) {
             pipeline->draw(commandBuffer, commandBufferIndex);
         }
     }
+    
     vkCmdEndRenderPass(commandBuffer);
 
     ret = vkEndCommandBuffer(commandBuffer);
@@ -622,7 +649,7 @@ void Renderer::drawFrame() {
     while (latestCommandBuffer == nullptr) {
         std::chrono::duration<double, std::milli> fetchPeriod = std::chrono::high_resolution_clock::now() - nextBufferFetchStart;
         if (fetchPeriod.count() > 2000) {
-            std::cout << "Could not get new buffer for quite a while!" << std::endl;
+            logInfo("Could not get new buffer for quite a while!");
             break;
         }
         latestCommandBuffer = this->workerQueue.getNextCommandBuffer(imageIndex);

@@ -232,6 +232,7 @@ class Models final {
         Model * findModel(std::string id);
         static Model * createPlaneModel(std::string id, VkExtent2D extent);
         BufferSummary getModelsBufferSizes(bool printInfo = false);
+        void removeDummyTexture(const VkDevice & device);
         ~Models();
 
 };

@@ -88,7 +88,7 @@ bool GraphicsPipeline::createBuffersFromModel(const VkPhysicalDevice & physicalD
     return true;
 }
 
-void GraphicsPipeline::prepareModelTextures(const VkPhysicalDevice & physicalDevice, const VkCommandPool & commandpool, const VkQueue & graphicsQueue, const VkExtent2D & swapChainExtent) {
+void GraphicsPipeline::prepareModelTextures(const VkPhysicalDevice & physicalDevice, const VkCommandPool & commandpool, const VkQueue & graphicsQueue, const VkExtent2D & swapChainExtent) {    
     auto & textures = Models::INSTANCE()->getTextures();
     
     // put in one dummy one to satify shader if we have none...
@@ -161,8 +161,6 @@ bool GraphicsPipeline::createGraphicsPipeline(
     
     this->prepareModelTextures(physicalDevice, commandpool, graphicsQueue, swapChainExtent);
 
-    if (this->vertexBuffer == nullptr) return true;
-    
     this->pushConstantRange = pushConstantRange;
     
     if (!this->createTextureSampler(physicalDevice, this->textureSampler, VK_SAMPLER_ADDRESS_MODE_REPEAT)) {
@@ -200,19 +198,18 @@ bool GraphicsPipeline::updateGraphicsPipeline(const VkRenderPass & renderPass, c
         
     this->destroyPipelineObjects();
 
-    if (this->vertexBuffer == nullptr) return true;
-    
     VkPipelineVertexInputStateCreateInfo vertexInputCreateInfo = {};
     vertexInputCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
 
-    const VkVertexInputBindingDescription bindingDescription = ModelVertex::getBindingDescription();
-    const std::array<VkVertexInputAttributeDescription, 5> attributeDescriptions = ModelVertex::getAttributeDescriptions();
+    if (this->vertexBuffer != nullptr) {
+        const VkVertexInputBindingDescription bindingDescription = ModelVertex::getBindingDescription();
+        const std::array<VkVertexInputAttributeDescription, 5> attributeDescriptions = ModelVertex::getAttributeDescriptions();
 
-    vertexInputCreateInfo.vertexBindingDescriptionCount = 1;
-    vertexInputCreateInfo.vertexAttributeDescriptionCount = static_cast<uint32_t>(attributeDescriptions.size());
-    vertexInputCreateInfo.pVertexBindingDescriptions = &bindingDescription;
-    vertexInputCreateInfo.pVertexAttributeDescriptions = attributeDescriptions.data();
-    
+        vertexInputCreateInfo.vertexBindingDescriptionCount = 1;
+        vertexInputCreateInfo.vertexAttributeDescriptionCount = static_cast<uint32_t>(attributeDescriptions.size());
+        vertexInputCreateInfo.pVertexBindingDescriptions = &bindingDescription;
+        vertexInputCreateInfo.pVertexAttributeDescriptions = attributeDescriptions.data();
+    }    
     
     VkPipelineInputAssemblyStateCreateInfo inputAssembly{};
     inputAssembly.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
@@ -329,6 +326,11 @@ bool GraphicsPipeline::updateGraphicsPipeline(const VkRenderPass & renderPass, c
 bool GraphicsPipeline::createDescriptorPool(size_t size) {
     if (this->device == nullptr) return false;
 
+    if (this->descriptorPool != nullptr) {
+        vkDestroyDescriptorPool(this->device, this->descriptorPool, nullptr);
+        this->descriptorPool = nullptr;
+    }
+
     std::vector<VkDescriptorPoolSize> poolSizes(3);
 
     poolSizes[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
@@ -356,7 +358,10 @@ bool GraphicsPipeline::createDescriptorPool(size_t size) {
 bool GraphicsPipeline::createDescriptorSetLayout() {
     if (this->device == nullptr) return false;
     
-    if (this->vertexBuffer == nullptr) return true;
+    if (this->descriptorSetLayout != nullptr) {
+        vkDestroyDescriptorSetLayout(this->device, this->descriptorSetLayout, nullptr);
+        this->descriptorSetLayout = nullptr;
+    }
     
     std::vector<VkDescriptorSetLayoutBinding> layoutBindings;
 
@@ -451,6 +456,13 @@ bool GraphicsPipeline::createSsboBufferFromModel(const VkPhysicalDevice & physic
 }
 
 bool GraphicsPipeline::createTextureSampler(const VkPhysicalDevice & physicalDevice, VkSampler & sampler, VkSamplerAddressMode addressMode) {
+    if (this->device == nullptr) return false;
+    
+    if (this->textureSampler != nullptr) {
+        vkDestroySampler(this->device, this->textureSampler, nullptr);
+        this->textureSampler = nullptr;
+    }
+
     VkPhysicalDeviceProperties properties{};
     vkGetPhysicalDeviceProperties(physicalDevice, &properties);
 
@@ -479,6 +491,16 @@ bool GraphicsPipeline::createTextureSampler(const VkPhysicalDevice & physicalDev
 }
 
 bool GraphicsPipeline::createUniformBuffers(const VkPhysicalDevice & physicalDevice, size_t size) {
+    
+    for (size_t i = 0; i < this->uniformBuffers.size(); i++) {
+        if (this->uniformBuffers[i] != nullptr) vkDestroyBuffer(this->device, this->uniformBuffers[i], nullptr);
+    }
+    for (size_t i = 0; i < this->uniformBuffersMemory.size(); i++) {
+        if (this->uniformBuffersMemory[i] != nullptr) vkFreeMemory(this->device, this->uniformBuffersMemory[i], nullptr);
+    }
+    this->uniformBuffers.clear();
+    this->uniformBuffersMemory.clear();
+    
     VkDeviceSize bufferSize = sizeof(struct ModelUniforms);
 
     this->uniformBuffers.resize(size);
@@ -496,8 +518,6 @@ bool GraphicsPipeline::createUniformBuffers(const VkPhysicalDevice & physicalDev
 
 bool GraphicsPipeline::createDescriptorSets(size_t size) {
     if (this->device == nullptr) return false;
-    
-    if (this->vertexBuffer == nullptr) return true;
     
     std::vector<VkDescriptorSetLayout> layouts(size, this->descriptorSetLayout);
     VkDescriptorSetAllocateInfo allocInfo{};
@@ -700,14 +720,17 @@ GraphicsPipeline::~GraphicsPipeline() {
     
     if (this->textureSampler != nullptr) {
         vkDestroySampler(this->device, this->textureSampler, nullptr);
+        this->textureSampler = nullptr;
     }
     
     if (this->descriptorSetLayout != nullptr) {
         vkDestroyDescriptorSetLayout(this->device, this->descriptorSetLayout, nullptr);
+        this->descriptorSetLayout = nullptr;
     }
 
     if (this->descriptorPool != nullptr) {
         vkDestroyDescriptorPool(this->device, this->descriptorPool, nullptr);
+        this->descriptorPool = nullptr;
     }
     
     if (this->vertexBuffer != nullptr) vkDestroyBuffer(this->device, this->vertexBuffer, nullptr);

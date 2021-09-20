@@ -125,7 +125,7 @@ bool Helper::createBuffer(
 
     ret = vkAllocateMemory(logicalDevice, &allocInfo, nullptr, &bufferMemory);
     if (ret != VK_SUCCESS) {
-        logError("Failed to get Allocate Memory for Vertex Buffer!");
+        logError("Failed to Allocate Memory for Buffer!");
         return false;
     }
 

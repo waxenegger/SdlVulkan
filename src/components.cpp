@@ -102,7 +102,9 @@ std::map<std::string, std::vector<std::unique_ptr<Component>>> & Components::get
 
 void Components::initWithModelIds(std::vector<std::string> modelIds) {
     for(auto & l : modelIds) {
-        this->components[l] = std::vector<std::unique_ptr<Component>>();
+        if (this->components[l].empty()) {
+            this->components[l] = std::vector<std::unique_ptr<Component>>();
+        }
     }
 }
 

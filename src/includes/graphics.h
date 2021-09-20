@@ -143,7 +143,6 @@ class GraphicsPipeline final {
         bool createUniformBuffers(const VkPhysicalDevice & physicalDevice, size_t size);
         bool createBuffersFromModel(const VkPhysicalDevice & physicalDevice, const VkCommandPool & commandpool, const VkQueue & graphicsQueue);
         void prepareModelTextures(const VkPhysicalDevice & physicalDevice, const VkCommandPool & commandpool, const VkQueue & graphicsQueue, const VkExtent2D & swapChainExtent);
-        void destroyPipelineObjects();
 
     public:
         GraphicsPipeline(const GraphicsPipeline&) = delete;
@@ -162,6 +161,7 @@ class GraphicsPipeline final {
             const VkExtent2D & swapChainExtent, const VkPushConstantRange & pushConstantRange, bool showWireFrame = false);
         bool updateGraphicsPipeline(const VkRenderPass & renderPass, const VkExtent2D & swapChainExtent, bool showWireFrame = false);
         void updateUniformBuffers(const ModelUniforms & modelUniforms, const uint32_t & currentImage);
+        void destroyPipelineObjects();
         
         void draw(const VkCommandBuffer & commandBuffer, const uint16_t commandBufferIndex);
         void drawModels(const VkCommandBuffer & commandBuffer, const bool useIndices);
@@ -225,8 +225,6 @@ class Renderer final {
         bool createSyncObjects();
         
         bool createCommandBuffers();
-        void startCommandBufferQueue();
-        void stopCommandBufferQueue();
         void destroyCommandBuffer(VkCommandBuffer commandBuffer);
         VkCommandBuffer createCommandBuffer(uint16_t commandBufferIndex);
         
@@ -234,7 +232,6 @@ class Renderer final {
         
         void destroySwapChainObjects();        
         void destroyRendererObjects();
-
     public:
         Renderer(const Renderer&) = delete;
         Renderer& operator=(const Renderer &) = delete;
@@ -243,6 +240,10 @@ class Renderer final {
         Renderer(const GraphicsContext * graphicsContext, const VkPhysicalDevice & physicalDevice, const int & queueIndex);
         
         void addPipeline(GraphicsPipeline * pipeline);
+        void removePipeline(const uint optIndexToRemove);
+
+        void startCommandBufferQueue();
+        void stopCommandBufferQueue();
         
         bool isReady();
         bool hasAtLeastOneActivePipeline();
@@ -265,6 +266,8 @@ class Renderer final {
         VkCommandPool getCommandPool();
         VkQueue getGraphicsQueue();
 
+        GraphicsPipeline * getPipeline(uint index);
+        
         void drawFrame();
         
         ~Renderer();
@@ -309,6 +312,7 @@ class Engine final {
 
         void createRenderer();
         void createModelPipeline();
+        void updateModelPipeline();
         
     public:
         Engine(const Helper&) = delete;
@@ -323,7 +327,8 @@ class Engine final {
         
         void startInputCapture();
 
-        void loadModels();
+        void preloadModels();
+        void updateModels(const std::string id, const std::filesystem::path file);
         
         Engine(const std::string & appName, const std::string root = "", const uint32_t version = VULKAN_VERSION);
         ~Engine();
