@@ -93,15 +93,12 @@ void GraphicsPipeline::prepareModelTextures(const VkPhysicalDevice & physicalDev
     
     // put in one dummy one to satify shader if we have none...
     if (textures.empty()) {
-        std::unique_ptr<Texture> emptyTexture = std::make_unique<Texture>(true, swapChainExtent);
-        emptyTexture->setId(0);
-        if (emptyTexture->isValid()) {
-            textures["dummy"] = std::move(emptyTexture);
-            logInfo("Added Dummy Texture");
-        }
+        Models::INSTANCE()->addDummyTexture(swapChainExtent);
     }
 
     for (auto & texture : textures) {
+        if (!texture.second->isValid() || texture.second->getTextureImageView() != nullptr) continue;
+        
         VkDeviceSize imageSize = texture.second->getSize();
         
         VkBuffer stagingBuffer = nullptr;
@@ -156,7 +153,7 @@ bool GraphicsPipeline::createGraphicsPipeline(
     const VkExtent2D & swapChainExtent, const VkPushConstantRange & pushConstantRange, bool showWireFrame) {
     
     if (!this->createBuffersFromModel(physicalDevice, commandpool, graphicsQueue)) {
-        logError("Failed to create Buffers from Models");        
+//         logError("Failed to create Buffers from Models");        
     }
     
     this->prepareModelTextures(physicalDevice, commandpool, graphicsQueue, swapChainExtent);
@@ -197,6 +194,12 @@ bool GraphicsPipeline::updateGraphicsPipeline(const VkRenderPass & renderPass, c
     if (this->device == nullptr || this->descriptorSetLayout == nullptr) return false;
         
     this->destroyPipelineObjects();
+    
+    const std::vector<VkPipelineShaderStageCreateInfo> shaderStageCreateInfos = this->getShaderStageCreateInfos();
+    if (this->getShaderStageCreateInfos().size() < 2) {
+        logError("Pipeline is missing required shaders");
+        return false;
+    }
 
     VkPipelineVertexInputStateCreateInfo vertexInputCreateInfo = {};
     vertexInputCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
@@ -295,8 +298,6 @@ bool GraphicsPipeline::updateGraphicsPipeline(const VkRenderPass & renderPass, c
         logError("Failed to Create Pipeline Layout!");
         return false;
     }
-
-    const std::vector<VkPipelineShaderStageCreateInfo> shaderStageCreateInfos = this->getShaderStageCreateInfos();
     
     VkGraphicsPipelineCreateInfo pipelineInfo{};
     pipelineInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;

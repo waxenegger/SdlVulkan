@@ -86,6 +86,12 @@ Component * Components::addComponent(Component * component) {
     
     std::map<std::string, std::vector<std::unique_ptr<Component>>>::iterator it = this->components.find(modelId);
     if (it != this->components.end()) {
+        for(auto & c : it->second) {
+            if (c->getId() == component->getId()) {
+                logError("Component with same id exists already");
+                return nullptr;
+            }
+        }
         it->second.push_back(std::move(componentPtr));
     } else {
         std::vector<std::unique_ptr<Component>> allComponentsPerModel;
@@ -94,6 +100,17 @@ Component * Components::addComponent(Component * component) {
     }
     
     return component;
+}
+
+Component * Components::findComponent(const std::string id, const std::string modelId) {
+    std::map<std::string, std::vector<std::unique_ptr<Component>>>::iterator it = this->components.find(modelId);
+    if (it != this->components.end()) {
+        for(auto & c : it->second) {
+            if (c->getId() == id) return c.get();
+        }
+    }
+    
+    return nullptr;
 }
 
 std::map<std::string, std::vector<std::unique_ptr<Component>>> & Components::getComponents() {

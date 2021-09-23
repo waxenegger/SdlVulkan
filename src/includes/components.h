@@ -46,6 +46,7 @@ class Components final {
         std::vector<Component *> getAllComponentsForModel(std::string model);
         void initWithModelIds(std::vector< std::string > modelIds);
         std::map<std::string, std::vector<std::unique_ptr<Component>>> & getComponents();
+        Component * findComponent(const std::string id, const std::string modelId);
         ~Components();
 };
 

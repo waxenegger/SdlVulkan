@@ -40,7 +40,7 @@ std::filesystem::path Engine::getAppPath(APP_PATHS appPath) {
 
 
 bool Engine::isReady() {
-    return this->graphics->isGraphicsActive() && this->renderer != nullptr && this->renderer->isReady();
+    return this->graphics->isGraphicsActive() && this->renderer != nullptr && this->renderer->canRender();
 }
 
 void Engine::loop() {
@@ -62,8 +62,10 @@ void Engine::loop() {
 }
 
 void Engine::preloadModels() {
-    this->models->addModel("cyborg", Engine::getAppPath(MODELS) / "cyborg.obj");
+    // TODO: read from location
     this->models->addModel("rock", Engine::getAppPath(MODELS) / "rock.obj");
+    this->models->addModel("cyborg", Engine::getAppPath(MODELS) / "cyborg.obj");
+    
     this->components->initWithModelIds(this->models->getModelIds());
 }
 
@@ -75,8 +77,11 @@ void Engine::updateModels(const std::string id, const std::filesystem::path file
     this->renderer->stopCommandBufferQueue();
     
     Models::INSTANCE()->removeDummyTexture(this->renderer->getLogicalDevice());
-
-    this->models->addModel(id, Engine::getAppPath(MODELS) / file);
+    if (!this->models->addModel(id, file)) {
+        Models::INSTANCE()->addDummyTexture(this->renderer->getSwapChainExtent());
+        this->renderer->startCommandBufferQueue();
+        return;
+    }
     
     this->updateModelPipeline();
     
@@ -144,7 +149,7 @@ void Engine::createModelPipeline() {
 }
 
 void Engine::updateModelPipeline() {
-    if (this->renderer == nullptr || !renderer->isReady() || !renderer->hasAtLeastOneActivePipeline()) return;    
+    if (this->renderer == nullptr || !renderer->isReady() || !renderer->canRender()) return;    
 
     logInfo("Updating Model Pipeline...");
 
@@ -165,8 +170,8 @@ void Engine::updateModelPipeline() {
 }
 
 void Engine::startInputCapture() {
+    
     std::thread inputThread([this]() {
-        
         SDL_Event e;
         bool isFullScreen = false;
         bool needsRestoreAfterFullScreen = false;
@@ -198,22 +203,9 @@ void Engine::startInputCapture() {
                             case SDL_SCANCODE_D:
                                 this->camera->move(Camera::KeyPress::RIGHT, true, walkingSpeed);
                                 break;
-                            case SDL_SCANCODE_F:
+                            case SDL_SCANCODE_F:{
                                 this->renderer->setShowWireFrame(!this->renderer->doesShowWireFrame());
-                                break;             
-                            case SDL_SCANCODE_M:
-                            {
-                                this->updateModels("rock", Engine::getAppPath(MODELS) / "rock.obj");
-                                Component * rock = Components::INSTANCE()->addComponentFromModel("rock instance", "rock");
-                                rock->setPosition(0.0f,0.0f,-10.0f);
-                                break;
-                            }
-                            case SDL_SCANCODE_C:
-                            {
-                                this->updateModels("cyborg", Engine::getAppPath(MODELS) / "cyborg.obj");
-                                Component * c = Components::INSTANCE()->addComponentFromModel("cyborg instance", "cyborg");
-                                c->setPosition(0.0f,0.0f,-11.0f);
-                                break;
+                                break;           
                             }
                             case SDL_SCANCODE_F12:
                                 isFullScreen = !isFullScreen;

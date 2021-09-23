@@ -595,18 +595,28 @@ Models * Models::INSTANCE() {
     return Models::instance;
 }
 
-void Models::addModel(const std::string id, const  std::filesystem::path file)
+bool Models::addModel(const std::string id, const  std::filesystem::path file)
 {
+    const Model * existingModel = this->findModel(id);
+    if (existingModel != nullptr)  {
+        logError("Model cannot be added. Same id exists already!");
+        return false;
+    }
+    
     std::unique_ptr<Model> model = std::make_unique<Model>(id, file);
-    if (!model->hasBeenLoaded()) return;
+    if (!model->hasBeenLoaded()) {
+        logError("Model could not be loaded!");
+        return false;
+    }
 
     auto & meshes = model->getMeshes();
     for (Mesh & m : meshes) {
         this->processTextures(m);
-        TextureInformation info =  m.getTextureInformation();
     }
     
     this->models.push_back(std::move(model));
+    
+    return true;
 }
 
 void Models::addTextModel(std::string id, std::string font, std::string text, uint16_t size) {
@@ -853,6 +863,15 @@ std::vector<std::string>  Models::getModelIds() {
 void Models::setMaterialInformation(MaterialInformation & material) {
     for (auto & model : this->models) {
         model->setMaterialInformation(material);
+    }
+}
+
+void Models::addDummyTexture(const VkExtent2D & swapChainExtent) {
+    std::unique_ptr<Texture> emptyTexture = std::make_unique<Texture>(true, swapChainExtent);
+    emptyTexture->setId(0);
+    if (emptyTexture->isValid()) {
+        textures["dummy"] = std::move(emptyTexture);
+        logInfo("Added Dummy Texture");
     }
 }
 

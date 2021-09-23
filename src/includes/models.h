@@ -215,14 +215,17 @@ class Models final {
 
     public:
         static Models * INSTANCE();
-        void addModel(const std::string id, const std::filesystem::path file);
+        
+        bool addModel(const std::string id, const std::filesystem::path file);
         void addTextModel(std::string id, std::string font, std::string text, uint16_t size);
         void clear();
         void setMaterialInformation(MaterialInformation & material);
+        
         const static std::string AMBIENT_TEXTURE;
         const static std::string DIFFUSE_TEXTURE;
         const static std::string SPECULAR_TEXTURE;
         const static std::string TEXTURE_NORMALS;
+        
         void processTextures(Mesh & mesh);
         std::map<std::string, std::unique_ptr<Texture>> &  getTextures();
         std::vector<std::string> getModelIds();
@@ -232,7 +235,10 @@ class Models final {
         Model * findModel(std::string id);
         static Model * createPlaneModel(std::string id, VkExtent2D extent);
         BufferSummary getModelsBufferSizes(bool printInfo = false);
+        
         void removeDummyTexture(const VkDevice & device);
+        void addDummyTexture(const VkExtent2D & swapChainExtent);
+        
         ~Models();
 
 };
