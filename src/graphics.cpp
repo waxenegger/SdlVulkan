@@ -224,7 +224,9 @@ void GraphicsContext::queryPhysicalDevices() {
 const std::tuple<VkPhysicalDevice, int> GraphicsContext::pickBestPhysicalDeviceAndQueueIndex() {
     std::tuple<VkPhysicalDevice, int> choice = std::make_tuple(nullptr, -1);
 
-    if (this->physicalDevices.empty()) return choice;
+    if (this->physicalDevices.empty()) {
+        return choice;
+    }
 
     int highestScore = 0;
     int i=0;

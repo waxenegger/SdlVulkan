@@ -341,7 +341,7 @@ extern DECLSPEC SDL_bool SDLCALL SDL_AndroidRequestPermission(const char *permis
  */
 extern DECLSPEC int SDLCALL SDL_AndroidShowToast(const char* message, int duration, int gravity, int xoffset, int yoffset);
 
-extern DECLSPEC const char * SDLCALL SDL_AndroidGetAssetContent(const char * filename);
+extern DECLSPEC const char * SDLCALL SDL_AndroidGetAssetContent(const char * filename, unsigned long * length);
 
 #endif /* __ANDROID__ */
 

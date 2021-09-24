@@ -43,6 +43,25 @@ bool Shader::isValid() const {
 }
 
 bool Shader::readFile(const std::string & filename, std::vector<char> & buffer) {
+
+#ifdef __ANDROID__
+        unsigned long length = 0;
+        const char * res = SDL_AndroidGetAssetContent(filename.c_str(), &length);
+
+        if (length == 0) {
+            logError("Failed To Read Shader File Or Shader File is empty " + filename);
+            free((void *) res);
+            return false;
+        }
+
+        for (int i=0;i<length;i++) {
+            buffer.push_back(res[i]);
+        }
+
+        free((void *) res);
+#endif
+
+#ifndef __ANDROID__
     std::ifstream file(filename, std::ios::ate | std::ios::binary);
 
     if (!file.is_open()) {
@@ -57,6 +76,8 @@ bool Shader::readFile(const std::string & filename, std::vector<char> & buffer) 
     file.read(buffer.data(), fileSize);
 
     file.close();
+#endif
+
 
     return true;
 }

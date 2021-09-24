@@ -1892,7 +1892,7 @@ int Android_JNI_FileOpen(SDL_RWops *ctx,
         return -1;
     }
 
-    asset = AAssetManager_open(asset_manager, fileName, AASSET_MODE_UNKNOWN);
+    asset = AAssetManager_open(asset_manager, fileName, AASSET_MODE_BUFFER);
     if (asset == NULL) {
         return -1;
     }
@@ -2641,17 +2641,19 @@ Android_JNI_OpenURL(const char *url)
     return ret;
 }
 
-const char * SDL_AndroidGetAssetContent(const char * fileName)
+const char * SDL_AndroidGetAssetContent(const char * fileName, unsigned long * length)
 {
     SDL_RWops ctx;
+    *length = 0;
     Android_JNI_FileOpen(&ctx, fileName, "r");
 
     if (ctx.hidden.androidio.asset != NULL) {
-        const Sint64 length = AAsset_getLength64(ctx.hidden.androidio.asset);
-        char * content = malloc(length);
-        Android_JNI_FileRead(&ctx, content, length, 1);
+        *length = AAsset_getLength64(ctx.hidden.androidio.asset);
+        const char * content = (const char *) AAsset_getBuffer(ctx.hidden.androidio.asset);
+        if (content == NULL) return "";
+
         Android_JNI_FileClose(&ctx);
-        return content;
+        return strdup(content);
     } else return "";
 }
 

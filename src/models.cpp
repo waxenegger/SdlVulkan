@@ -397,8 +397,10 @@ Model::Model(const std::string id, const  std::filesystem::path file) : Model(id
     Assimp::Importer importer;
 
     #ifdef __ANDROID__
-        const char * res = SDL_AndroidGetAssetContent(file.string().c_str());
-        const aiScene *scene = importer.ReadFileFromMemory(res, strlen(res),
+        unsigned long length = 0;
+        const char * res = SDL_AndroidGetAssetContent(file.string().c_str(), &length);
+
+        const aiScene *scene = importer.ReadFileFromMemory(res, length,
             aiProcess_Triangulate | aiProcess_GenBoundingBoxes | aiProcess_CalcTangentSpace | aiProcess_FlipUVs | aiProcess_GenSmoothNormals,
             nullptr);
         free((void *) res);
