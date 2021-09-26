@@ -1,0 +1,12 @@
+adb push vkal_config.txt /data/local/tmp
+adb shell run-as sdl.vulkan cp /data/local/tmp/vkal_config.txt .
+
+adb push libVkLayer_adreno.so /data/local/tmp
+adb shell run-as sdl.vulkan cp /data/local/tmp/libVkLayer_adreno.so .
+
+
+// optional
+adb shell settings put global enable_gpu_debug_layers 1
+adb shell settings put global gpu_debug_app sdl.vulkan
+adb shell settings put global gpu_debug_layers VK_LAYER_ADRENO_debug
+

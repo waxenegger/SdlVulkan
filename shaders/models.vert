@@ -45,7 +45,7 @@ layout(location = 5) flat out MeshProperties meshProperties;
 void main() {
     MeshProperties meshProps = meshPropertiesSSBO.props[gl_InstanceIndex];
 
-    vec4 pos = modelProperties.matrix * vec4(inPosition, 1.0);
+    vec4 pos = modelProperties.matrix * vec4(inPosition, 1.0f);
 
     gl_Position = modelUniforms.proj * modelUniforms.view * pos;
     fragPosition = vec3(pos);
@@ -67,8 +67,8 @@ void main() {
         if (dot(cross(N, T), B) < 0.0f) T *= -1.0f;
         mat3 TBN = transpose(mat3(T, cross(N, T), N));
 
-        pos = vec4(TBN * vec3(pos), 1.0);        
-        eye = vec4(TBN * vec3(eye), 1.0);
-        light = vec4(TBN * vec3(light), 1.0);	
+        pos = vec4(TBN * vec3(pos), 1.0f);        
+        eye = vec4(TBN * vec3(eye), 1.0f);
+        light = vec4(TBN * vec3(light), 1.0f);	
     }
 }

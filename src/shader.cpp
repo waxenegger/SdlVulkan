@@ -20,6 +20,10 @@ Shader::~Shader() {
     }
 }
 
+std::string Shader::getFileName() const {
+    return this->filename;
+}
+
 VkShaderModule Shader::createShaderModule(const std::vector<char> & code) {
     VkShaderModuleCreateInfo createInfo {};
     createInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
