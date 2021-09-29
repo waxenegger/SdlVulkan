@@ -15,7 +15,7 @@ bool ModelsPipeline::createBuffersFromModel(const VkPhysicalDevice & physicalDev
     if (!Helper::createBuffer(physicalDevice, this->device, bufferSizes.vertexBufferSize,
             VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
             stagingBuffer, stagingBufferMemory)) {
-        logError("Failed to get Create Staging Buffer");
+        logError("Failed to get Create Models Pipeline Staging Buffer");
         return false;
     }
 
@@ -27,7 +27,7 @@ bool ModelsPipeline::createBuffersFromModel(const VkPhysicalDevice & physicalDev
     if (!Helper::createBuffer(physicalDevice, this->device, bufferSizes.vertexBufferSize,
             VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
             this->vertexBuffer, this->vertexBufferMemory)) {
-        logError("Failed to get Create Vertex Buffer");
+        logError("Failed to get Models Pipeline Create Vertex Buffer");
         return false;
     }
 
@@ -38,7 +38,7 @@ bool ModelsPipeline::createBuffersFromModel(const VkPhysicalDevice & physicalDev
     
     // meshes (SSBOs)
     if (!this->createSsboBufferFromModel(physicalDevice, commandpool, graphicsQueue, bufferSizes.ssboBufferSize)) {
-        logError("Failed to create SSBO from Models");
+        logError("Failed to create Models Pipeline SSBO");
         return false;        
     }
 
@@ -51,7 +51,7 @@ bool ModelsPipeline::createBuffersFromModel(const VkPhysicalDevice & physicalDev
     if (!Helper::createBuffer(physicalDevice, this->device, bufferSizes.indexBufferSize,
             VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
             stagingBuffer, stagingBufferMemory)) {
-        logError("Failed to get Create Staging Buffer");
+        logError("Failed to get Create Models Pipeline Staging Buffer");
         return false;
     }
 
@@ -63,7 +63,7 @@ bool ModelsPipeline::createBuffersFromModel(const VkPhysicalDevice & physicalDev
     if (!Helper::createBuffer(physicalDevice, this->device, bufferSizes.indexBufferSize,
             VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
             this->indexBuffer, this->indexBufferMemory)) {
-        logError("Failed to get Create Vertex Buffer");
+        logError("Failed to get Create Models Pipeline Vertex Buffer");
         return false;
     }
     
@@ -92,7 +92,7 @@ void ModelsPipeline::prepareModelTextures(const VkPhysicalDevice & physicalDevic
         VkDeviceMemory stagingBufferMemory = nullptr;
         if (!Helper::createBuffer(physicalDevice, this->device,
             imageSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, stagingBuffer, stagingBufferMemory)) {
-                logError("Failed to Create Texture Staging Buffer");
+                logError("Failed to Create Models Pipeline Texture Staging Buffer");
                 return;
         }
 
@@ -109,7 +109,7 @@ void ModelsPipeline::prepareModelTextures(const VkPhysicalDevice & physicalDevic
             texture.second->getImageFormat(), 
             VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, 
             textureImage, textureImageMemory)) {
-                logError("Failed to Create Texture Image");
+                logError("Failed to Create Models Pipeline Texture Image");
                 return;
         }
 
@@ -131,7 +131,7 @@ void ModelsPipeline::prepareModelTextures(const VkPhysicalDevice & physicalDevic
         texture.second->freeSurface();
     }
     
-    logInfo("Number of Textures: " + std::to_string(textures.size()));
+    logInfo("Number of Model Textures: " + std::to_string(textures.size()));
 }
 
 bool ModelsPipeline::createGraphicsPipeline(
@@ -147,27 +147,27 @@ bool ModelsPipeline::createGraphicsPipeline(
     this->pushConstantRange = pushConstantRange;
     
     if (!this->createTextureSampler(physicalDevice, this->textureSampler, VK_SAMPLER_ADDRESS_MODE_REPEAT)) {
-        logError("Failed to create Pipeline Texture Sampler");
+        logError("Failed to create Models Pipeline Texture Sampler");
         return false;        
     }
         
     if (!this->createUniformBuffers(physicalDevice, size)) {
-        logError("Failed to create Pipeline Uniform Buffers");
+        logError("Failed to create Models Pipeline Uniform Buffers");
         return false;        
     }    
     
     if (!this->createDescriptorPool(size)) {
-        logError("Failed to create Pipeline Descriptor Pool");
+        logError("Failed to create Models Pipeline Descriptor Pool");
         return false;
     }
 
     if (!this->createDescriptorSetLayout()) {
-        logError("Failed to create Pipeline Descriptor Set Layout");
+        logError("Failed to create Models Pipeline Descriptor Set Layout");
         return false;
     }
 
     if (!this->createDescriptorSets(size)) {
-        logError("Failed to create Pipeline Descriptor Sets");
+        logError("Failed to create Models Pipeline Descriptor Sets");
         return false;
     }
 
@@ -183,7 +183,7 @@ bool ModelsPipeline::updateGraphicsPipeline(const VkRenderPass & renderPass, con
     
     const std::vector<VkPipelineShaderStageCreateInfo> shaderStageCreateInfos = this->getShaderStageCreateInfos();
     if (this->getShaderStageCreateInfos().size() < 2) {
-        logError("Pipeline is missing required shaders");
+        logError("Models Pipeline is missing required shaders");
         return false;
     }
 
@@ -281,7 +281,7 @@ bool ModelsPipeline::updateGraphicsPipeline(const VkRenderPass & renderPass, con
     
     VkResult ret = vkCreatePipelineLayout(this->device, &pipelineLayoutInfo, nullptr, &this->layout);
     if (ret != VK_SUCCESS) {
-        logError("Failed to Create Pipeline Layout!");
+        logError("Failed to Create Models Pipeline Layout!");
         return false;
     }
     
@@ -303,7 +303,7 @@ bool ModelsPipeline::updateGraphicsPipeline(const VkRenderPass & renderPass, con
 
     ret = vkCreateGraphicsPipelines(this->device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &this->pipeline);
     if (ret != VK_SUCCESS) {
-        logError("Failed to Create Graphics Pipeline!");
+        logError("Failed to Create Models Pipeline!");
         return false;
     }
     
@@ -396,7 +396,7 @@ bool ModelsPipeline::createDescriptorPool(size_t size) {
 
     VkResult ret = vkCreateDescriptorPool(this->device, &poolInfo, nullptr, &this->descriptorPool);
     if (ret != VK_SUCCESS) {
-       logError("Failed to Create Descriptor Pool!");
+       logError("Failed to Create Models Pipeline Descriptor Pool!");
        return false;
     }
     
@@ -445,7 +445,7 @@ bool ModelsPipeline::createDescriptorSetLayout() {
 
     VkResult ret = vkCreateDescriptorSetLayout(this->device, &layoutInfo, nullptr, &this->descriptorSetLayout);
     if (ret != VK_SUCCESS) {
-        logError("Failed to Create Descriptor Set Layout!");
+        logError("Failed to Create Models Pipeline Descriptor Set Layout!");
         return false;
     }
     
@@ -466,7 +466,7 @@ bool ModelsPipeline::createSsboBufferFromModel(const VkPhysicalDevice & physical
         if (!Helper::createBuffer(physicalDevice, this->device, bufferSize,
                 VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
                 stagingBuffer, stagingBufferMemory)) {
-            logError("Failed to get Create Staging Buffer");
+            logError("Failed to get Create Models Pipeline Staging Buffer");
             return false;
         }
 
@@ -478,7 +478,7 @@ bool ModelsPipeline::createSsboBufferFromModel(const VkPhysicalDevice & physical
         if (!Helper::createBuffer(physicalDevice, this->device, bufferSize,
                 VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
                 this->ssboBuffer, this->ssboBufferMemory)) {
-            logError("Failed to get Create SSBO Buffer");
+            logError("Failed to get Create Models Pipeline SSBO Buffer");
             return false;
         }
 
@@ -490,7 +490,7 @@ bool ModelsPipeline::createSsboBufferFromModel(const VkPhysicalDevice & physical
         if (!Helper::createBuffer(physicalDevice, this->device, bufferSize,
                 VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
                 this->ssboBuffer, this->ssboBufferMemory)) {
-            logError("Failed to get Create Vertex Buffer");
+            logError("Failed to get Create Models Pipeline Vertex Buffer");
             return false;
         }
 
@@ -516,7 +516,7 @@ bool ModelsPipeline::createDescriptorSets(size_t size) {
     this->descriptorSets.resize(size);
     VkResult ret = vkAllocateDescriptorSets(this->device, &allocInfo, this->descriptorSets.data());
     if (ret != VK_SUCCESS) {
-        logError("Failed to Allocate Descriptor Sets!");
+        logError("Failed to Allocate Models Pipeline Descriptor Sets!");
         return false;
     }
 

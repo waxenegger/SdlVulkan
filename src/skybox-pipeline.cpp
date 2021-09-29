@@ -9,32 +9,32 @@ bool SkyboxPipeline::createGraphicsPipeline(
     this->pushConstantRange = pushConstantRange;
 
     if (!this->createTextureSampler(physicalDevice, this->textureSampler, VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE)) {
-        logError("Failed to create Pipeline Texture Sampler");
+        logError("Failed to create Skybox Pipeline Texture Sampler");
         return false;        
     }
     
     if (!this->createSkybox(physicalDevice, commandpool, graphicsQueue)) {
-        logError("Failed to create Pipeline Texture Sampler");
+        logError("Failed to create Skybox Pipeline Texture Sampler");
         return false;        
     }
 
     if (!this->createUniformBuffers(physicalDevice, size)) {
-        logError("Failed to create Pipeline Uniform Buffers");
+        logError("Failed to create Skybox Pipeline Uniform Buffers");
         return false;        
     }    
     
     if (!this->createDescriptorPool(size)) {
-        logError("Failed to create Pipeline Descriptor Pool");
+        logError("Failed to create Skybox Pipeline Descriptor Pool");
         return false;
     }
 
     if (!this->createDescriptorSetLayout()) {
-        logError("Failed to create Pipeline Descriptor Set Layout");
+        logError("Failed to create Skybox Pipeline Descriptor Set Layout");
         return false;
     }
 
     if (!this->createDescriptorSets(size)) {
-        logError("Failed to create Pipeline Descriptor Sets");
+        logError("Failed to create Skybox Pipeline Descriptor Sets");
         return false;
     }
 
@@ -50,7 +50,7 @@ bool SkyboxPipeline::updateGraphicsPipeline(const VkRenderPass & renderPass, con
     
     const std::vector<VkPipelineShaderStageCreateInfo> shaderStageCreateInfos = this->getShaderStageCreateInfos();
     if (this->getShaderStageCreateInfos().size() < 2) {
-        logError("Pipeline is missing required shaders");
+        logError("Skybox Pipeline is missing required shaders");
         return false;
     }
     
@@ -139,7 +139,7 @@ bool SkyboxPipeline::updateGraphicsPipeline(const VkRenderPass & renderPass, con
 
     VkResult ret = vkCreatePipelineLayout(this->device, &pipelineLayoutInfo, nullptr, &this->layout);
     if (ret != VK_SUCCESS) {
-        logError("Failed to Create Pipeline Layout!");
+        logError("Failed to Create Skybox Pipeline Layout!");
         return false;
     }  
     
@@ -161,7 +161,7 @@ bool SkyboxPipeline::updateGraphicsPipeline(const VkRenderPass & renderPass, con
 
     ret = vkCreateGraphicsPipelines(this->device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &this->pipeline);
     if (ret != VK_SUCCESS) {
-        logError("Failed to Create Graphics Pipeline!");
+        logError("Failed to Create Skybox Pipeline!");
         return false;
     }
 
@@ -191,7 +191,7 @@ bool SkyboxPipeline::createDescriptorPool(size_t size) {
 
     VkResult ret = vkCreateDescriptorPool(this->device, &poolInfo, nullptr, &this->descriptorPool);
     if (ret != VK_SUCCESS) {
-       logError("Failed to Create Skybox Descriptor Pool!");
+       logError("Failed to Create Skybox Pipeline Descriptor Pool!");
        return false;
     }
     
@@ -231,7 +231,7 @@ bool SkyboxPipeline::createDescriptorSetLayout() {
 
     VkResult ret = vkCreateDescriptorSetLayout(this->device, &layoutInfo, nullptr, &this->descriptorSetLayout);
     if (ret != VK_SUCCESS) {
-        logError("Failed to Create Skybox Descriptor Set Layout!");
+        logError("Failed to Create Skybox Pipeline Descriptor Set Layout!");
         return false;
     }
     
@@ -252,7 +252,7 @@ bool SkyboxPipeline::createDescriptorSets(size_t size) {
     this->descriptorSets.resize(size);
     VkResult ret = vkAllocateDescriptorSets(this->device, &allocInfo, this->descriptorSets.data());
     if (ret != VK_SUCCESS) {
-        logError("Failed to Allocate Skybox Descriptor Sets!");
+        logError("Failed to Allocate Skybox Pipeline Descriptor Sets!");
         return false;
     }
 
@@ -315,7 +315,7 @@ bool SkyboxPipeline::createSkybox(const VkPhysicalDevice & physicalDevice, const
     VkDeviceMemory stagingBufferMemory;
     if (!Helper::createBuffer(physicalDevice, this->device, bufferSize,
         VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, stagingBuffer, stagingBufferMemory)) {
-            logError("Failed to get Create Skybox Staging Buffer");
+            logError("Failed to get Create Skybox Pipeline Staging Buffer");
             return false;
     }
 
@@ -326,7 +326,7 @@ bool SkyboxPipeline::createSkybox(const VkPhysicalDevice & physicalDevice, const
 
     if (!Helper::createBuffer(physicalDevice, this->device, bufferSize,
             VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, this->vertexBuffer, this->vertexBufferMemory)) {
-        logError("Failed to get Skybox Vertex Buffer");
+        logError("Failed to get Skybox Pipeline Vertex Buffer");
         return false;
     }
 
@@ -341,7 +341,7 @@ bool SkyboxPipeline::createSkybox(const VkPhysicalDevice & physicalDevice, const
     
     if (!Helper::createBuffer(physicalDevice, this->device, skyboxCubeSize,
             VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, stagingBuffer, stagingBufferMemory)) {
-        logError("Failed to get Create Vertex Buffer");
+        logError("Failed to get Create Skybox Pipeline Vertex Buffer");
         return false;
     }
 
@@ -359,7 +359,7 @@ bool SkyboxPipeline::createSkybox(const VkPhysicalDevice & physicalDevice, const
         skyboxCubeTextures[0]->getImageFormat(), 
         VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, 
         this->cubeImage, this->cubeImageMemory, skyboxCubeTextures.size())) {
-            logError("Failed to Create Skybox Image");
+            logError("Failed to Create Skybox Images");
             return false;
     }
 
