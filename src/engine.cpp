@@ -28,6 +28,8 @@ std::filesystem::path Engine::getAppPath(APP_PATHS appPath) {
             return Engine::base / "shaders";
         case MODELS:
             return Engine::base / "models";
+        case SKYBOX:
+            return Engine::base / "skybox";
         case FONTS:
             return Engine::base / "fonts";
         case MAPS:
@@ -95,6 +97,8 @@ void Engine::init() {
     if (this->renderer == nullptr) return;
 
     renderer->initRenderer();    
+    
+    this->createSkyboxPipeline();
     this->createModelPipeline();
     
     VkExtent2D windowSize = this->renderer->getSwapChainExtent();
@@ -128,7 +132,7 @@ void Engine::createModelPipeline() {
 
     logInfo("Creating Model Pipeline...");
 
-    std::unique_ptr<GraphicsPipeline> pipeline = std::make_unique<GraphicsPipeline>(this->renderer->getLogicalDevice());
+    std::unique_ptr<GraphicsPipeline> pipeline = std::make_unique<ModelsPipeline>(this->renderer->getLogicalDevice());
 
     pipeline->addShader((Engine::getAppPath(SHADERS) / "models-vert.spv").string(), VK_SHADER_STAGE_VERTEX_BIT);
     pipeline->addShader((Engine::getAppPath(SHADERS) / "models-frag.spv").string(), VK_SHADER_STAGE_FRAGMENT_BIT);
@@ -142,9 +146,31 @@ void Engine::createModelPipeline() {
         this->renderer->getImageCount() , this->renderer->getPhysicalDevice(), this->renderer->getRenderPass(), this->renderer->getCommandPool(), this->renderer->getGraphicsQueue(),
         this->renderer->getSwapChainExtent(), pushConstantRange, this->renderer->doesShowWireFrame())) {
         
-        this->renderer->addPipeline(pipeline.release());
+        this->modelPipelineIndex = this->renderer->addPipeline(pipeline.release());
     
         logInfo("Added Model Pipeline");
+    }
+}
+
+void Engine::createSkyboxPipeline() {
+    if (this->renderer == nullptr || !renderer->isReady()) return;    
+
+    logInfo("Creating Skybox Pipeline...");
+
+    std::unique_ptr<GraphicsPipeline> pipeline = std::make_unique<SkyboxPipeline>(this->renderer->getLogicalDevice());
+
+    pipeline->addShader((Engine::getAppPath(SHADERS) / "skybox-vert.spv").string(), VK_SHADER_STAGE_VERTEX_BIT);
+    pipeline->addShader((Engine::getAppPath(SHADERS) / "skybox-frag.spv").string(), VK_SHADER_STAGE_FRAGMENT_BIT);
+
+    VkPushConstantRange pushConstantRange{};
+    
+    if (pipeline->createGraphicsPipeline(
+        this->renderer->getImageCount() , this->renderer->getPhysicalDevice(), this->renderer->getRenderPass(), this->renderer->getCommandPool(), this->renderer->getGraphicsQueue(),
+        this->renderer->getSwapChainExtent(), pushConstantRange, this->renderer->doesShowWireFrame())) {
+        
+        this->renderer->addPipeline(pipeline.release());
+    
+        logInfo("Added Skybox Pipeline");
     }
 }
 
@@ -153,7 +179,7 @@ void Engine::updateModelPipeline() {
 
     logInfo("Updating Model Pipeline...");
 
-    GraphicsPipeline * pipeline = this->renderer->getPipeline(0);
+    GraphicsPipeline * pipeline = this->renderer->getPipeline(this->modelPipelineIndex);
     pipeline->destroyPipelineObjects();
 
     VkPushConstantRange pushConstantRange{};

@@ -39,6 +39,8 @@ set(projectSources
     src/desktop.cpp
     src/graphics.cpp
     src/pipeline.cpp
+    src/models-pipeline.cpp
+    src/skybox-pipeline.cpp
     src/shader.cpp
     src/models.cpp
     src/renderer.cpp

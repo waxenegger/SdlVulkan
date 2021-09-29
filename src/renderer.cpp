@@ -77,13 +77,15 @@ bool Renderer::canRender() {
 }
 
 
-void Renderer::addPipeline(GraphicsPipeline * pipeline) {
+uint Renderer::addPipeline(GraphicsPipeline * pipeline) {
     if (!this->isReady()) {
         logError("Render has not been properly initialized!");
-        return;
+        return 0;
     }
         
     this->pipelines.push_back(pipeline);
+    
+    return this->pipelines.size()-1;
 }
 
 void Renderer::removePipeline(const uint optIndexToRemove) {

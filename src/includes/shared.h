@@ -39,7 +39,7 @@ static constexpr uint32_t MEGA_BYTE = 1000 * 1000;
 
 
 enum APP_PATHS {
-    ROOT, SHADERS, MODELS, FONTS, MAPS
+    ROOT, SHADERS, MODELS, SKYBOX, FONTS, MAPS
 };
 
 #endif
