@@ -361,7 +361,7 @@ bool SkyboxPipeline::createSkybox() {
 
     Helper::transitionImageLayout(this->renderer->getLogicalDevice(), this->renderer->getCommandPool(), this->renderer->getGraphicsQueue(), this->cubeImage, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, skyboxCubeTextures.size());
     Helper::copyBufferToImage(this->renderer->getLogicalDevice(), this->renderer->getCommandPool(), this->renderer->getGraphicsQueue(),
-        stagingBuffer, this->cubeImage, static_cast<uint32_t>(skyboxCubeTextures[0]->getWidth()), static_cast<uint32_t>(skyboxCubeTextures[0]->getHeight(), skyboxCubeTextures.size()));
+        stagingBuffer, this->cubeImage, skyboxCubeTextures[0]->getWidth(), skyboxCubeTextures[0]->getHeight(), skyboxCubeTextures.size());
     Helper::transitionImageLayout(this->renderer->getLogicalDevice(), this->renderer->getCommandPool(), this->renderer->getGraphicsQueue(), this->cubeImage, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, skyboxCubeTextures.size());
     
     vkDestroyBuffer(this->renderer->getLogicalDevice(), stagingBuffer, nullptr);
