@@ -85,13 +85,13 @@ void Renderer::updateUniformBuffers(const ModelUniforms & modelUniforms, const u
     vkUnmapMemory(this->logicalDevice, this->uniformBuffersMemory[currentImage]);    
 }
 
-const VkBuffer Renderer::getUniformBuffer(uint index) const {
+const VkBuffer Renderer::getUniformBuffer(uint8_t index) const {
     if (index >= this->uniformBuffers.size()) return nullptr;
     
     return this->uniformBuffers[index];
 }
 
-GraphicsPipeline * Renderer::getPipeline(uint index) {
+GraphicsPipeline * Renderer::getPipeline(uint8_t index) {
     if (index >= this->pipelines.size()) return nullptr;
     
     return this->pipelines[index];
@@ -107,7 +107,7 @@ bool Renderer::canRender() const {
 }
 
 
-uint Renderer::addPipeline(GraphicsPipeline * pipeline) {
+uint8_t Renderer::addPipeline(GraphicsPipeline * pipeline) {
     if (!this->isReady()) {
         logError("Render has not been properly initialized!");
         return 0;
@@ -118,7 +118,7 @@ uint Renderer::addPipeline(GraphicsPipeline * pipeline) {
     return this->pipelines.size()-1;
 }
 
-void Renderer::removePipeline(const uint optIndexToRemove) {
+void Renderer::removePipeline(const uint8_t optIndexToRemove) {
     if (!this->isReady()) {
         logError("Render has not been properly initialized!");
         return;

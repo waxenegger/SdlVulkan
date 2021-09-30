@@ -42,4 +42,6 @@ enum APP_PATHS {
     ROOT, SHADERS, MODELS, SKYBOX, FONTS, MAPS
 };
 
+typedef unsigned int uint;
+
 #endif

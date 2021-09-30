@@ -289,8 +289,8 @@ class Renderer final {
         Renderer & operator=(Renderer) = delete;
         Renderer(const GraphicsContext * graphicsContext, const VkPhysicalDevice & physicalDevice, const int & queueIndex);
         
-        uint addPipeline(GraphicsPipeline * pipeline);
-        void removePipeline(const uint optIndexToRemove);
+        uint8_t addPipeline(GraphicsPipeline * pipeline);
+        void removePipeline(const uint8_t optIndexToRemove);
 
         void startCommandBufferQueue();
         void stopCommandBufferQueue();
@@ -316,9 +316,9 @@ class Renderer final {
         VkCommandPool getCommandPool() const;
         VkQueue getGraphicsQueue() const;
         
-        const VkBuffer getUniformBuffer(uint index) const;
+        const VkBuffer getUniformBuffer(uint8_t index) const;
 
-        GraphicsPipeline * getPipeline(uint index);
+        GraphicsPipeline * getPipeline(uint8_t index);
         
         void drawFrame();
         
@@ -360,7 +360,7 @@ class Engine final {
         Camera * camera = Camera::INSTANCE();
         Renderer * renderer = nullptr;
         
-        uint modelPipelineIndex = 0;
+        uint8_t modelPipelineIndex = 0;
         
         bool quit = false;
 

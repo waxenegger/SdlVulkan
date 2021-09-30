@@ -86,7 +86,7 @@ bool GraphicsPipeline::isReady() {
 }
 
 bool GraphicsPipeline::canRender() {
-    uint validShaders = 0;
+    uint8_t validShaders = 0;
     
     for (auto & shader : this->shaders) {
         if (shader.second->isValid()) validShaders++;
