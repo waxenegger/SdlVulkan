@@ -52,7 +52,7 @@ bool Renderer::hasAtLeastOneActivePipeline() const {
     bool isReady = false;
     
     for (GraphicsPipeline * pipeline : this->pipelines) {
-        if (pipeline != nullptr && pipeline->isReady()) {
+        if (pipeline != nullptr && pipeline->canRender()) {
             isReady = true;
             break;
         }
@@ -85,8 +85,8 @@ void Renderer::updateUniformBuffers(const ModelUniforms & modelUniforms, const u
     vkUnmapMemory(this->logicalDevice, this->uniformBuffersMemory[currentImage]);    
 }
 
-const VkBuffer & Renderer::getUniformBuffer(uint index) const {
-    //if (index >= this->uniformBuffers.size()) return nullptr;
+const VkBuffer Renderer::getUniformBuffer(uint index) const {
+    if (index >= this->uniformBuffers.size()) return nullptr;
     
     return this->uniformBuffers[index];
 }
@@ -620,7 +620,7 @@ VkCommandBuffer Renderer::createCommandBuffer(uint16_t commandBufferIndex) {
     vkCmdBeginRenderPass(commandBuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
         
     for (GraphicsPipeline * pipeline : this->pipelines) {
-        if (!this->requiresRenderUpdate) {
+        if (!this->requiresRenderUpdate && pipeline->canRender()) {
             pipeline->draw(commandBuffer, commandBufferIndex);
         }
     }
@@ -803,10 +803,10 @@ bool Renderer::updateRenderer() {
 
     for (GraphicsPipeline * pipeline : this->pipelines) {
         if (pipeline != nullptr) {
-            pipeline->updateGraphicsPipeline();
+            if (!pipeline->updateGraphicsPipeline()) continue;
         }
     }
-
+    
     if (!this->createDepthResources()) return false;
     if (!this->createFramebuffers()) return false;
     

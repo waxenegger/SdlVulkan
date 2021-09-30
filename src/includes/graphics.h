@@ -155,6 +155,7 @@ class GraphicsPipeline {
         std::vector<VkPipelineShaderStageCreateInfo> getShaderStageCreateInfos();
         
         bool isReady();
+        bool canRender();
 
         virtual bool createGraphicsPipeline(const VkPushConstantRange & pushConstantRange) = 0;
         virtual bool updateGraphicsPipeline() = 0;
@@ -315,7 +316,7 @@ class Renderer final {
         VkCommandPool getCommandPool() const;
         VkQueue getGraphicsQueue() const;
         
-        const VkBuffer & getUniformBuffer(uint index) const;
+        const VkBuffer getUniformBuffer(uint index) const;
 
         GraphicsPipeline * getPipeline(uint index);
         

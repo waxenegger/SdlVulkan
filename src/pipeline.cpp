@@ -85,6 +85,16 @@ bool GraphicsPipeline::isReady() {
     return this->pipeline != nullptr;
 }
 
+bool GraphicsPipeline::canRender() {
+    uint validShaders = 0;
+    
+    for (auto & shader : this->shaders) {
+        if (shader.second->isValid()) validShaders++;
+    }    
+    
+    return this->isReady() && validShaders >= 2;
+}
+
 GraphicsPipeline::~GraphicsPipeline() {
     for (auto & shader : this->shaders) {
         if (shader.second != nullptr) {

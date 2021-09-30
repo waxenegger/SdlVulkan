@@ -578,7 +578,7 @@ bool ModelsPipeline::createDescriptorSets() {
         samplerDescriptorSet.dstBinding = 2;
         samplerDescriptorSet.dstArrayElement = 0;
         samplerDescriptorSet.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-        samplerDescriptorSet.descriptorCount = numberOfTextures > 0 ? numberOfTextures : 1;
+        samplerDescriptorSet.descriptorCount = numberOfTextures;
         samplerDescriptorSet.pImageInfo = descriptorImageInfos.data();
         samplerDescriptorSet.dstSet = this->descriptorSets[i];
         descriptorWrites.push_back(samplerDescriptorSet);
