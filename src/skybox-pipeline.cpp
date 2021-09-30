@@ -17,11 +17,6 @@ bool SkyboxPipeline::createGraphicsPipeline(const VkPushConstantRange & pushCons
         return false;        
     }
 
-    if (!this->createUniformBuffers()) {
-        logError("Failed to create Skybox Pipeline Uniform Buffers");
-        return false;        
-    }    
-    
     if (!this->createDescriptorPool()) {
         logError("Failed to create Skybox Pipeline Descriptor Pool");
         return false;
@@ -262,7 +257,7 @@ bool SkyboxPipeline::createDescriptorSets() {
 
     for (size_t i = 0; i < this->descriptorSets.size(); i++) {
         VkDescriptorBufferInfo uniformBufferInfo{};
-        uniformBufferInfo.buffer = this->uniformBuffers[i];
+        uniformBufferInfo.buffer = this->renderer->getUniformBuffer(i);
         uniformBufferInfo.offset = 0;
         uniformBufferInfo.range = sizeof(struct ModelUniforms);
 

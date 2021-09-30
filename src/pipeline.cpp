@@ -48,33 +48,6 @@ bool GraphicsPipeline::createTextureSampler(VkSamplerAddressMode addressMode) {
     return true;
 }
 
-bool GraphicsPipeline::createUniformBuffers() {
-    if (this->renderer == nullptr || !this->renderer->isReady()) return false;
-    
-    for (size_t i = 0; i < this->uniformBuffers.size(); i++) {
-        if (this->uniformBuffers[i] != nullptr) vkDestroyBuffer(this->renderer->getLogicalDevice(), this->uniformBuffers[i], nullptr);
-    }
-    for (size_t i = 0; i < this->uniformBuffersMemory.size(); i++) {
-        if (this->uniformBuffersMemory[i] != nullptr) vkFreeMemory(this->renderer->getLogicalDevice(), this->uniformBuffersMemory[i], nullptr);
-    }
-    this->uniformBuffers.clear();
-    this->uniformBuffersMemory.clear();
-    
-    VkDeviceSize bufferSize = sizeof(struct ModelUniforms);
-
-    this->uniformBuffers.resize(this->renderer->getImageCount());
-    this->uniformBuffersMemory.resize(this->renderer->getImageCount());
-
-    for (size_t i = 0; i < this->uniformBuffers.size(); i++) {
-        Helper::createBuffer(this->renderer->getPhysicalDevice(), this->renderer->getLogicalDevice(),
-            bufferSize, 
-            VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, 
-            this->uniformBuffers[i], this->uniformBuffersMemory[i]);
-    }
-
-    return true;
-}
-
 std::vector<VkPipelineShaderStageCreateInfo> GraphicsPipeline::getShaderStageCreateInfos() {
     std::vector<VkPipelineShaderStageCreateInfo> shaderCreateInfos;
 
@@ -92,13 +65,6 @@ std::vector<VkPipelineShaderStageCreateInfo> GraphicsPipeline::getShaderStageCre
     }
 
     return shaderCreateInfos;
-}
-
-void GraphicsPipeline::updateUniformBuffers(const ModelUniforms & modelUniforms, const uint32_t & currentImage) {
-    void* data;
-    vkMapMemory(this->renderer->getLogicalDevice(), this->uniformBuffersMemory[currentImage], 0, sizeof(modelUniforms), 0, &data);
-    memcpy(data, &modelUniforms, sizeof(modelUniforms));
-    vkUnmapMemory(this->renderer->getLogicalDevice(), this->uniformBuffersMemory[currentImage]);    
 }
 
 void GraphicsPipeline::destroyPipelineObjects() {
@@ -153,11 +119,4 @@ GraphicsPipeline::~GraphicsPipeline() {
 
     if (this->ssboBuffer != nullptr) vkDestroyBuffer(this->renderer->getLogicalDevice(), this->ssboBuffer, nullptr);
     if (this->ssboBufferMemory != nullptr) vkFreeMemory(this->renderer->getLogicalDevice(), this->ssboBufferMemory, nullptr);
-    
-    for (size_t i = 0; i < this->uniformBuffers.size(); i++) {
-        if (this->uniformBuffers[i] != nullptr) vkDestroyBuffer(this->renderer->getLogicalDevice(), this->uniformBuffers[i], nullptr);
-    }
-    for (size_t i = 0; i < this->uniformBuffersMemory.size(); i++) {
-        if (this->uniformBuffersMemory[i] != nullptr) vkFreeMemory(this->renderer->getLogicalDevice(), this->uniformBuffersMemory[i], nullptr);
-    }
 }

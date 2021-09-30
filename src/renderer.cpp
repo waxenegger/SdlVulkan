@@ -61,6 +61,36 @@ bool Renderer::hasAtLeastOneActivePipeline() const {
     return isReady;
 }
 
+bool Renderer::createUniformBuffers() {
+    if (!this->isReady()) return false;
+    
+    VkDeviceSize bufferSize = sizeof(struct ModelUniforms);
+
+    this->uniformBuffers.resize(this->imageCount);
+    this->uniformBuffersMemory.resize(this->imageCount);
+
+    for (size_t i = 0; i < this->uniformBuffers.size(); i++) {
+        Helper::createBuffer(this->physicalDevice, this->logicalDevice, bufferSize, 
+            VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, 
+            this->uniformBuffers[i], this->uniformBuffersMemory[i]);
+    }
+
+    return true;
+}
+
+void Renderer::updateUniformBuffers(const ModelUniforms & modelUniforms, const uint32_t & currentImage) {
+    void* data;
+    vkMapMemory(this->logicalDevice, this->uniformBuffersMemory[currentImage], 0, sizeof(modelUniforms), 0, &data);
+    memcpy(data, &modelUniforms, sizeof(modelUniforms));
+    vkUnmapMemory(this->logicalDevice, this->uniformBuffersMemory[currentImage]);    
+}
+
+const VkBuffer & Renderer::getUniformBuffer(uint index) const {
+    //if (index >= this->uniformBuffers.size()) return nullptr;
+    
+    return this->uniformBuffers[index];
+}
+
 GraphicsPipeline * Renderer::getPipeline(uint index) {
     if (index >= this->pipelines.size()) return nullptr;
     
@@ -396,10 +426,20 @@ void Renderer::initRenderer() {
     if (!this->updateRenderer()) return;
     if (!this->createCommandPool()) return;
     if (!this->createSyncObjects()) return;
+    if (!this->createUniformBuffers()) return;
 }
 
 void Renderer::destroyRendererObjects() {
     this->destroySwapChainObjects();
+    
+    if (this->logicalDevice == nullptr) return;
+    
+    for (size_t i = 0; i < this->uniformBuffers.size(); i++) {
+        if (this->uniformBuffers[i] != nullptr) vkDestroyBuffer(this->logicalDevice, this->uniformBuffers[i], nullptr);
+    }
+    for (size_t i = 0; i < this->uniformBuffersMemory.size(); i++) {
+        if (this->uniformBuffersMemory[i] != nullptr) vkFreeMemory(this->logicalDevice, this->uniformBuffersMemory[i], nullptr);
+    }
     
     for (GraphicsPipeline * pipeline : this->pipelines) {
         if (pipeline != nullptr) {
@@ -603,9 +643,7 @@ void Renderer::updateUniformBuffer(uint32_t currentImage) {
     modelUniforms.viewMatrix = Camera::INSTANCE()->getViewMatrix();
     modelUniforms.projectionMatrix = Camera::INSTANCE()->getProjectionMatrix();
 
-    for (GraphicsPipeline * pipeline : this->pipelines) {
-        if (pipeline != nullptr) pipeline->updateUniformBuffers(modelUniforms, currentImage);
-    }
+    this->updateUniformBuffers(modelUniforms, currentImage);
 }
 
 bool Renderer::createCommandBuffers() {

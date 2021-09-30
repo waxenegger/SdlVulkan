@@ -125,9 +125,6 @@ class GraphicsPipeline {
                 
         VkDescriptorPool descriptorPool = nullptr;
         std::vector<VkDescriptorSet> descriptorSets;
-
-        std::vector<VkBuffer> uniformBuffers;
-        std::vector<VkDeviceMemory> uniformBuffersMemory;
         
         VkPushConstantRange pushConstantRange;
 
@@ -148,8 +145,6 @@ class GraphicsPipeline {
         virtual bool createDescriptorPool() = 0;
         virtual bool createDescriptorSets() = 0;
 
-        bool createUniformBuffers();
-
     public:
         GraphicsPipeline(const GraphicsPipeline&) = delete;
         GraphicsPipeline& operator=(const GraphicsPipeline &) = delete;
@@ -165,7 +160,6 @@ class GraphicsPipeline {
         virtual bool updateGraphicsPipeline() = 0;
 
         bool createTextureSampler(VkSamplerAddressMode addressMode);
-        void updateUniformBuffers(const ModelUniforms & modelUniforms, const uint32_t & currentImage);
         void destroyPipelineObjects();
         
         virtual void draw(const VkCommandBuffer & commandBuffer, const uint16_t commandBufferIndex) = 0;
@@ -239,6 +233,9 @@ class Renderer final {
         uint32_t presentQueueIndex = -1;
         VkQueue presentQueue = nullptr;
 
+        std::vector<VkBuffer> uniformBuffers;
+        std::vector<VkDeviceMemory> uniformBuffersMemory;
+
         std::vector<GraphicsPipeline *> pipelines;
         
         uint16_t frameCount = 0;
@@ -278,7 +275,9 @@ class Renderer final {
         void destroyCommandBuffer(VkCommandBuffer commandBuffer);
         VkCommandBuffer createCommandBuffer(uint16_t commandBufferIndex);
         
+        bool createUniformBuffers();
         void updateUniformBuffer(uint32_t currentImage);
+        void updateUniformBuffers(const ModelUniforms & modelUniforms, const uint32_t & currentImage);
         
         void destroySwapChainObjects();        
         void destroyRendererObjects();
@@ -315,6 +314,8 @@ class Renderer final {
         
         VkCommandPool getCommandPool() const;
         VkQueue getGraphicsQueue() const;
+        
+        const VkBuffer & getUniformBuffer(uint index) const;
 
         GraphicsPipeline * getPipeline(uint index);
         

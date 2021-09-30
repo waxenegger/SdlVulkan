@@ -156,11 +156,6 @@ bool ModelsPipeline::createGraphicsPipeline(const VkPushConstantRange & pushCons
         return false;        
     }
         
-    if (!this->createUniformBuffers()) {
-        logError("Failed to create Models Pipeline Uniform Buffers");
-        return false;        
-    }    
-    
     if (!this->createDescriptorPool()) {
         logError("Failed to create Models Pipeline Descriptor Pool");
         return false;
@@ -552,7 +547,7 @@ bool ModelsPipeline::createDescriptorSets() {
 
     for (size_t i = 0; i < this->descriptorSets.size(); i++) {
         VkDescriptorBufferInfo uniformBufferInfo{};
-        uniformBufferInfo.buffer = this->uniformBuffers[i];
+        uniformBufferInfo.buffer = this->renderer->getUniformBuffer(i);
         uniformBufferInfo.offset = 0;
         uniformBufferInfo.range = sizeof(struct ModelUniforms);
 
