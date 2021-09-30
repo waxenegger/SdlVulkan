@@ -44,11 +44,11 @@ Renderer:: Renderer(const GraphicsContext * graphicsContext, const VkPhysicalDev
     vkGetDeviceQueue(this->logicalDevice, this->presentQueueIndex , 0, &this->presentQueue);
 }
 
-bool Renderer::isReady() {
+bool Renderer::isReady() const {
     return this->graphicsContext != nullptr && this->physicalDevice != nullptr && this->logicalDevice  != nullptr;
 }
 
-bool Renderer::hasAtLeastOneActivePipeline() {
+bool Renderer::hasAtLeastOneActivePipeline() const {
     bool isReady = false;
     
     for (GraphicsPipeline * pipeline : this->pipelines) {
@@ -67,7 +67,7 @@ GraphicsPipeline * Renderer::getPipeline(uint index) {
     return this->pipelines[index];
 }
 
-bool Renderer::canRender() {
+bool Renderer::canRender() const {
     return this->isReady() && this->hasAtLeastOneActivePipeline() && this->swapChain != nullptr && this->swapChainImages.size() == this->imageCount && 
         this->swapChainImages.size() == this->swapChainImageViews.size() && this->imagesInFlight.size() == this->swapChainImages.size() &&
         this->imageAvailableSemaphores.size() == this->imageCount && this->renderFinishedSemaphores.size() == this->imageCount && this->inFlightFences.size() == this->imageCount &&
@@ -321,11 +321,11 @@ bool Renderer::createCommandPool() {
     return true;
 }
 
-VkCommandPool Renderer::getCommandPool() {
+VkCommandPool Renderer::getCommandPool() const {
     return this->commandPool;
 }
 
-VkQueue Renderer::getGraphicsQueue() {
+VkQueue Renderer::getGraphicsQueue() const {
     return this->graphicsQueue;
 }
 
@@ -505,11 +505,11 @@ void Renderer::destroySwapChainObjects() {
 
 }
 
-VkDevice Renderer::getLogicalDevice() {
+VkDevice Renderer::getLogicalDevice() const {
     return this->logicalDevice;
 }
 
-VkPhysicalDevice Renderer::getPhysicalDevice() {
+VkPhysicalDevice Renderer::getPhysicalDevice() const {
     return this->physicalDevice;
 }
 
@@ -730,7 +730,7 @@ void Renderer::drawFrame() {
     std::chrono::duration<double, std::milli> time_span = now -frameStart;
 }
 
-bool Renderer::doesShowWireFrame() {
+bool Renderer::doesShowWireFrame() const {
     return this->showWireFrame;
 }
 
@@ -739,11 +739,11 @@ void Renderer::setShowWireFrame(bool showWireFrame) {
     this->requiresRenderUpdate = true;
 }
 
-VkRenderPass Renderer::getRenderPass() {
+VkRenderPass Renderer::getRenderPass() const {
     return this->renderPass;
 }
 
-VkExtent2D Renderer::getSwapChainExtent() {
+VkExtent2D Renderer::getSwapChainExtent() const {
     return this->swapChainExtent;
 }
 
@@ -765,7 +765,7 @@ bool Renderer::updateRenderer() {
 
     for (GraphicsPipeline * pipeline : this->pipelines) {
         if (pipeline != nullptr) {
-            pipeline->updateGraphicsPipeline(this->renderPass, this->getSwapChainExtent(), this->showWireFrame);
+            pipeline->updateGraphicsPipeline();
         }
     }
 
@@ -777,7 +777,7 @@ bool Renderer::updateRenderer() {
     return true;
 }
 
-uint32_t Renderer::getImageCount() {
+uint32_t Renderer::getImageCount() const {
     return this->imageCount;
 }
 

@@ -114,10 +114,12 @@ class GraphicsContext final {
         ~GraphicsContext();
 };
 
+class Renderer;
+
 class GraphicsPipeline {
     protected:
         std::map<std::string, const Shader *> shaders;
-        const VkDevice device = nullptr;
+        const Renderer * renderer = nullptr;
         
         VkDescriptorSetLayout descriptorSetLayout = nullptr;
                 
@@ -143,10 +145,10 @@ class GraphicsPipeline {
         VkPipeline pipeline = nullptr;
 
         virtual bool createDescriptorSetLayout() = 0;
-        virtual bool createDescriptorPool(const size_t size) = 0;
-        virtual bool createDescriptorSets(const size_t size) = 0;
+        virtual bool createDescriptorPool() = 0;
+        virtual bool createDescriptorSets() = 0;
 
-        bool createUniformBuffers(const VkPhysicalDevice & physicalDevice, size_t size);
+        bool createUniformBuffers();
 
     public:
         GraphicsPipeline(const GraphicsPipeline&) = delete;
@@ -159,40 +161,36 @@ class GraphicsPipeline {
         
         bool isReady();
 
-        virtual bool createGraphicsPipeline(
-            const size_t size, const VkPhysicalDevice & physicalDevice, const VkRenderPass & renderPass, const VkCommandPool & commandpool, const VkQueue & graphicsQueue, 
-            const VkExtent2D & swapChainExtent, const VkPushConstantRange & pushConstantRange, bool showWireFrame = false) = 0;
-        virtual bool updateGraphicsPipeline(const VkRenderPass & renderPass, const VkExtent2D & swapChainExtent, bool showWireFrame = false) = 0;
+        virtual bool createGraphicsPipeline(const VkPushConstantRange & pushConstantRange) = 0;
+        virtual bool updateGraphicsPipeline() = 0;
 
-        bool createTextureSampler(const VkPhysicalDevice & physicalDevice, VkSampler & sampler, VkSamplerAddressMode addressMode);
+        bool createTextureSampler(VkSamplerAddressMode addressMode);
         void updateUniformBuffers(const ModelUniforms & modelUniforms, const uint32_t & currentImage);
         void destroyPipelineObjects();
         
         virtual void draw(const VkCommandBuffer & commandBuffer, const uint16_t commandBufferIndex) = 0;
         
-        GraphicsPipeline(const VkDevice & device);
+        GraphicsPipeline(const Renderer * renderer);
         virtual ~GraphicsPipeline();
 };
 
 class ModelsPipeline : public GraphicsPipeline {
     private:
-        bool createSsboBufferFromModel(const VkPhysicalDevice & physicalDevice, const VkCommandPool & commandpool, const VkQueue & graphicsQueue, VkDeviceSize bufferSize, bool makeHostWritable = false);
-        bool createBuffersFromModel(const VkPhysicalDevice & physicalDevice, const VkCommandPool & commandpool, const VkQueue & graphicsQueue);
-        void prepareModelTextures(const VkPhysicalDevice & physicalDevice, const VkCommandPool & commandpool, const VkQueue & graphicsQueue, const VkExtent2D & swapChainExtent);
+        bool createSsboBufferFromModel(VkDeviceSize bufferSize, bool makeHostWritable = false);
+        bool createBuffersFromModel();
+        void prepareModelTextures();
 
         bool createDescriptorSetLayout();
-        bool createDescriptorPool(const size_t size);
-        bool createDescriptorSets(const size_t size);
+        bool createDescriptorPool();
+        bool createDescriptorSets();
         
         void drawModels(const VkCommandBuffer & commandBuffer, const bool useIndices);
     public:
-        ModelsPipeline(const VkDevice & device);
-        ModelsPipeline & operator=(GraphicsPipeline) = delete;
+        ModelsPipeline(const Renderer * renderer);
+        ModelsPipeline & operator=(ModelsPipeline) = delete;
 
-        bool createGraphicsPipeline(
-            const size_t size, const VkPhysicalDevice & physicalDevice, const VkRenderPass & renderPass, const VkCommandPool & commandpool, const VkQueue & graphicsQueue, 
-            const VkExtent2D & swapChainExtent, const VkPushConstantRange & pushConstantRange, bool showWireFrame = false);
-        bool updateGraphicsPipeline(const VkRenderPass & renderPass, const VkExtent2D & swapChainExtent, bool showWireFrame = false);
+        bool createGraphicsPipeline(const VkPushConstantRange & pushConstantRange);
+        bool updateGraphicsPipeline();
         
         void draw(const VkCommandBuffer & commandBuffer, const uint16_t commandBufferIndex);
 };
@@ -205,20 +203,18 @@ class SkyboxPipeline : public GraphicsPipeline {
         VkImage cubeImage = nullptr;
         VkDeviceMemory cubeImageMemory = nullptr;
 
-        bool createSkybox(const VkPhysicalDevice & physicalDevice, const VkCommandPool & commandpool,const VkQueue & graphicsQueue);
+        bool createSkybox();
         
         bool createDescriptorSetLayout();
-        bool createDescriptorPool(const size_t size);
-        bool createDescriptorSets(const size_t size);
+        bool createDescriptorPool();
+        bool createDescriptorSets();
         
     public:
-        SkyboxPipeline(const VkDevice & device);
+        SkyboxPipeline(const Renderer * renderer);
         SkyboxPipeline & operator=(SkyboxPipeline) = delete;
 
-        bool createGraphicsPipeline(
-            const size_t size, const VkPhysicalDevice & physicalDevice, const VkRenderPass & renderPass, const VkCommandPool & commandpool, const VkQueue & graphicsQueue, 
-            const VkExtent2D & swapChainExtent, const VkPushConstantRange & pushConstantRange, bool showWireFrame = false);
-        bool updateGraphicsPipeline(const VkRenderPass & renderPass, const VkExtent2D & swapChainExtent, bool showWireFrame = false);
+        bool createGraphicsPipeline(const VkPushConstantRange & pushConstantRange);
+        bool updateGraphicsPipeline();
         
         void draw(const VkCommandBuffer & commandBuffer, const uint16_t commandBufferIndex);
         ~SkyboxPipeline();
@@ -299,26 +295,26 @@ class Renderer final {
         void startCommandBufferQueue();
         void stopCommandBufferQueue();
         
-        bool isReady();
-        bool hasAtLeastOneActivePipeline();
-        bool canRender();
+        bool isReady() const;
+        bool hasAtLeastOneActivePipeline() const;
+        bool canRender() const;
                 
-        VkDevice getLogicalDevice();
-        VkPhysicalDevice getPhysicalDevice();
-        uint32_t getImageCount();
+        VkDevice getLogicalDevice() const;
+        VkPhysicalDevice getPhysicalDevice() const;
+        uint32_t getImageCount() const;
         
         void initRenderer();
         bool updateRenderer();
         
         void forceRenderUpdate();
-        bool doesShowWireFrame();
+        bool doesShowWireFrame() const;
         void setShowWireFrame(bool showWireFrame);
 
-        VkRenderPass getRenderPass();
-        VkExtent2D getSwapChainExtent();
+        VkRenderPass getRenderPass() const;
+        VkExtent2D getSwapChainExtent() const;
         
-        VkCommandPool getCommandPool();
-        VkQueue getGraphicsQueue();
+        VkCommandPool getCommandPool() const;
+        VkQueue getGraphicsQueue() const;
 
         GraphicsPipeline * getPipeline(uint index);
         
@@ -372,7 +368,7 @@ class Engine final {
         void createSkyboxPipeline();
         
     public:
-        Engine(const Helper&) = delete;
+        Engine(const Engine&) = delete;
         Engine& operator=(const Engine &) = delete;
         Engine(Engine &&) = delete;
         Engine & operator=(Engine) = delete;

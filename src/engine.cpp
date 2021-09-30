@@ -132,7 +132,7 @@ void Engine::createModelPipeline() {
 
     logInfo("Creating Model Pipeline...");
 
-    std::unique_ptr<GraphicsPipeline> pipeline = std::make_unique<ModelsPipeline>(this->renderer->getLogicalDevice());
+    std::unique_ptr<GraphicsPipeline> pipeline = std::make_unique<ModelsPipeline>(this->renderer);
 
     pipeline->addShader((Engine::getAppPath(SHADERS) / "models-vert.spv").string(), VK_SHADER_STAGE_VERTEX_BIT);
     pipeline->addShader((Engine::getAppPath(SHADERS) / "models-frag.spv").string(), VK_SHADER_STAGE_FRAGMENT_BIT);
@@ -142,9 +142,7 @@ void Engine::createModelPipeline() {
     pushConstantRange.offset = 0;
     pushConstantRange.size = sizeof(struct ModelProperties);
     
-    if (pipeline->createGraphicsPipeline(
-        this->renderer->getImageCount() , this->renderer->getPhysicalDevice(), this->renderer->getRenderPass(), this->renderer->getCommandPool(), this->renderer->getGraphicsQueue(),
-        this->renderer->getSwapChainExtent(), pushConstantRange, this->renderer->doesShowWireFrame())) {
+    if (pipeline->createGraphicsPipeline(pushConstantRange)) {
         
         this->modelPipelineIndex = this->renderer->addPipeline(pipeline.release());
     
@@ -157,16 +155,14 @@ void Engine::createSkyboxPipeline() {
 
     logInfo("Creating Skybox Pipeline...");
 
-    std::unique_ptr<GraphicsPipeline> pipeline = std::make_unique<SkyboxPipeline>(this->renderer->getLogicalDevice());
+    std::unique_ptr<GraphicsPipeline> pipeline = std::make_unique<SkyboxPipeline>(this->renderer);
 
     pipeline->addShader((Engine::getAppPath(SHADERS) / "skybox-vert.spv").string(), VK_SHADER_STAGE_VERTEX_BIT);
     pipeline->addShader((Engine::getAppPath(SHADERS) / "skybox-frag.spv").string(), VK_SHADER_STAGE_FRAGMENT_BIT);
 
     VkPushConstantRange pushConstantRange{};
     
-    if (pipeline->createGraphicsPipeline(
-        this->renderer->getImageCount() , this->renderer->getPhysicalDevice(), this->renderer->getRenderPass(), this->renderer->getCommandPool(), this->renderer->getGraphicsQueue(),
-        this->renderer->getSwapChainExtent(), pushConstantRange, this->renderer->doesShowWireFrame())) {
+    if (pipeline->createGraphicsPipeline(pushConstantRange)) {
         
         this->renderer->addPipeline(pipeline.release());
     
@@ -187,9 +183,7 @@ void Engine::updateModelPipeline() {
     pushConstantRange.offset = 0;
     pushConstantRange.size = sizeof(struct ModelProperties);
     
-    if (pipeline->createGraphicsPipeline(
-        this->renderer->getImageCount() , this->renderer->getPhysicalDevice(), this->renderer->getRenderPass(), this->renderer->getCommandPool(), this->renderer->getGraphicsQueue(),
-        this->renderer->getSwapChainExtent(), pushConstantRange, this->renderer->doesShowWireFrame())) {
+    if (pipeline->createGraphicsPipeline(pushConstantRange)) {
     
         logInfo("Updated Model Pipeline");
     }
