@@ -31,7 +31,7 @@ bool Camera::moving()
     return this->keys.left || this->keys.right || this->keys.up || this->keys.down;
 }
 
-void Camera::move(KeyPress key, bool isPressed, float deltaTime) {
+void Camera::move(KeyPress key, bool isPressed, float delta) {
     
     switch(key) {
         case LEFT:
@@ -50,7 +50,7 @@ void Camera::move(KeyPress key, bool isPressed, float deltaTime) {
             break;
     }
     
-    if (isPressed) this->update(deltaTime);
+    if (isPressed) this->update(delta);
 }
 
 void Camera::setAspectRatio(float aspect) {
@@ -114,23 +114,22 @@ glm::vec3 Camera::getCameraFront() {
     return camFront;
 }
 
-void Camera::update(const float deltaTime) {
+void Camera::update(const float delta) {
     if (type == CameraType::firstperson) {
         if (moving()) {
             glm::vec3 camFront = this->getCameraFront();
-            float moveSpeed = deltaTime;
 
             if (this->keys.up) {
-                this->position += camFront * moveSpeed;
+                this->position += camFront * delta;
             }
             if (this->keys.down) {
-                this->position -= camFront * moveSpeed;
+                this->position -= camFront * delta;
             }
             if (this->keys.left) {
-                this->position -= glm::normalize(glm::cross(camFront, glm::vec3(0.0f, 1.0f, 0.0f))) * moveSpeed;
+                this->position -= glm::normalize(glm::cross(camFront, glm::vec3(0.0f, 1.0f, 0.0f))) * delta;
             }
             if (this->keys.right) {
-                this->position += glm::normalize(glm::cross(camFront, glm::vec3(0.0f, 1.0f, 0.0f))) * moveSpeed;
+                this->position += glm::normalize(glm::cross(camFront, glm::vec3(0.0f, 1.0f, 0.0f))) * delta;
             }
             
             //this->position.y = terrainHeight + CameraHeight;
@@ -140,12 +139,10 @@ void Camera::update(const float deltaTime) {
     }
 };
 
-void Camera::updateDirection(const float deltaX, const float  deltaY, float deltaTime) {
-    float moveSpeed = deltaTime;
-    
+void Camera::updateDirection(const float deltaX, const float  deltaY, float delta) {    
     glm::vec3 rot(0.0f);
-    rot.y = deltaX * moveSpeed;
-    rot.x = -deltaY * moveSpeed;
+    rot.y = deltaX * delta;
+    rot.x = -deltaY * delta;
         
     this->rotate(rot);
 }

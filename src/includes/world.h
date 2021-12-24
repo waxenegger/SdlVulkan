@@ -51,13 +51,13 @@ class Camera
         void rotate(glm::vec3 delta);
         void setTranslation(glm::vec3 translation);
         void translate(glm::vec3 delta);
-        void update(const float deltaTime);
+        void update(const float delta);
         glm::mat4 getViewMatrix();
         glm::mat4 getProjectionMatrix();
         static Camera * INSTANCE(glm::vec3 pos);
         static Camera * INSTANCE();
         void setType(CameraType type);
-        void move(KeyPress key, bool isPressed = false, float deltaTime = 1.0f);
+        void move(KeyPress key, bool isPressed = false, float delta = 1.0f);
         void updateDirection(const float deltaX, const float  deltaY, float deltaTime = 1.0f);
         glm::vec3 getCameraFront();
         void destroy();

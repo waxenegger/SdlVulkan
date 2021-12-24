@@ -9,7 +9,7 @@
 
 constexpr uint32_t VULKAN_VERSION = VK_MAKE_VERSION(1,0,0);
 
-static constexpr uint32_t MAX_BUFFERING = 2;
+static constexpr uint32_t MAX_BUFFERING = 3;
 static constexpr uint64_t IMAGE_ACQUIRE_TIMEOUT = 5 * 1000;
 
 const VkSurfaceFormatKHR SWAP_CHAIN_IMAGE_FORMAT = {
@@ -56,7 +56,7 @@ class GraphicsContext final {
         
         std::vector<const char *> vulkanExtensions;
         std::vector<const char *> vulkanLayers = {
-           "VK_LAYER_KHRONOS_validation"
+           //"VK_LAYER_KHRONOS_validation"
            //"VK_LAYER_ADRENO_debug"
         };
         
@@ -239,7 +239,7 @@ class Renderer final {
 
         std::vector<GraphicsPipeline *> pipelines;
         
-        uint16_t frameCount = 0;
+        float deltaTime = 0.16f;
         size_t currentFrame = 0;
         
         bool requiresRenderUpdate = false;
@@ -319,6 +319,8 @@ class Renderer final {
         const VkBuffer getUniformBuffer(uint8_t index) const;
 
         GraphicsPipeline * getPipeline(uint8_t index);
+        
+        float getDeltaTime();
         
         void drawFrame();
         

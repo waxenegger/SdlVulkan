@@ -688,7 +688,7 @@ void Renderer::drawFrame() {
     std::chrono::high_resolution_clock::time_point nextBufferFetchStart = std::chrono::high_resolution_clock::now();
     while (latestCommandBuffer == nullptr) {
         std::chrono::duration<double, std::milli> fetchPeriod = std::chrono::high_resolution_clock::now() - nextBufferFetchStart;
-        if (fetchPeriod.count() > 2000) {
+        if (fetchPeriod.count() > 500) {
             logInfo("Could not get new buffer for quite a while!");
             break;
         }
@@ -762,10 +762,13 @@ void Renderer::drawFrame() {
     }
     
     this->currentFrame = (this->currentFrame + 1) % this->imageCount;
-    ++this->frameCount;
 
     std::chrono::high_resolution_clock::time_point now = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double, std::milli> time_span = now -frameStart;
+    this->deltaTime = time_span.count();
+    
+    int frameRate = static_cast<int>(1000 / this->deltaTime);
+    if (frameRate < 5) std::cout << frameRate << std::endl;
 }
 
 bool Renderer::doesShowWireFrame() const {
@@ -821,6 +824,10 @@ uint32_t Renderer::getImageCount() const {
 
 void Renderer::forceRenderUpdate() {
     this->requiresRenderUpdate = true;
+}
+
+float Renderer::getDeltaTime() {
+    return this->deltaTime;
 }
 
 Renderer::~Renderer() {

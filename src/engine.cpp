@@ -65,8 +65,8 @@ void Engine::loop() {
 
 void Engine::preloadModels() {
     // TODO: read from location
-    this->models->addModel("rock", Engine::getAppPath(MODELS) / "rock.obj");
     this->models->addModel("cyborg", Engine::getAppPath(MODELS) / "cyborg.obj");
+    this->models->addModel("nanosuit", Engine::getAppPath(MODELS) / "nanosuit.obj");
     
     this->components->initWithModelIds(this->models->getModelIds());
 }
@@ -74,6 +74,8 @@ void Engine::preloadModels() {
 void Engine::updateModels(const std::string id, const std::filesystem::path file) {
     if (this->renderer == nullptr || !renderer->isReady()) return;
 
+    std::chrono::high_resolution_clock::time_point start = std::chrono::high_resolution_clock::now();
+    
     logInfo("Adding Model...");
     
     this->renderer->stopCommandBufferQueue();
@@ -88,6 +90,10 @@ void Engine::updateModels(const std::string id, const std::filesystem::path file
     this->updateModelPipeline();
     
     this->renderer->updateRenderer();
+    
+    std::chrono::high_resolution_clock::time_point now = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<double, std::milli> time_span = now - start;
+    std::cout << "Duration Update Models: " << time_span.count() << std::endl;
 }
 
 void Engine::init() {
