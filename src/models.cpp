@@ -573,7 +573,13 @@ TextureInformation Model::addTextures(const aiMaterial * mat) {
         textureInfo.specularTextureLocation = (this->file.parent_path().string() / std::filesystem::path(str.C_Str())).string();
     }
     
-    if (mat->GetTextureCount(aiTextureType_NORMALS) > 0) {
+    if (mat->GetTextureCount(aiTextureType_HEIGHT) > 0) {
+        aiString str;
+        mat->GetTexture(aiTextureType_HEIGHT, 0, &str);
+
+        if (str.length > 0) this->correctTexturePath(str.data);
+        textureInfo.normalTextureLocation = (this->file.parent_path().string() / std::filesystem::path(str.C_Str())).string();
+    } else if (mat->GetTextureCount(aiTextureType_NORMALS) > 0) {
         aiString str;
         mat->GetTexture(aiTextureType_NORMALS, 0, &str);
 
@@ -760,14 +766,29 @@ BufferSummary Models::getModelsBufferSizes(bool printInfo) {
     }
     
     if (printInfo) {
-        logInfo("Models Vertex Buffer Size: " + std::to_string(bufferSizes.vertexBufferSize / MEGA_BYTE) + " MB");
-        logInfo("Models Index Buffer Size: " + std::to_string(bufferSizes.indexBufferSize / MEGA_BYTE) + " MB");
-        logInfo("Models SSBO Buffer Size: " + std::to_string(bufferSizes.ssboBufferSize / MEGA_BYTE) + " MB");
+        logInfo("Models Vertex Buffer Size: " + this->formatMemoryUsage(bufferSizes.vertexBufferSize));
+        logInfo("Models Index Buffer Size: " + this->formatMemoryUsage(bufferSizes.indexBufferSize));
+        logInfo("Models SSBO Buffer Size: " + this->formatMemoryUsage(bufferSizes.ssboBufferSize));
     }
-    
+
     return bufferSizes;
 }
 
+std::string Models::formatMemoryUsage(const VkDeviceSize size) {
+    if (size < KILO_BYTE) {
+        return std::to_string(size) + " B";
+    }
+
+    if (size < MEGA_BYTE) {
+        return std::to_string(size / KILO_BYTE) + " KB";
+    }
+
+    if (size < GIGA_BYTE) {
+        return std::to_string(size / MEGA_BYTE) + " MB";
+    }
+
+     return std::to_string(size / GIGA_BYTE) + " GB";
+}
 
 void Models::processTextures(Mesh & mesh) {
     TextureInformation textureInfo = mesh.getTextureInformation();

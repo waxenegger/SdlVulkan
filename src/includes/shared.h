@@ -35,8 +35,9 @@
 
 int start(int argc, char* argv []);
 
-static constexpr uint32_t MEGA_BYTE = 1000 * 1000;
-
+static constexpr uint64_t KILO_BYTE = 1000;
+static constexpr uint64_t MEGA_BYTE = KILO_BYTE * 1000;
+static constexpr uint64_t GIGA_BYTE = MEGA_BYTE * 1000;
 
 enum APP_PATHS {
     ROOT, SHADERS, MODELS, SKYBOX, FONTS, MAPS

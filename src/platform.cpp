@@ -15,7 +15,7 @@ int start(int argc, char* argv []) {
         rock->scale(2.0f);
     }
 
-    for (int i=0;i<1000;i++) {
+    for (int i=0;i<100;i++) {
         for (int j=0;j<100;j++) {
             Component * nanosuit = Components::INSTANCE()->addComponentFromModel("nanosuit" + std::to_string(i) + "_" + std::to_string(j), "nanosuit");
             if (nanosuit != nullptr) nanosuit->setPosition(0.0f + j*10.0f,10.0f,-11.0f+i* 10.0f);

@@ -213,6 +213,8 @@ class Models final {
         std::map<std::string, std::unique_ptr<Texture>> textures;
         std::vector<std::unique_ptr<Model>> models;
 
+        std::string formatMemoryUsage(const VkDeviceSize size);
+        
     public:
         static Models * INSTANCE();
         
