@@ -66,6 +66,7 @@ void Engine::loop() {
 void Engine::preloadModels() {
     // TODO: read from location
     this->models->addModel("cyborg", Engine::getAppPath(MODELS) / "cyborg.obj");
+    this->models->addModel("rock", Engine::getAppPath(MODELS) / "rock.obj");
     this->models->addModel("nanosuit", Engine::getAppPath(MODELS) / "nanosuit.obj");
     
     this->components->initWithModelIds(this->models->getModelIds());

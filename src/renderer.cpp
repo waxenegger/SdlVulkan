@@ -768,7 +768,7 @@ void Renderer::drawFrame() {
     this->deltaTime = time_span.count();
     
     int frameRate = static_cast<int>(1000 / this->deltaTime);
-    if (frameRate < 5) std::cout << frameRate << std::endl;
+    std::cout << frameRate << std::endl;
 }
 
 bool Renderer::doesShowWireFrame() const {
