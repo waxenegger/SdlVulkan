@@ -126,7 +126,6 @@ void Renderer::removePipeline(const uint8_t optIndexToRemove) {
         
     if (optIndexToRemove < 0|| optIndexToRemove >= this->pipelines.size()) return;
     
-    this->stopCommandBufferQueue();
     vkDeviceWaitIdle(this->logicalDevice);
 
     delete this->pipelines[optIndexToRemove];
@@ -414,10 +413,18 @@ bool Renderer::createDepthResources() {
 }
 
 void Renderer::initRenderer() {
+    if (this->isReady()) {
+        this->threadPool->start(Helper::createCommandPool, this->logicalDevice, this->graphicsQueueIndex);
+    }
+    
     if (!this->updateRenderer()) return;
     if (!this->createCommandPool()) return;
     if (!this->createSyncObjects()) return;
     if (!this->createUniformBuffers()) return;
+    
+    if (!this->threadPool->isActive()) {
+        logError("Failed to start Thread Pool");
+    }
 }
 
 void Renderer::destroyRendererObjects() {
@@ -544,25 +551,6 @@ VkPhysicalDevice Renderer::getPhysicalDevice() const {
     return this->physicalDevice;
 }
 
-void Renderer::startCommandBufferQueue() {
-    if (!this->canRender() || this->workerQueue.isRunning()) return;
-    
-    this->workerQueue.startQueue(
-        std::bind(&Renderer::createCommandBuffer, this, std::placeholders::_1, std::placeholders::_2),
-        std::bind(&Renderer::destroyCommandBuffer , this, std::placeholders::_1), 
-        this->swapChainFramebuffers.size());
-}
-
-void Renderer::stopCommandBufferQueue() {
-    this->workerQueue.stopQueue();
-}
-
-void Renderer::destroyCommandBuffer(VkCommandBuffer commandBuffer) {
-    if (!this->isReady()) return; 
-    
-    vkFreeCommandBuffers(this->logicalDevice, this->commandPool, 1, &commandBuffer);
-}
-
 VkCommandBuffer Renderer::createCommandBuffer(uint16_t commandBufferIndex, const bool useSecondaryBuffers) {
     if (this->requiresRenderUpdate) return nullptr;
     
@@ -634,13 +622,13 @@ void Renderer::updateUniformBuffer(uint32_t currentImage) {
 
 bool Renderer::createCommandBuffers() {
     this->commandBuffers.resize(this->swapChainFramebuffers.size());
-    
-    this->startCommandBufferQueue();
 
     return true;
 }
 
 void Renderer::drawFrame() {
+    return;
+    
     std::chrono::high_resolution_clock::time_point frameStart = std::chrono::high_resolution_clock::now();
     
     if (this->requiresRenderUpdate) {
@@ -666,29 +654,9 @@ void Renderer::drawFrame() {
         return;
     }
 
-    if (this->commandBuffers[imageIndex] != nullptr) {
-        this->workerQueue.queueCommandBufferForDeletion(this->commandBuffers[imageIndex]);
-    }
-
-    VkCommandBuffer latestCommandBuffer = this->workerQueue.getNextCommandBuffer(imageIndex);
-    std::chrono::high_resolution_clock::time_point nextBufferFetchStart = std::chrono::high_resolution_clock::now();
-    while (latestCommandBuffer == nullptr) {
-        std::chrono::duration<double, std::milli> fetchPeriod = std::chrono::high_resolution_clock::now() - nextBufferFetchStart;
-        if (fetchPeriod.count() > 500) {
-            logInfo("Could not get new buffer for quite a while!");
-            break;
-        }
-        latestCommandBuffer = this->workerQueue.getNextCommandBuffer(imageIndex);
-    }
-    std::chrono::duration<double, std::milli> timer = std::chrono::high_resolution_clock::now() - nextBufferFetchStart;
-    //if (timer.count() < 50) {
-    //    std::this_thread::sleep_for(std::chrono::duration<double, std::milli>(50 - timer.count()));
-    //}
-    //timer = std::chrono::high_resolution_clock::now() - nextBufferFetchStart;
-    //std::cout << "Fetch Time: " << timer.count() << " | " << this->workerQueue.getNumberOfItems(imageIndex) << std::endl;
+    // TODO: get command buffer
     
-    if (latestCommandBuffer == nullptr) return;
-    this->commandBuffers[imageIndex] = latestCommandBuffer;
+    this->commandBuffers[imageIndex] = nullptr;
 
     this->updateUniformBuffer(imageIndex);
         
@@ -754,7 +722,7 @@ void Renderer::drawFrame() {
     this->deltaTime = time_span.count();
     
     int frameRate = static_cast<int>(1000 / this->deltaTime);
-    std::cout << frameRate << std::endl;
+    logInfo(std::to_string(frameRate));
 }
 
 bool Renderer::doesShowWireFrame() const {
@@ -780,8 +748,6 @@ bool Renderer::updateRenderer() {
         return false;
     }
 
-    this->stopCommandBufferQueue();
-    
     this->destroySwapChainObjects();
 
     this->requiresRenderUpdate = false;
@@ -817,10 +783,13 @@ float Renderer::getDeltaTime() {
 }
 
 Renderer::~Renderer() {
-    this->stopCommandBufferQueue();
-
     logInfo("Destroying Renderer...");
     this->destroyRendererObjects();
+    
+    logInfo("Destroying Thread Pool...");
+    if (this->threadPool != nullptr) {
+        this->threadPool->stop();
+    }
     
     if (this->logicalDevice != nullptr) {
         vkDestroyDevice(this->logicalDevice, nullptr);
@@ -828,7 +797,7 @@ Renderer::~Renderer() {
     logInfo("Destroyed Renderer");
 }
 
-u_int32_t Renderer::getGraphicsQueueIndex() const {
+uint32_t Renderer::getGraphicsQueueIndex() const {
     return this->graphicsQueueIndex;
 }
 

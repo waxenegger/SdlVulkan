@@ -328,7 +328,7 @@ bool Helper::transitionImageLayout(
         return true;
     } else
     {
-        std::cerr << "Unsupported Layout Transition" << std::endl;
+        logError("Unsupported Layout Transition");
         return false;
     }
 
@@ -346,7 +346,7 @@ bool Helper::transitionImageLayout(
     return true;
 }
 
-VkCommandPool Helper::createCommandPool(const VkDevice & logicalDevice, const u_int32_t graphicsQueueIndex) {
+VkCommandPool Helper::createCommandPool(const VkDevice & logicalDevice, const uint32_t graphicsQueueIndex) {
     if (logicalDevice == nullptr) {
         logError("Logical Device is null!");
         return nullptr;

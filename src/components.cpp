@@ -164,4 +164,7 @@ Components * Components::INSTANCE() {
     return Components::instance;
 }
 
+Components::Components() { }
+
+
 Components * Components::instance = nullptr;

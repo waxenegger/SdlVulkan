@@ -209,6 +209,8 @@ class Model final {
 
 class Models final {
     private:
+        Models();
+
         static Models * instance;
         std::map<std::string, std::unique_ptr<Texture>> textures;
         std::vector<std::unique_ptr<Model>> models;
@@ -217,6 +219,9 @@ class Models final {
         
     public:
         static Models * INSTANCE();
+        Models(const Models&) = delete;
+        Models& operator=(const Models &) = delete;
+        Models(Models &&) = delete;
         
         bool addModel(const std::string id, const std::filesystem::path file);
         void addTextModel(std::string id, std::string font, std::string text, uint16_t size);

@@ -2,10 +2,10 @@
 #define SRC_INCLUDES_GRAPHICS_INCL_H_
 
 #include "shared.h"
+#include "threading.h"
 #include "models.h"
 #include "components.h"
 #include "world.h"
-#include "threading.h"
 
 constexpr uint32_t VULKAN_VERSION = VK_MAKE_VERSION(1,0,0);
 
@@ -56,7 +56,7 @@ class GraphicsContext final {
         
         std::vector<const char *> vulkanExtensions;
         std::vector<const char *> vulkanLayers = {
-           //"VK_LAYER_KHRONOS_validation"
+           "VK_LAYER_KHRONOS_validation"
            //"VK_LAYER_ADRENO_debug"
         };
         
@@ -223,7 +223,7 @@ class Renderer final {
         VkDevice logicalDevice = nullptr;
 
         VkCommandPool commandPool = nullptr;
-        CommandBufferQueue workerQueue;
+        ThreadPool * threadPool = ThreadPool::INSTANCE();
 
         std::vector<VkCommandBuffer> commandBuffers;
         
@@ -274,7 +274,6 @@ class Renderer final {
         bool createSyncObjects();
         
         bool createCommandBuffers();
-        void destroyCommandBuffer(VkCommandBuffer commandBuffer);
         VkCommandBuffer createCommandBuffer(uint16_t commandBufferIndex, const bool useSecondaryBuffers = false);
         
         bool createUniformBuffers();
@@ -293,9 +292,6 @@ class Renderer final {
         uint8_t addPipeline(GraphicsPipeline * pipeline);
         void removePipeline(const uint8_t optIndexToRemove);
 
-        void startCommandBufferQueue();
-        void stopCommandBufferQueue();
-        
         bool isReady() const;
         bool hasAtLeastOneActivePipeline() const;
         bool canRender() const;
@@ -316,7 +312,7 @@ class Renderer final {
         
         VkCommandPool getCommandPool() const;
         VkQueue getGraphicsQueue() const;
-        u_int32_t getGraphicsQueueIndex() const;
+        uint32_t getGraphicsQueueIndex() const;
         
         const VkBuffer getUniformBuffer(uint8_t index) const;
 
@@ -351,7 +347,7 @@ class Helper final {
         static void endCommandBufferWithSubmit(const VkDevice & logicalDevice, const VkCommandPool & commandPool, const VkQueue & graphicsQueue, VkCommandBuffer & commandBuffer);
         static bool endCommandBuffer(VkCommandBuffer & commandBuffer);
         static void copyModelsContentIntoBuffer(void* data, ModelsContentType modelsContentType, VkDeviceSize maxSize);
-        static VkCommandPool createCommandPool(const VkDevice & logicalDevice, const u_int32_t graphicsQueueIndex);
+        static VkCommandPool createCommandPool(const VkDevice& logicalDevice, const uint32_t graphicsQueueIndex);
         static bool transitionImageLayout(
             const VkDevice & logicalDevice, const VkCommandPool & commandPool, const VkQueue & graphicsQueue, 
             VkImage image, VkImageLayout oldLayout, VkImageLayout newLayout, uint16_t layerCount = 1);

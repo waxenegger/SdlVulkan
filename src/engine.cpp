@@ -79,12 +79,9 @@ void Engine::updateModels(const std::string id, const std::filesystem::path file
     
     logInfo("Adding Model...");
     
-    this->renderer->stopCommandBufferQueue();
-    
     Models::INSTANCE()->removeDummyTexture(this->renderer->getLogicalDevice());
     if (!this->models->addModel(id, file)) {
         Models::INSTANCE()->addDummyTexture(this->renderer->getSwapChainExtent());
-        this->renderer->startCommandBufferQueue();
         return;
     }
     
@@ -94,7 +91,7 @@ void Engine::updateModels(const std::string id, const std::filesystem::path file
     
     std::chrono::high_resolution_clock::time_point now = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double, std::milli> time_span = now - start;
-    std::cout << "Duration Update Models: " << time_span.count() << std::endl;
+    logInfo("Duration Update Models: " + std::to_string(time_span.count()));
 }
 
 void Engine::init() {

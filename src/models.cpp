@@ -920,6 +920,8 @@ Models::~Models() {
     this->clear();
 }
 
+Models::Models() { }
+
 Models * Models::instance = nullptr;
 const std::string Models::AMBIENT_TEXTURE = "ambient";
 const std::string Models::DIFFUSE_TEXTURE = "diffuse";

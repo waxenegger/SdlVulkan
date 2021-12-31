@@ -38,8 +38,12 @@ class Components final {
     private:
         static Components * instance;
         std::map<std::string, std::vector<std::unique_ptr<Component>>> components;
-
+        Components();
     public:
+        Components(const Components&) = delete;
+        Components& operator=(const Components &) = delete;
+        Components(Components &&) = delete;
+
         static Components * INSTANCE();
         Component * addComponent(Component * component);
         Component * addComponentFromModel(const std::string id, const std::string modelId);

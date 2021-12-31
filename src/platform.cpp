@@ -32,7 +32,7 @@ int start(int argc, char* argv []) {
     
     std::chrono::high_resolution_clock::time_point now = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double, std::milli> time_span = now - start;
-    std::cout << "Duration Init: " << time_span.count() << std::endl;
+    logInfo("Duration Init: " + std::to_string(time_span.count()));
 
     
     auto t = std::thread([]() {

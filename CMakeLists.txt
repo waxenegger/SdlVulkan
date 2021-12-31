@@ -35,6 +35,7 @@ endif()
 
 # Sources
 set(projectSources
+    src/threading.cpp
     src/platform.cpp
     src/desktop.cpp
     src/graphics.cpp
