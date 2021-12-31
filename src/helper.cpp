@@ -134,10 +134,10 @@ bool Helper::createBuffer(
     return true;
 }
 
-VkCommandBuffer Helper::beginSingleTimeCommands(const VkDevice & logicalDevice, const VkCommandPool & commandPool) {
+VkCommandBuffer Helper::beginCommandBuffer(const VkDevice & logicalDevice, const VkCommandPool & commandPool, const VkCommandBufferInheritanceInfo * cmdBufferInherit) {
     VkCommandBufferAllocateInfo allocInfo{};
     allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-    allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+    allocInfo.level = cmdBufferInherit == nullptr ? VK_COMMAND_BUFFER_LEVEL_PRIMARY : VK_COMMAND_BUFFER_LEVEL_SECONDARY;
     allocInfo.commandPool = commandPool;
     allocInfo.commandBufferCount = 1;
 
@@ -152,7 +152,8 @@ VkCommandBuffer Helper::beginSingleTimeCommands(const VkDevice & logicalDevice, 
 
     VkCommandBufferBeginInfo beginInfo{};
     beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-    beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+    beginInfo.flags = cmdBufferInherit == nullptr ? VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT : VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT | VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT;
+    beginInfo.pInheritanceInfo = cmdBufferInherit;
 
     ret = vkBeginCommandBuffer(commandBuffer, &beginInfo);
     if (ret != VK_SUCCESS) {
@@ -163,8 +164,12 @@ VkCommandBuffer Helper::beginSingleTimeCommands(const VkDevice & logicalDevice, 
     return commandBuffer;
 }
 
-void Helper::endSingleTimeCommands(const VkDevice & logicalDevice, const VkCommandPool & commandPool, const VkQueue & graphicsQueue, VkCommandBuffer & commandBuffer) {
-    vkEndCommandBuffer(commandBuffer);
+void Helper::endCommandBufferWithSubmit(const VkDevice & logicalDevice, const VkCommandPool & commandPool, const VkQueue & graphicsQueue, VkCommandBuffer & commandBuffer) {
+    VkResult ret = vkEndCommandBuffer(commandBuffer);
+    if (ret != VK_SUCCESS) {
+        logError("Failed to End Command Buffer!");
+        return;
+    }
 
     VkSubmitInfo submitInfo{};
     submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
@@ -172,22 +177,33 @@ void Helper::endSingleTimeCommands(const VkDevice & logicalDevice, const VkComma
     submitInfo.pCommandBuffers = &commandBuffer;
 
     vkQueueSubmit(graphicsQueue, 1, &submitInfo, VK_NULL_HANDLE);
+    // TODO: revisit
     vkQueueWaitIdle(graphicsQueue);
 
     vkFreeCommandBuffers(logicalDevice, commandPool, 1, &commandBuffer);
+}
+
+bool Helper::endCommandBuffer(VkCommandBuffer & commandBuffer) {
+    VkResult ret = vkEndCommandBuffer(commandBuffer);
+    if (ret != VK_SUCCESS) {
+        logError("Failed to End Command Buffer!");
+        return false;
+    }
+    
+    return true;
 }
 
 void Helper::copyBuffer(
     const VkDevice & logicalDevice, const VkCommandPool & commandPool, const VkQueue & graphicsQueue, 
     VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size) {
     
-    VkCommandBuffer commandBuffer = Helper::beginSingleTimeCommands(logicalDevice, commandPool);
+    VkCommandBuffer commandBuffer = Helper::beginCommandBuffer(logicalDevice, commandPool);
 
     VkBufferCopy copyRegion{};
     copyRegion.size = size;
     vkCmdCopyBuffer(commandBuffer, srcBuffer, dstBuffer, 1, &copyRegion);
 
-    endSingleTimeCommands(logicalDevice, commandPool, graphicsQueue, commandBuffer);
+    Helper::endCommandBufferWithSubmit(logicalDevice, commandPool, graphicsQueue, commandBuffer);
 }
 
 
@@ -196,7 +212,7 @@ void Helper::copyBufferToImage(
     VkBuffer & buffer, VkImage & image, uint32_t width, uint32_t height, uint16_t layerCount) {
     
     
-    VkCommandBuffer commandBuffer = Helper::beginSingleTimeCommands(logicalDevice, commandPool);
+    VkCommandBuffer commandBuffer = Helper::beginCommandBuffer(logicalDevice, commandPool);
     if (commandBuffer == nullptr) return;
 
     std::vector<VkBufferImageCopy> regions;
@@ -214,7 +230,7 @@ void Helper::copyBufferToImage(
 
     vkCmdCopyBufferToImage(commandBuffer, buffer, image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, regions.size(), regions.data());
 
-    endSingleTimeCommands(logicalDevice, commandPool, graphicsQueue, commandBuffer);    
+    Helper::endCommandBufferWithSubmit(logicalDevice, commandPool, graphicsQueue, commandBuffer);    
 }
 
 void Helper::copyModelsContentIntoBuffer(void* data, ModelsContentType modelsContentType, VkDeviceSize maxSize) {
@@ -271,7 +287,7 @@ bool Helper::transitionImageLayout(
     const VkDevice & logicalDevice, const VkCommandPool & commandPool, const VkQueue & graphicsQueue, 
     VkImage image, VkImageLayout oldLayout, VkImageLayout newLayout, uint16_t layerCount) {
     
-    VkCommandBuffer commandBuffer = Helper::beginSingleTimeCommands(logicalDevice, commandPool);
+    VkCommandBuffer commandBuffer = Helper::beginCommandBuffer(logicalDevice, commandPool);
     if (commandBuffer == nullptr) return false;
 
     VkImageMemoryBarrier barrier{};
@@ -325,7 +341,7 @@ bool Helper::transitionImageLayout(
         1, &barrier
     );
 
-    Helper::endSingleTimeCommands(logicalDevice, commandPool, graphicsQueue, commandBuffer);
+    Helper::endCommandBufferWithSubmit(logicalDevice, commandPool, graphicsQueue, commandBuffer);
     
     return true;
 }

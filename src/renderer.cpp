@@ -557,7 +557,7 @@ void Renderer::startCommandBufferQueue() {
     if (!this->canRender() || this->workerQueue.isRunning()) return;
     
     this->workerQueue.startQueue(
-        std::bind(&Renderer::createCommandBuffer, this, std::placeholders::_1),
+        std::bind(&Renderer::createCommandBuffer, this, std::placeholders::_1, std::placeholders::_2),
         std::bind(&Renderer::destroyCommandBuffer , this, std::placeholders::_1), 
         this->swapChainFramebuffers.size());
 }
@@ -572,34 +572,17 @@ void Renderer::destroyCommandBuffer(VkCommandBuffer commandBuffer) {
     vkFreeCommandBuffers(this->logicalDevice, this->commandPool, 1, &commandBuffer);
 }
 
-VkCommandBuffer Renderer::createCommandBuffer(uint16_t commandBufferIndex) {
+VkCommandBuffer Renderer::createCommandBuffer(uint16_t commandBufferIndex, const bool threaded) {
     if (this->requiresRenderUpdate) return nullptr;
     
-    VkCommandBuffer commandBuffer = nullptr;
+    std::vector<VkCommandBuffer> commandBuffers;
     
-    VkCommandBufferAllocateInfo allocInfo{};
-    allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-    allocInfo.commandPool = this->commandPool;
-    allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-    allocInfo.commandBufferCount = 1;
-
-    VkResult ret = vkAllocateCommandBuffers(this->logicalDevice, &allocInfo, &commandBuffer);
-    if (ret != VK_SUCCESS) {
-        logError("Failed to Allocate Command Buffer!");
-        return nullptr;
-    }
-
-    VkCommandBufferBeginInfo beginInfo{};
-    beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-    beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-
-    ret = vkBeginCommandBuffer(commandBuffer, &beginInfo);
-    if (ret != VK_SUCCESS) {
-        logError("Failed to begin Recording Command Buffer!");
-        return nullptr;
-    }
-
-    if (this->requiresRenderUpdate) return nullptr;
+    // TODO: fork for threaded
+    
+    VkCommandBuffer commandBuffer = Helper::beginCommandBuffer(this->logicalDevice,this->commandPool);
+    if (this->requiresRenderUpdate || commandBuffer == nullptr) return nullptr;
+    
+    commandBuffers.push_back(commandBuffer);
     
     VkRenderPassBeginInfo renderPassInfo{};
     renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
@@ -615,23 +598,17 @@ VkCommandBuffer Renderer::createCommandBuffer(uint16_t commandBufferIndex) {
     renderPassInfo.clearValueCount = static_cast<uint32_t>(clearValues.size());
     renderPassInfo.pClearValues = clearValues.data();
     
-    if (this->requiresRenderUpdate) return nullptr;
-    
     vkCmdBeginRenderPass(commandBuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
         
     for (GraphicsPipeline * pipeline : this->pipelines) {
         if (!this->requiresRenderUpdate && pipeline->canRender()) {
-            pipeline->draw(commandBuffer, commandBufferIndex);
+            pipeline->draw(commandBuffers, commandBufferIndex);
         }
     }
     
     vkCmdEndRenderPass(commandBuffer);
 
-    ret = vkEndCommandBuffer(commandBuffer);
-    if (ret != VK_SUCCESS) {
-        logError("Failed to end  Recording Command Buffer!");
-        return nullptr;
-    }
+    if (!Helper::endCommandBuffer(commandBuffer)) return nullptr;
 
     return commandBuffer;
 }

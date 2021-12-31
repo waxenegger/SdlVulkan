@@ -377,9 +377,27 @@ bool SkyboxPipeline::createSkybox() {
     return true;
 }
 
-void SkyboxPipeline::draw(const VkCommandBuffer & commandBuffer, const uint16_t commandBufferIndex) {
-    if (this->isReady()) {
-        if (this->vertexBuffer != nullptr) {
+void SkyboxPipeline::draw(std::vector<VkCommandBuffer> & commandBuffers, const uint16_t commandBufferIndex, const VkCommandBufferInheritanceInfo * cmdBufferInherit) {
+    if (this->isReady() && this->vertexBuffer != nullptr) {
+        if (cmdBufferInherit == nullptr) {
+            if (commandBuffers.empty()) return;
+
+            const VkCommandBuffer commandBuffer = commandBuffers[0];
+            
+            vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, this->layout, 0, 1, &this->descriptorSets[commandBufferIndex], 0, nullptr);
+
+            vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, this->pipeline);
+
+            VkDeviceSize offsets[] = {0};
+            VkBuffer vertexBuffers[] = {this->vertexBuffer};
+            vkCmdBindVertexBuffers(commandBuffer, 0, 1, vertexBuffers, offsets);
+            
+            vkCmdDraw(commandBuffer, SKYBOX_VERTICES.size(), 1, 0, 0);
+        } else {
+            // multithreaded with secondary
+            VkCommandBuffer commandBuffer = Helper::beginCommandBuffer(this->renderer->getLogicalDevice(),this->renderer->getCommandPool(), cmdBufferInherit);
+            if (commandBuffer == nullptr) return;
+            
             vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, this->layout, 0, 1, &this->descriptorSets[commandBufferIndex], 0, nullptr);
     
             vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, this->pipeline);
@@ -388,7 +406,11 @@ void SkyboxPipeline::draw(const VkCommandBuffer & commandBuffer, const uint16_t 
             VkBuffer vertexBuffers[] = {this->vertexBuffer};
             vkCmdBindVertexBuffers(commandBuffer, 0, 1, vertexBuffers, offsets);
             
-            vkCmdDraw(commandBuffer, SKYBOX_VERTICES.size(), 1, 0, 0);   
+            vkCmdDraw(commandBuffer, SKYBOX_VERTICES.size(), 1, 0, 0);
+            
+            if (Helper::endCommandBuffer(commandBuffer)) {
+                commandBuffers.push_back(commandBuffer);
+            }
         }
     }
 }

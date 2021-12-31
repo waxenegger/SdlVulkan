@@ -310,31 +310,43 @@ bool ModelsPipeline::updateGraphicsPipeline() {
     return true;
 }
 
-
-void ModelsPipeline::draw(const VkCommandBuffer & commandBuffer, const uint16_t commandBufferIndex) {
+void ModelsPipeline::draw(std::vector<VkCommandBuffer> & commandBuffers, const uint16_t commandBufferIndex, const VkCommandBufferInheritanceInfo * cmdBufferInherit) {
     if (this->isReady()) {
-        if (this->vertexBuffer != nullptr) {
-            vkCmdBindDescriptorSets(
-                commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, 
-                this->layout, 0, 1, &this->descriptorSets[commandBufferIndex], 0, nullptr);
+        // single threaded execution with primary buffer only
+        if (cmdBufferInherit == nullptr) {
+            if (commandBuffers.empty()) return;
             
-            vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, this->pipeline);
+            const VkCommandBuffer commandBuffer = commandBuffers[0];
+            if (this->vertexBuffer != nullptr) {
+                vkCmdBindDescriptorSets(
+                    commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, 
+                    this->layout, 0, 1, &this->descriptorSets[commandBufferIndex], 0, nullptr);
+                
+                vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, this->pipeline);
 
-            VkBuffer vertexBuffers[] = {this->vertexBuffer};
-            VkDeviceSize offsets[] = {0};
-            vkCmdBindVertexBuffers(commandBuffer, 0, 1, vertexBuffers, offsets);
-        }
-            
-        if (this->indexBuffer != nullptr) {
-            vkCmdBindIndexBuffer(commandBuffer, this->indexBuffer, 0, VK_INDEX_TYPE_UINT32);
-            this->drawModels(commandBuffer, true);
+                VkBuffer vertexBuffers[] = {this->vertexBuffer};
+                VkDeviceSize offsets[] = {0};
+                vkCmdBindVertexBuffers(commandBuffer, 0, 1, vertexBuffers, offsets);
+            }
+                
+            if (this->indexBuffer != nullptr) {
+                vkCmdBindIndexBuffer(commandBuffer, this->indexBuffer, 0, VK_INDEX_TYPE_UINT32);
+                this->drawModelsPrimaryBuffer(commandBuffer, true);
+            } else {
+                this->drawModelsPrimaryBuffer(commandBuffer, false);       
+            }
         } else {
-            this->drawModels(commandBuffer, false);       
+            // multithreaded with secondary
+            if (this->indexBuffer != nullptr) {
+                this->drawModelsSecondaryBuffer(commandBuffers, commandBufferIndex, cmdBufferInherit, true);
+            } else {
+                this->drawModelsSecondaryBuffer(commandBuffers, commandBufferIndex, cmdBufferInherit, false);
+            }
         }
     }
 }
 
-void ModelsPipeline::drawModels(const VkCommandBuffer & commandBuffer, const bool useIndices) {
+void ModelsPipeline::drawModelsPrimaryBuffer(const VkCommandBuffer & commandBuffer, const bool useIndices) {
     VkDeviceSize lastVertexOffset = 0;
     VkDeviceSize lastIndexOffset = 0;
     uint32_t firstInstanceMesh = 0;
@@ -371,6 +383,10 @@ void ModelsPipeline::drawModels(const VkCommandBuffer & commandBuffer, const boo
     }
 }
 
+void ModelsPipeline::drawModelsSecondaryBuffer(std::vector<VkCommandBuffer> & commandBuffers, const uint16_t commandBufferIndex, const VkCommandBufferInheritanceInfo * cmdBufferInherit, const bool useIndices) {
+    // TODO: implement
+}
+    
 bool ModelsPipeline::createDescriptorPool() {
     if (this->renderer == nullptr || !this->renderer->isReady()) return false;
 
