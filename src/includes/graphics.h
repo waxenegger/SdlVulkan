@@ -275,7 +275,7 @@ class Renderer final {
         
         bool createCommandBuffers();
         void destroyCommandBuffer(VkCommandBuffer commandBuffer);
-        VkCommandBuffer createCommandBuffer(uint16_t commandBufferIndex, const bool threaded = false);
+        VkCommandBuffer createCommandBuffer(uint16_t commandBufferIndex, const bool useSecondaryBuffers = false);
         
         bool createUniformBuffers();
         void updateUniformBuffer(uint32_t currentImage);

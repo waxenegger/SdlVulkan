@@ -346,3 +346,25 @@ bool Helper::transitionImageLayout(
     return true;
 }
 
+VkCommandPool Helper::createCommandPool(const VkDevice & logicalDevice, const u_int32_t graphicsQueueIndex) {
+    if (logicalDevice == nullptr) {
+        logError("Logical Device is null!");
+        return nullptr;
+    }
+    
+    VkCommandPoolCreateInfo poolInfo{};
+    poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+    poolInfo.flags = VK_COMMAND_POOL_CREATE_TRANSIENT_BIT;
+    poolInfo.queueFamilyIndex = graphicsQueueIndex;
+    
+    VkCommandPool pool = nullptr;
+
+    VkResult ret = vkCreateCommandPool(logicalDevice, &poolInfo, nullptr, &pool);
+    if (ret != VK_SUCCESS) {
+        logError("Failed to Create Command Pool!");
+        return nullptr;
+    }
+
+    return pool;
+}
+

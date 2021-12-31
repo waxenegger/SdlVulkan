@@ -336,19 +336,10 @@ bool Renderer::createCommandPool() {
         logError("Renderer has not been initialized!");
         return false;
     }
-    
-    VkCommandPoolCreateInfo poolInfo{};
-    poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
-    poolInfo.flags = VK_COMMAND_POOL_CREATE_TRANSIENT_BIT;
-    poolInfo.queueFamilyIndex = this->graphicsQueueIndex;
 
-    VkResult ret = vkCreateCommandPool(this->logicalDevice, &poolInfo, nullptr, &this->commandPool);
-    if (ret != VK_SUCCESS) {
-        logError("Failed to Create Command Pool!");
-        return false;
-    }
+    this->commandPool = Helper::createCommandPool(this->logicalDevice, this->graphicsQueueIndex);
 
-    return true;
+    return this->commandPool != nullptr;
 }
 
 VkCommandPool Renderer::getCommandPool() const {
@@ -572,17 +563,26 @@ void Renderer::destroyCommandBuffer(VkCommandBuffer commandBuffer) {
     vkFreeCommandBuffers(this->logicalDevice, this->commandPool, 1, &commandBuffer);
 }
 
-VkCommandBuffer Renderer::createCommandBuffer(uint16_t commandBufferIndex, const bool threaded) {
+VkCommandBuffer Renderer::createCommandBuffer(uint16_t commandBufferIndex, const bool useSecondaryBuffers) {
     if (this->requiresRenderUpdate) return nullptr;
     
-    std::vector<VkCommandBuffer> commandBuffers;
+    std::vector<VkCommandBuffer> commandBuffers;    
+    VkCommandBufferInheritanceInfo cmdBufferInherit = {};
+    VkCommandBuffer commandBuffer = Helper::beginCommandBuffer(this->logicalDevice,this->commandPool);;
     
-    // TODO: fork for threaded
-    
-    VkCommandBuffer commandBuffer = Helper::beginCommandBuffer(this->logicalDevice,this->commandPool);
-    if (this->requiresRenderUpdate || commandBuffer == nullptr) return nullptr;
-    
-    commandBuffers.push_back(commandBuffer);
+    if (useSecondaryBuffers) {
+        cmdBufferInherit.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO;
+        cmdBufferInherit.pNext = NULL;
+        cmdBufferInherit.renderPass = this->renderPass;
+        cmdBufferInherit.subpass = 0;
+        cmdBufferInherit.framebuffer = this->swapChainFramebuffers[commandBufferIndex];
+        cmdBufferInherit.occlusionQueryEnable = VK_FALSE;
+        cmdBufferInherit.queryFlags = 0;
+        cmdBufferInherit.pipelineStatistics = 0;
+    } else {
+        commandBuffers.push_back(commandBuffer);
+    }
+    if (commandBuffer == nullptr) return nullptr;
     
     VkRenderPassBeginInfo renderPassInfo{};
     renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
@@ -598,12 +598,21 @@ VkCommandBuffer Renderer::createCommandBuffer(uint16_t commandBufferIndex, const
     renderPassInfo.clearValueCount = static_cast<uint32_t>(clearValues.size());
     renderPassInfo.pClearValues = clearValues.data();
     
-    vkCmdBeginRenderPass(commandBuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
+    vkCmdBeginRenderPass(commandBuffer, &renderPassInfo, 
+        useSecondaryBuffers ? VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS : VK_SUBPASS_CONTENTS_INLINE);
         
     for (GraphicsPipeline * pipeline : this->pipelines) {
         if (!this->requiresRenderUpdate && pipeline->canRender()) {
-            pipeline->draw(commandBuffers, commandBufferIndex);
+            if (useSecondaryBuffers) {
+                pipeline->draw(commandBuffers, commandBufferIndex, &cmdBufferInherit);
+            } else {
+                pipeline->draw(commandBuffers, commandBufferIndex);
+            }
         }
+    }
+    
+    if (useSecondaryBuffers) {
+        vkCmdExecuteCommands(commandBuffer, commandBuffers.size(), commandBuffers.data());
     }
     
     vkCmdEndRenderPass(commandBuffer);
@@ -817,5 +826,9 @@ Renderer::~Renderer() {
         vkDestroyDevice(this->logicalDevice, nullptr);
     }
     logInfo("Destroyed Renderer");
+}
+
+u_int32_t Renderer::getGraphicsQueueIndex() const {
+    return this->graphicsQueueIndex;
 }
 

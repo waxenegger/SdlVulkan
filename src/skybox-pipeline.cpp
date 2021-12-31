@@ -379,9 +379,10 @@ bool SkyboxPipeline::createSkybox() {
 
 void SkyboxPipeline::draw(std::vector<VkCommandBuffer> & commandBuffers, const uint16_t commandBufferIndex, const VkCommandBufferInheritanceInfo * cmdBufferInherit) {
     if (this->isReady() && this->vertexBuffer != nullptr) {
+        // primary buffer use
         if (cmdBufferInherit == nullptr) {
             if (commandBuffers.empty()) return;
-
+            
             const VkCommandBuffer commandBuffer = commandBuffers[0];
             
             vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, this->layout, 0, 1, &this->descriptorSets[commandBufferIndex], 0, nullptr);
@@ -394,7 +395,7 @@ void SkyboxPipeline::draw(std::vector<VkCommandBuffer> & commandBuffers, const u
             
             vkCmdDraw(commandBuffer, SKYBOX_VERTICES.size(), 1, 0, 0);
         } else {
-            // multithreaded with secondary
+            // secondary buffer use
             VkCommandBuffer commandBuffer = Helper::beginCommandBuffer(this->renderer->getLogicalDevice(),this->renderer->getCommandPool(), cmdBufferInherit);
             if (commandBuffer == nullptr) return;
             

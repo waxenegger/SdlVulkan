@@ -35,15 +35,15 @@ class CommandBufferQueue final {
         
         uint16_t getNumberOfItems(uint16_t frameIndex) {
             if (this->isStopping) return 0;
-            
+        
             return this->commmandBuffers[frameIndex].size();
         }
         
         void startQueue(std::function<VkCommandBuffer(uint16_t,bool)> commandBufferCreation, 
-                        std::function<void(VkCommandBuffer)> commandBufferDeletion, uint16_t numberOfFrames, bool threaded = false) {
+                        std::function<void(VkCommandBuffer)> commandBufferDeletion, uint16_t numberOfFrames, bool useSecondaryBuffers = false) {
             this->commmandBuffers.resize(numberOfFrames);
 
-            this->queueThread = std::make_unique<std::thread>([this, commandBufferCreation,commandBufferDeletion, threaded]() {
+            this->queueThread = std::make_unique<std::thread>([this, commandBufferCreation,commandBufferDeletion, useSecondaryBuffers]() {
                 this->isStopping = false;
                 this->hasStopped = false;
 
@@ -57,7 +57,7 @@ class CommandBufferQueue final {
 
                             uint16_t numberOfCommandBuffers = this->commmandBuffers[i].size();
                             if (numberOfCommandBuffers < maxItems) {
-                                VkCommandBuffer buf = commandBufferCreation(i, threaded);
+                                VkCommandBuffer buf = commandBufferCreation(i, useSecondaryBuffers);
                                 if (buf != nullptr) {
                                     this->commmandBuffers[i].push(std::move(buf));
                                 }

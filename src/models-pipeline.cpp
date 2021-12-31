@@ -312,7 +312,7 @@ bool ModelsPipeline::updateGraphicsPipeline() {
 
 void ModelsPipeline::draw(std::vector<VkCommandBuffer> & commandBuffers, const uint16_t commandBufferIndex, const VkCommandBufferInheritanceInfo * cmdBufferInherit) {
     if (this->isReady()) {
-        // single threaded execution with primary buffer only
+        // primary buffer use
         if (cmdBufferInherit == nullptr) {
             if (commandBuffers.empty()) return;
             
@@ -336,7 +336,7 @@ void ModelsPipeline::draw(std::vector<VkCommandBuffer> & commandBuffers, const u
                 this->drawModelsPrimaryBuffer(commandBuffer, false);       
             }
         } else {
-            // multithreaded with secondary
+            // secondary buffer use
             if (this->indexBuffer != nullptr) {
                 this->drawModelsSecondaryBuffer(commandBuffers, commandBufferIndex, cmdBufferInherit, true);
             } else {
@@ -384,7 +384,61 @@ void ModelsPipeline::drawModelsPrimaryBuffer(const VkCommandBuffer & commandBuff
 }
 
 void ModelsPipeline::drawModelsSecondaryBuffer(std::vector<VkCommandBuffer> & commandBuffers, const uint16_t commandBufferIndex, const VkCommandBufferInheritanceInfo * cmdBufferInherit, const bool useIndices) {
-    // TODO: implement
+
+    VkCommandBuffer commandBuffer = Helper::beginCommandBuffer(this->renderer->getLogicalDevice(), this->renderer->getCommandPool(), cmdBufferInherit);
+
+    vkCmdBindDescriptorSets(
+        commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, 
+        this->layout, 0, 1, &this->descriptorSets[commandBufferIndex], 0, nullptr);
+    
+    vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, this->pipeline);
+    
+    if (useIndices) {
+        vkCmdBindIndexBuffer(commandBuffer, this->indexBuffer, 0, VK_INDEX_TYPE_UINT32);
+    }
+    
+    VkBuffer vertexBuffers[] = {this->vertexBuffer};
+    VkDeviceSize offsets[] = {0};
+    vkCmdBindVertexBuffers(commandBuffer, 0, 1, vertexBuffers, offsets);
+
+    
+    VkDeviceSize lastVertexOffset = 0;
+    VkDeviceSize lastIndexOffset = 0;
+    uint32_t firstInstanceMesh = 0;
+
+    auto & allModels = Models::INSTANCE()->getModels();
+    
+    for (auto & model :  allModels) {
+        auto meshes = model->getMeshes();
+        
+        for (Mesh & mesh : meshes) {
+            VkDeviceSize vertexSize = mesh.getVertices().size();
+            VkDeviceSize indexSize = mesh.getIndices().size();
+            
+            auto allComponents = Components::INSTANCE()->getAllComponentsForModel(model->getId());
+            for (auto & comp : allComponents) {
+                if (!comp->isVisible()) continue;
+                
+                ModelProperties props = { comp->getModelMatrix()};
+                vkCmdPushConstants(
+                    commandBuffer, this->layout,
+                    VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(struct ModelProperties), &props);
+
+                if (useIndices) {                
+                    vkCmdDrawIndexed(commandBuffer, indexSize , 1, lastIndexOffset, lastVertexOffset, firstInstanceMesh);
+                } else {
+                    vkCmdDraw(commandBuffer, vertexSize, 1, 0, firstInstanceMesh);
+                }
+            }
+                        
+            lastIndexOffset += indexSize;
+            lastVertexOffset += vertexSize;
+            firstInstanceMesh++;
+        }
+    }
+            
+    Helper::endCommandBuffer(commandBuffer);
+    commandBuffers.push_back(commandBuffer);
 }
     
 bool ModelsPipeline::createDescriptorPool() {
