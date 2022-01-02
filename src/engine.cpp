@@ -140,9 +140,11 @@ void Engine::createModelPipeline() {
     pipeline->addShader((Engine::getAppPath(SHADERS) / "models-frag.spv").string(), VK_SHADER_STAGE_FRAGMENT_BIT);
 
     VkPushConstantRange pushConstantRange{};
+    /*
     pushConstantRange.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
     pushConstantRange.offset = 0;
     pushConstantRange.size = sizeof(struct ModelProperties);
+    */
     
     if (pipeline->createGraphicsPipeline(pushConstantRange)) {
         
@@ -181,9 +183,11 @@ void Engine::updateModelPipeline() {
     pipeline->destroyPipelineObjects();
 
     VkPushConstantRange pushConstantRange{};
+    /*
     pushConstantRange.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
     pushConstantRange.offset = 0;
     pushConstantRange.size = sizeof(struct ModelProperties);
+    */
     
     if (pipeline->createGraphicsPipeline(pushConstantRange)) {
     

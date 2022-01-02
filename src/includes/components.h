@@ -3,10 +3,17 @@
 
 #include "models.h"
 
+struct ComponentProperties final {
+    public:
+        MeshProperties meshProperties;
+        ModelProperties modelProperties;
+};
+
 class Component final {
     private:
         Model * model = nullptr;
         uint32_t ssboIndex;
+        std::vector<ComponentProperties> compProps;
         
         std::string id = "";
         
@@ -15,10 +22,11 @@ class Component final {
         float scaleFactor = 1.0f;
         
         bool visible = true;
+        
+        void updateComponentProperties();
     public:
         Component(std::string id);
         Component(std::string id, Model * model);
-        MeshProperties & getModelProperties();
         bool hasModel();
         Model * getModel();
         void setPosition(float x, float y, float z);
@@ -36,6 +44,8 @@ class Component final {
         void setSsboIndex(const uint32_t index);
         uint32_t getSsboIndex();
         VkDeviceSize getSsboSize();
+        std::vector<ComponentProperties> & getProperties();
+        void addComponentProperties(const ComponentProperties props);
 };
 
 class Components final {

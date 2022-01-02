@@ -165,6 +165,7 @@ class GraphicsPipeline {
         void destroyPipelineObjects();
         
         virtual void draw(std::vector<VkCommandBuffer> & commandBuffers, const uint16_t commandBufferIndex, const VkCommandBufferInheritanceInfo * cmdBufferInherit = nullptr) = 0;
+        virtual void update() = 0;
         
         GraphicsPipeline(const Renderer * renderer);
         virtual ~GraphicsPipeline();
@@ -180,16 +181,19 @@ class ModelsPipeline : public GraphicsPipeline {
         bool createDescriptorPool();
         bool createDescriptorSets();
         
+        void updateSsboBuffersComponents();
         void drawModelsPrimaryBuffer(const VkCommandBuffer & commandBuffer, const bool useIndices);
         void drawModelsSecondaryBuffer(std::vector<VkCommandBuffer> & commandBuffers, const uint16_t commandBufferIndex, const VkCommandBufferInheritanceInfo * cmdBufferInherit, const bool useIndices);
     public:
         ModelsPipeline(const Renderer * renderer);
         ModelsPipeline & operator=(ModelsPipeline) = delete;
 
+        bool createSsboBuffersFromComponents();
         bool createGraphicsPipeline(const VkPushConstantRange & pushConstantRange);
         bool updateGraphicsPipeline();
         
         void draw(std::vector<VkCommandBuffer> & commandBuffers, const uint16_t commandBufferIndex, const VkCommandBufferInheritanceInfo * cmdBufferInherit = nullptr);
+        void update();
 };
 
 class SkyboxPipeline : public GraphicsPipeline {
@@ -214,6 +218,8 @@ class SkyboxPipeline : public GraphicsPipeline {
         bool updateGraphicsPipeline();
         
         void draw(std::vector<VkCommandBuffer> & commandBuffers, const uint16_t commandBufferIndex, const VkCommandBufferInheritanceInfo * cmdBufferInherit = nullptr);
+        void update();
+        
         ~SkyboxPipeline();
 };
 
@@ -350,7 +356,8 @@ class Helper final {
         static void endCommandBufferWithSubmit(const VkDevice & logicalDevice, const VkCommandPool & commandPool, const VkQueue & graphicsQueue, VkCommandBuffer & commandBuffer);
         static bool endCommandBuffer(VkCommandBuffer & commandBuffer);
         static void copyModelsContentIntoBuffer(void* data, ModelsContentType modelsContentType, VkDeviceSize maxSize);
-        static VkCommandPool createCommandPool(const VkDevice& logicalDevice, const uint32_t graphicsQueueIndex);
+	static void copyComponentsPropertiesIntoSsbo(void* data, VkDeviceSize maxSize);        
+	static VkCommandPool createCommandPool(const VkDevice& logicalDevice, const uint32_t graphicsQueueIndex);
         static bool transitionImageLayout(
             const VkDevice & logicalDevice, const VkCommandPool & commandPool, const VkQueue & graphicsQueue, 
             VkImage image, VkImageLayout oldLayout, VkImageLayout newLayout, uint16_t layerCount = 1);

@@ -591,6 +591,7 @@ VkCommandBuffer Renderer::createCommandBuffer(uint16_t commandBufferIndex, const
         
     for (GraphicsPipeline * pipeline : this->pipelines) {
         if (!this->requiresRenderUpdate && pipeline->canRender()) {
+            pipeline->update();
             if (useSecondaryBuffers) {
                 pipeline->draw(commandBuffers, commandBufferIndex, &cmdBufferInherit);
             } else {

@@ -7,7 +7,7 @@ layout(location = 2) in vec3 fragNormals;
 layout(location = 3) in vec4 eye;
 layout(location = 4) in vec4 light;
 
-struct MeshProperties {
+struct ComponentProperties {
     int ambientTexture;
     int diffuseTexture;
     int specularTexture;
@@ -18,9 +18,10 @@ struct MeshProperties {
     float opacity;
     vec3 specularColor;
     float shininess;
+    mat4 matrix;
 };
 
-layout(location = 5) flat in MeshProperties meshProperties;
+layout(location = 5) flat in ComponentProperties compProperties;
 
 layout(binding = 2) uniform sampler2D samplers[25];
 
@@ -28,27 +29,27 @@ layout(location = 0) out vec4 outColor;
 
 void main() {
     bool hasTextures =
-        meshProperties.ambientTexture != -1 || meshProperties.diffuseTexture != -1 ||
-        meshProperties.specularTexture != -1 || meshProperties.normalTexture != -1;
+        compProperties.ambientTexture != -1 || compProperties.diffuseTexture != -1 ||
+        compProperties.specularTexture != -1 || compProperties.normalTexture != -1;
 
-    vec3 emissiveContribution = vec3(1) * meshProperties.emissiveFactor;
+    vec3 emissiveContribution = vec3(1) * compProperties.emissiveFactor;
     
     // ambientContribution
-    vec3 ambientContribution = meshProperties.ambientColor;
+    vec3 ambientContribution = compProperties.ambientColor;
     
     // diffuseContribution
-    vec3 diffuseContribution = meshProperties.diffuseColor;
+    vec3 diffuseContribution = compProperties.diffuseColor;
     
     // specularContribution
-    vec3 specularContribution = meshProperties.specularColor;
+    vec3 specularContribution = compProperties.specularColor;
 
     // global light source
     vec3 lightDirection = normalize(vec3(light) - fragPosition);
 
     // normals adjustment if normal texture is present
     vec3 normals = fragNormals;
-    if (meshProperties.normalTexture != -1) {
-        normals = texture(samplers[meshProperties.normalTexture], fragTexCoord).rgb;
+    if (compProperties.normalTexture != -1) {
+        normals = texture(samplers[compProperties.normalTexture], fragTexCoord).rgb;
         normals = normalize(normals * 2.0 - 1.0);
     }
     
@@ -58,26 +59,26 @@ void main() {
     // specular multiplier based on normals and eye direction
     vec3 eyeDirection = normalize(vec3(eye) - fragPosition);
     vec3 halfDirection = normalize(lightDirection + vec3(eye));
-    float specular = pow(max(dot(normals, halfDirection), 0), meshProperties.shininess);
+    float specular = pow(max(dot(normals, halfDirection), 0), compProperties.shininess);
     
     if (hasTextures) {
         // ambience
-        if (meshProperties.ambientTexture != -1) {
-            ambientContribution = texture(samplers[meshProperties.ambientTexture], fragTexCoord).rgb;
+        if (compProperties.ambientTexture != -1) {
+            ambientContribution = texture(samplers[compProperties.ambientTexture], fragTexCoord).rgb;
         }
         
         // diffuse
-        if (meshProperties.diffuseTexture != -1) {
-            diffuseContribution = texture(samplers[meshProperties.diffuseTexture], fragTexCoord).rgb;
+        if (compProperties.diffuseTexture != -1) {
+            diffuseContribution = texture(samplers[compProperties.diffuseTexture], fragTexCoord).rgb;
         }
         
         // sepcular
-        if (meshProperties.specularTexture != -1) {
-            specularContribution = texture(samplers[meshProperties.specularTexture], fragTexCoord).rgb;
+        if (compProperties.specularTexture != -1) {
+            specularContribution = texture(samplers[compProperties.specularTexture], fragTexCoord).rgb;
         }
     }
     
     outColor = vec4(
         mix((emissiveContribution + ambientContribution + vec3(diffuse)) * diffuseContribution.rgb, 
-        vec3(specular) * specularContribution.rgb, 0.40), meshProperties.opacity);
+        vec3(specular) * specularContribution.rgb, 0.40), compProperties.opacity);
 }

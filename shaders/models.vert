@@ -14,7 +14,7 @@ layout(binding = 0) uniform UniformBufferObject {
     vec4 sun;
 } modelUniforms;
 
-struct MeshProperties {
+struct ComponentProperties {
     int ambientTexture;
     int diffuseTexture;
     int specularTexture;
@@ -25,40 +25,37 @@ struct MeshProperties {
     float opacity;
     vec3 specularColor;
     float shininess;
+    mat4 matrix;
 };
 
-layout(push_constant) uniform PushConstants {
-    mat4 matrix;
-} modelProperties;
-
-layout(std430, binding = 1) readonly buffer SSBO {
-    MeshProperties props[];
-} meshPropertiesSSBO;
+layout(binding = 1) buffer SSBO {
+    ComponentProperties props[];
+} compPropertiesSSBO;
 
 layout(location = 0) out vec3 fragPosition;
 layout(location = 1) out vec2 fragTexCoord;
 layout(location = 2) out vec3 fragNormals;
 layout(location = 3) out vec4 eye;
 layout(location = 4) out vec4 light;
-layout(location = 5) flat out MeshProperties meshProperties;
+layout(location = 5) flat out ComponentProperties compProperties;
 
 void main() {
-    MeshProperties meshProps = meshPropertiesSSBO.props[gl_InstanceIndex];
+    ComponentProperties compProps = compPropertiesSSBO.props[gl_InstanceIndex];
 
-    vec4 pos = modelProperties.matrix * vec4(inPosition, 1.0f);
+    vec4 pos = compProps.matrix * vec4(inPosition, 1.0f);
 
     gl_Position = modelUniforms.proj * modelUniforms.view * pos;
     fragPosition = vec3(pos);
     fragTexCoord = inUV;
     
-    mat3 invertTransposeModel = mat3(transpose(inverse(modelProperties.matrix)));
+    mat3 invertTransposeModel = mat3(transpose(inverse(compProps.matrix)));
     
     fragNormals = normalize(invertTransposeModel * inNormal);
     eye = modelUniforms.camera;
     light = modelUniforms.sun;
-    meshProperties = meshProps;
+    compProperties = compProps;
 
-    if (meshProps.normalTexture != -1) {
+    if (compProps.normalTexture != -1) {
         vec3 T = normalize(invertTransposeModel * inTangent);
         vec3 N = normalize(invertTransposeModel * inNormal);
         vec3 B = normalize(invertTransposeModel * inBitangent);

@@ -38,12 +38,6 @@ bool ModelsPipeline::createBuffersFromModel() {
     vkDestroyBuffer(this->renderer->getLogicalDevice(), stagingBuffer, nullptr);
     vkFreeMemory(this->renderer->getLogicalDevice(), stagingBufferMemory, nullptr);
     
-    // meshes (SSBOs)
-    if (!this->createSsboBufferFromModel(bufferSizes.ssboBufferSize)) {
-        logError("Failed to create Models Pipeline SSBO");
-        return false;        
-    }
-
     // indices
     if (bufferSizes.indexBufferSize == 0) return true;
 
@@ -146,9 +140,15 @@ bool ModelsPipeline::createGraphicsPipeline(const VkPushConstantRange & pushCons
     if (!this->createBuffersFromModel()) {
         logError("Failed to create Buffers from Models");        
     }
-    
-    this->prepareModelTextures();
 
+    this->prepareModelTextures();
+    
+    // components SSBOs
+    if (!this->createSsboBuffersFromComponents()) {
+        logError("Failed to create Components Pipeline SSBO");
+        return false;        
+    }
+    
     this->pushConstantRange = pushConstantRange;
     
     if (!this->createTextureSampler(VK_SAMPLER_ADDRESS_MODE_REPEAT)) {
@@ -310,6 +310,10 @@ bool ModelsPipeline::updateGraphicsPipeline() {
     return true;
 }
 
+void ModelsPipeline::update() {
+    this->updateSsboBuffersComponents();
+}
+
 void ModelsPipeline::draw(std::vector<VkCommandBuffer> & commandBuffers, const uint16_t commandBufferIndex, const VkCommandBufferInheritanceInfo * cmdBufferInherit) {
     if (this->isReady()) {
         // primary buffer use
@@ -350,27 +354,22 @@ void ModelsPipeline::drawModelsPrimaryBuffer(const VkCommandBuffer & commandBuff
     auto & allModels = Models::INSTANCE()->getModels();
     for (auto & model :  allModels) {            
         auto allComponents = Components::INSTANCE()->getAllComponentsForModel(model->getId());
-
         auto meshes = model->getMeshes();
-        uint32_t meshIndex = 0;
+        
+        uint32_t instanceOffset = 0;
         for (Mesh & mesh : meshes) {
 
             for (auto & comp : allComponents) {
                 if (!comp->isVisible()) continue;
-
-                    ModelProperties props = { comp->getModelMatrix()};
-                    vkCmdPushConstants(
-                        commandBuffer, this->layout,
-                        VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(struct ModelProperties), &props);
-
-                    if (useIndices) {                
-                        vkCmdDrawIndexed(commandBuffer, mesh.getIndices().size() , 1, mesh.getIndexOffset(), mesh.getVertexOffset(), model->getModelIndex() + meshIndex);
-                    } else {
-                        vkCmdDraw(commandBuffer, mesh.getVertices().size(), 1, 0, comp->getModel()->getModelIndex() + meshIndex);
-                    }
+                
+                if (useIndices) {                
+                    vkCmdDrawIndexed(commandBuffer, mesh.getIndices().size() , 1, mesh.getIndexOffset(), mesh.getIndexOffset(), comp->getSsboIndex() + instanceOffset);
+                } else {
+                    vkCmdDraw(commandBuffer, mesh.getVertices().size(), 1, 0, comp->getSsboIndex() + instanceOffset);
+                }        
             }
-            
-            meshIndex++;
+                 
+            instanceOffset++;
         }
     }
 }
@@ -395,29 +394,25 @@ void ModelsPipeline::drawModelsSecondaryBuffer(std::vector<VkCommandBuffer> & co
     auto & allModels = Models::INSTANCE()->getModels();
     for (auto & model :  allModels) {            
         auto allComponents = Components::INSTANCE()->getAllComponentsForModel(model->getId());
-
         auto meshes = model->getMeshes();
-        uint32_t meshIndex = 0;
+        
+        uint32_t instanceOffset = 0;
         for (Mesh & mesh : meshes) {
 
             for (auto & comp : allComponents) {
                 if (!comp->isVisible()) continue;
-
-                    ModelProperties props = { comp->getModelMatrix()};
-                    vkCmdPushConstants(
-                        commandBuffer, this->layout,
-                        VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(struct ModelProperties), &props);
-
-                    if (useIndices) {                
-                        vkCmdDrawIndexed(commandBuffer, mesh.getIndices().size() , 1, mesh.getIndexOffset(), mesh.getVertexOffset(), model->getModelIndex() + meshIndex);
-                    } else {
-                        vkCmdDraw(commandBuffer, mesh.getVertices().size(), 1, 0, comp->getModel()->getModelIndex() + meshIndex);
-                    }
+                
+                if (useIndices) {                
+                    vkCmdDrawIndexed(commandBuffer, mesh.getIndices().size() , 1, mesh.getIndexOffset(), mesh.getIndexOffset(), comp->getSsboIndex() + instanceOffset);
+                } else {
+                    vkCmdDraw(commandBuffer, mesh.getVertices().size(), 1, 0, comp->getSsboIndex() + instanceOffset);
+                }        
             }
-            
-            meshIndex++;
+                 
+            instanceOffset++;
         }
     }
+
             
     Helper::endCommandBuffer(commandBuffer);
     commandBuffers.push_back(commandBuffer);
@@ -502,6 +497,44 @@ bool ModelsPipeline::createDescriptorSetLayout() {
     }
     
     return true;
+}
+
+bool ModelsPipeline::createSsboBuffersFromComponents() {
+    if (this->renderer == nullptr || !this->renderer->isReady()) return false;
+   
+    const BufferSummary bufferSizes = Models::INSTANCE()->getModelsBufferSizes(true);
+
+    if (bufferSizes.reservedSsboBufferSize == 0) return true;
+
+    if (this->ssboBuffer != nullptr) vkDestroyBuffer(this->renderer->getLogicalDevice(), this->ssboBuffer, nullptr);
+    if (this->ssboBufferMemory != nullptr) vkFreeMemory(this->renderer->getLogicalDevice(), this->ssboBufferMemory, nullptr);
+
+    if (!Helper::createBuffer(this->renderer->getPhysicalDevice(), this->renderer->getLogicalDevice(), bufferSizes.reservedSsboBufferSize,
+            VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+            this->ssboBuffer, this->ssboBufferMemory)) {
+        logError("Failed to get Create Models Pipeline Vertex Buffer");
+        return false;
+    }
+
+    void * data = nullptr;
+    vkMapMemory(this->renderer->getLogicalDevice(), ssboBufferMemory, 0, bufferSizes.reservedSsboBufferSize, 0, &data);
+    Helper::copyComponentsPropertiesIntoSsbo(data, bufferSizes.reservedSsboBufferSize);
+    vkUnmapMemory(this->renderer->getLogicalDevice(), ssboBufferMemory);
+    
+    return true;
+}
+
+void ModelsPipeline::updateSsboBuffersComponents() {
+    if (this->renderer == nullptr || !this->renderer->isReady() || this->ssboBufferMemory == nullptr) return;
+   
+    const BufferSummary bufferSizes = Models::INSTANCE()->getModelsBufferSizes();
+
+    if (bufferSizes.reservedSsboBufferSize == 0) return;
+
+    void * data = nullptr;
+    vkMapMemory(this->renderer->getLogicalDevice(), ssboBufferMemory, 0, bufferSizes.reservedSsboBufferSize, 0, &data);
+    Helper::copyComponentsPropertiesIntoSsbo(data, bufferSizes.reservedSsboBufferSize);
+    vkUnmapMemory(this->renderer->getLogicalDevice(), ssboBufferMemory);
 }
 
 bool ModelsPipeline::createSsboBufferFromModel(VkDeviceSize bufferSize, bool makeHostWritable) {
@@ -595,7 +628,7 @@ bool ModelsPipeline::createDescriptorSets() {
     VkDescriptorBufferInfo ssboBufferInfo{};
     ssboBufferInfo.buffer = this->ssboBuffer;
     ssboBufferInfo.offset = 0;
-    ssboBufferInfo.range = Models::INSTANCE()->getModelsBufferSizes().ssboBufferSize;
+    ssboBufferInfo.range = Models::INSTANCE()->getModelsBufferSizes().reservedSsboBufferSize;
 
     for (size_t i = 0; i < this->descriptorSets.size(); i++) {
         VkDescriptorBufferInfo uniformBufferInfo{};

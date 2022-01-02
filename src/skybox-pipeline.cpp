@@ -162,6 +162,10 @@ bool SkyboxPipeline::updateGraphicsPipeline() {
     return true;
 }
 
+void SkyboxPipeline::update() {
+    
+}
+
 bool SkyboxPipeline::createDescriptorPool() {
     if (this->renderer == nullptr || !this->renderer->isReady()) return false;
 
