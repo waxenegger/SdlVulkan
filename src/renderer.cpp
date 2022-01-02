@@ -657,7 +657,7 @@ void Renderer::drawFrame() {
             //vkResetCommandPool(this->logicalDevice, this->getCommandPool(), VK_COMMAND_POOL_RESET_RELEASE_RESOURCES_BIT);
         } else {
             // TODO: call only sporadically
-            //vkFreeCommandBuffers(this->logicalDevice, this->commandPool, 1, &this->commandBuffers[imageIndex]);
+            vkFreeCommandBuffers(this->logicalDevice, this->commandPool, 1, &this->commandBuffers[imageIndex]);
         }
     }
 

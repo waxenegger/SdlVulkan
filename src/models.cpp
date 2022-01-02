@@ -189,6 +189,22 @@ void Mesh::setName(std::string name) {
     this->name = name;
 }
 
+uint32_t Mesh::getIndexOffset() {
+    return this->indexOffset;
+}
+
+int32_t Mesh::getVertexOffset() {
+    return this->vertexOffset;
+}
+
+void Mesh::setIndexOffset(const uint32_t indexOffset) {
+    this->indexOffset = indexOffset;
+}
+
+void Mesh::setVertexOffset(const int32_t vertexOffset) {
+    this->vertexOffset = vertexOffset;
+}
+
 TextureInformation Mesh::getTextureInformation() {
     return this->texture;
 }
@@ -596,6 +612,23 @@ Model::Model(std::string id) {
 
 Model::~Model() {}
 
+uint32_t Model::getModelIndex() {
+    return this->modelIndex;
+}
+
+void Model::updateOffsets(uint32_t & modelIndex, int32_t & vertexOffset, uint32_t & indexOffset) {
+    this->modelIndex = modelIndex;
+    modelIndex += this->meshes.size();
+    
+    for (auto & m : this->meshes) {
+        m.setIndexOffset(indexOffset);
+        m.setVertexOffset(vertexOffset);
+        indexOffset += m.getIndices().size();
+        vertexOffset += m.getVertices().size();
+    }
+}
+
+
 Models * Models::INSTANCE() {
     if (Models::instance == nullptr) {
         Models::instance = new Models();
@@ -621,6 +654,8 @@ bool Models::addModel(const std::string id, const  std::filesystem::path file)
     for (Mesh & m : meshes) {
         this->processTextures(m);
     }
+    
+    model->updateOffsets(this->modelIndex, this->vertexOffset, this->indexOffset);
     
     this->models.push_back(std::move(model));
     
@@ -661,7 +696,8 @@ void Models::addTextModel(std::string id, std::string font, std::string text, ui
                     texInfo.diffuseTextureLocation = m->getId();
                     m->getMeshes()[0].setTextureInformation(texInfo);
 
-                    this->textures[m->getId()] = std::move(tex);    
+                    this->textures[m->getId()] = std::move(tex);
+                    m->updateOffsets(this->modelIndex, this->vertexOffset, this->indexOffset);
                     this->models.push_back(std::move(m));
                     
                     succeeded = true;

@@ -126,6 +126,8 @@ class Mesh final {
         TextureInformation texture;
         MaterialInformation material;
         std::string name = "";
+        uint32_t indexOffset = 0;
+        int32_t vertexOffset = 0;
     public:
         Mesh(const std::vector<ModelVertex> & vertices);
         Mesh(const std::vector<ModelVertex> & vertices, const std::vector<uint32_t> indices);
@@ -141,6 +143,10 @@ class Mesh final {
         void setOpacity(float opacity);
         std::string getName();
         void setName(std::string name);
+        uint32_t getIndexOffset();
+        int32_t getVertexOffset();
+        void setIndexOffset(const uint32_t indexOffset);
+        void setVertexOffset(const int32_t vertexOffset);
 };
 
 class Texture final {
@@ -187,7 +193,7 @@ class Model final {
         std::filesystem::path file;
         std::vector<Mesh> meshes;
         bool loaded = false;
-        
+        uint32_t modelIndex = 0;
         void processNode(const aiNode * node, const aiScene *scene);
         Mesh processMesh(const aiMesh *mesh, const aiScene *scene);
 
@@ -205,12 +211,19 @@ class Model final {
         void setMaterialInformation(MaterialInformation & material);
         TextureInformation addTextures(const aiMaterial * mat);
         void correctTexturePath(char * path);
+        
+        uint32_t getModelIndex();
+        void updateOffsets(uint32_t & modelIndex, int32_t & vertexOffset, uint32_t & indexOffset);
 };
 
 class Models final {
     private:
         Models();
 
+        uint32_t indexOffset = 0;
+        int32_t vertexOffset = 0;
+        uint32_t modelIndex = 0;
+        
         static Models * instance;
         std::map<std::string, std::unique_ptr<Texture>> textures;
         std::vector<std::unique_ptr<Model>> models;

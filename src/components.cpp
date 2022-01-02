@@ -69,6 +69,18 @@ std::string Component::getId() {
     return this->id;
 }
 
+void Component::setSsboIndex(const uint32_t index) {
+    this->ssboIndex = index;
+}
+
+uint32_t Component::getSsboIndex() {
+    return this->ssboIndex;
+}
+
+VkDeviceSize Component::getSsboSize() {
+    return sizeof(struct MeshProperties);
+}
+
 Component * Components::addComponentFromModel(const std::string id, const std::string modelId) {
     Model * model = Models::INSTANCE()->findModel(modelId);
     if (model == nullptr) return nullptr;
@@ -80,43 +92,43 @@ Component * Components::addComponentFromModel(const std::string id, const std::s
 Component * Components::addComponent(Component * component) {
     if (component == nullptr) return nullptr;
 
-    std::unique_ptr<Component> componentPtr(component);
+    if (component->hasModel()) {
+        auto & meshes = component->getModel()->getMeshes();
+        if (!meshes.empty()) {
+            component->setSsboIndex(this->ssboIndex);
+            this->ssboIndex += meshes.size();
+        }
+    }
+    
+    this->components.push_back(std::unique_ptr<Component>(component));
     
     const std::string modelId = component->hasModel() ? component->getModel()->getId() : "";
     
-    std::map<std::string, std::vector<std::unique_ptr<Component>>>::iterator it = this->components.find(modelId);
-    if (it != this->components.end()) {
-        it->second.push_back(std::move(componentPtr));
+    std::map<std::string, std::vector<Component*>>::iterator it = this->componentsByModel.find(modelId);
+    if (it != this->componentsByModel.end()) {
+        it->second.push_back(component);
     } else {
-        std::vector<std::unique_ptr<Component>> allComponentsPerModel;
-        allComponentsPerModel.push_back(std::move(componentPtr));
-        this->components[modelId] = std::move(allComponentsPerModel);
+        std::vector<Component *> allComponentsPerModel;
+        allComponentsPerModel.push_back(component);
+        this->componentsByModel[modelId] = std::move(allComponentsPerModel);
     }
     
     return component;
 }
 
 Component * Components::findComponent(const std::string id, const std::string modelId) {
-    std::map<std::string, std::vector<std::unique_ptr<Component>>>::iterator it = this->components.find(modelId);
-    if (it != this->components.end()) {
+    std::map<std::string, std::vector<Component*>>::iterator it = this->componentsByModel.find(modelId);
+    if (it != this->componentsByModel.end()) {
         for(auto & c : it->second) {
-            if (c->getId() == id) return c.get();
+            if (c->getId() == id) return c;
         }
     }
     
     return nullptr;
 }
 
-std::map<std::string, std::vector<std::unique_ptr<Component>>> & Components::getComponents() {
+std::vector<std::unique_ptr<Component>> & Components::getComponents() {
     return this->components;
-}
-
-void Components::initWithModelIds(std::vector<std::string> modelIds) {
-    for(auto & l : modelIds) {
-        if (this->components[l].empty()) {
-            this->components[l] = std::vector<std::unique_ptr<Component>>();
-        }
-    }
 }
 
 Components::~Components() {
@@ -126,12 +138,12 @@ Components::~Components() {
 std::vector<Component *> Components::getAllComponentsForModel(std::string model) {
     std::vector<Component *> allMeshProperties;
     
-    std::map<std::string, std::vector<std::unique_ptr<Component>>>::iterator it = this->components.find(model);
-    if (it == this->components.end()) return allMeshProperties;
+    std::map<std::string, std::vector<Component*>>::iterator it = this->componentsByModel.find(model);
+    if (it == this->componentsByModel.end()) return allMeshProperties;
     
-    std::vector<std::unique_ptr<Component>> & comps = it->second;
-    for (std::unique_ptr<Component> & comp : comps) {
-        if (comp->hasModel()) allMeshProperties.push_back(comp.get());
+    std::vector<Component*> & comps = it->second;
+    for (Component * comp : comps) {
+        if (comp->hasModel()) allMeshProperties.push_back(comp);
     }
     
     return allMeshProperties;

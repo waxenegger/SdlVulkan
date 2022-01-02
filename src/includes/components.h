@@ -6,6 +6,7 @@
 class Component final {
     private:
         Model * model = nullptr;
+        uint32_t ssboIndex;
         
         std::string id = "";
         
@@ -32,12 +33,18 @@ class Component final {
         bool isVisible();
         void setVisible(bool visible);
         std::string getId();
+        void setSsboIndex(const uint32_t index);
+        uint32_t getSsboIndex();
+        VkDeviceSize getSsboSize();
 };
 
 class Components final {
     private:
         static Components * instance;
-        std::map<std::string, std::vector<std::unique_ptr<Component>>> components;
+        std::vector<std::unique_ptr<Component>> components;
+        std::map<std::string,  std::vector<Component *>> componentsByModel;
+        uint32_t ssboIndex = 0;
+
         Components();
     public:
         Components(const Components&) = delete;
@@ -48,8 +55,7 @@ class Components final {
         Component * addComponent(Component * component);
         Component * addComponentFromModel(const std::string id, const std::string modelId);
         std::vector<Component *> getAllComponentsForModel(std::string model);
-        void initWithModelIds(std::vector< std::string > modelIds);
-        std::map<std::string, std::vector<std::unique_ptr<Component>>> & getComponents();
+        std::vector<std::unique_ptr<Component>> & getComponents();
         Component * findComponent(const std::string id, const std::string modelId);
         ~Components();
 };
