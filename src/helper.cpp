@@ -172,11 +172,6 @@ VkCommandBuffer Helper::allocateAndBeginCommandBuffer(const VkDevice & logicalDe
     VkCommandBuffer commandBuffer = Helper::allocateCommandBuffer(logicalDevice, commandPool, cmdBufferInherit);
     if (commandBuffer == nullptr) return nullptr;
 
-    VkCommandBufferBeginInfo beginInfo{};
-    beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-    beginInfo.flags = cmdBufferInherit == nullptr ? VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT : VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT | VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT;
-    beginInfo.pInheritanceInfo = cmdBufferInherit;
-
     if (!Helper::beginCommandBuffer(commandBuffer, cmdBufferInherit)) {
         vkFreeCommandBuffers(logicalDevice, commandPool, 1, &commandBuffer);
         return nullptr;
