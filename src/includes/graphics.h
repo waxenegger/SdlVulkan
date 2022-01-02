@@ -9,7 +9,7 @@
 
 constexpr uint32_t VULKAN_VERSION = VK_MAKE_VERSION(1,0,0);
 
-static constexpr uint32_t MAX_BUFFERING = 3;
+static constexpr uint32_t MAX_BUFFERING = 2;
 static constexpr bool USE_SECONDARY_BUFFERS = false;
 static constexpr uint64_t IMAGE_ACQUIRE_TIMEOUT = 5 * 1000;
 
@@ -224,7 +224,7 @@ class Renderer final {
         VkDevice logicalDevice = nullptr;
 
         VkCommandPool commandPool = nullptr;
-        ThreadPool * threadPool = ThreadPool::INSTANCE();
+        CommandBufferQueue workerQueue;
 
         std::vector<VkCommandBuffer> commandBuffers;
         
@@ -275,6 +275,7 @@ class Renderer final {
         bool createSyncObjects();
         
         bool createCommandBuffers();
+        void destroyCommandBuffer(VkCommandBuffer commandBuffer);
         VkCommandBuffer createCommandBuffer(uint16_t commandBufferIndex, const bool useSecondaryBuffers = false);
         
         bool createUniformBuffers();
@@ -293,6 +294,9 @@ class Renderer final {
         uint8_t addPipeline(GraphicsPipeline * pipeline);
         void removePipeline(const uint8_t optIndexToRemove);
 
+        void startCommandBufferQueue();
+        void stopCommandBufferQueue();
+        
         bool isReady() const;
         bool hasAtLeastOneActivePipeline() const;
         bool canRender() const;
