@@ -652,12 +652,16 @@ void Renderer::drawFrame() {
         return;
     }
 
-    // TODO: get command buffer
-    
-    if (this->commandBuffers[imageIndex] != nullptr)
-        vkFreeCommandBuffers(this->logicalDevice, this->commandPool, 1, &this->commandBuffers[imageIndex]);
+    if (this->commandBuffers[imageIndex] != nullptr) {
+        if (USE_SECONDARY_BUFFERS) {
+            vkFreeCommandBuffers(this->logicalDevice, this->commandPool, 1, &this->commandBuffers[imageIndex]);   
+        } else {
+            // TODO: call only sporadically
+            vkResetCommandPool(this->logicalDevice, this->getCommandPool(), VK_COMMAND_POOL_RESET_RELEASE_RESOURCES_BIT);
+        }
+    }
 
-    this->commandBuffers[imageIndex] = this->createCommandBuffer(imageIndex, false);
+    this->commandBuffers[imageIndex] = this->createCommandBuffer(imageIndex, USE_SECONDARY_BUFFERS);
 
     this->updateUniformBuffer(imageIndex);
         
