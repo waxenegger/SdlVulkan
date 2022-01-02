@@ -343,7 +343,9 @@ class Helper final {
         static void copyBuffer(const VkDevice & logicalDevice, const VkCommandPool & commandPool, const VkQueue & graphicsQueue, 
             VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size);
         static void copyBufferToImage(const VkDevice & logicalDevice, const VkCommandPool & commandPool, const VkQueue & graphicsQueue, VkBuffer & buffer, VkImage & image, uint32_t width, uint32_t height, uint16_t layerCount = 1);
-        static VkCommandBuffer beginCommandBuffer(const VkDevice & logicalDevice, const VkCommandPool & commandPool, const VkCommandBufferInheritanceInfo * cmdBufferInherit = nullptr);
+        static bool beginCommandBuffer(VkCommandBuffer & commandBuffer, const VkCommandBufferInheritanceInfo * cmdBufferInherit = nullptr);
+        static VkCommandBuffer allocateCommandBuffer(const VkDevice & logicalDevice, const VkCommandPool & commandPool, const VkCommandBufferInheritanceInfo * cmdBufferInherit = nullptr);
+        static VkCommandBuffer allocateAndBeginCommandBuffer(const VkDevice & logicalDevice, const VkCommandPool & commandPool, const VkCommandBufferInheritanceInfo * cmdBufferInherit = nullptr);
         static void endCommandBufferWithSubmit(const VkDevice & logicalDevice, const VkCommandPool & commandPool, const VkQueue & graphicsQueue, VkCommandBuffer & commandBuffer);
         static bool endCommandBuffer(VkCommandBuffer & commandBuffer);
         static void copyModelsContentIntoBuffer(void* data, ModelsContentType modelsContentType, VkDeviceSize maxSize);

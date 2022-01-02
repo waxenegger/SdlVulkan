@@ -23,6 +23,8 @@
 #include <mutex>
 #include <queue>
 #include <functional>
+#include <condition_variable>
+#include <atomic>
 
 #include <glm.hpp>
 #include <gtc/matrix_transform.hpp>

@@ -414,7 +414,7 @@ bool Renderer::createDepthResources() {
 
 void Renderer::initRenderer() {
     if (this->isReady()) {
-        this->threadPool->start(Helper::createCommandPool, this->logicalDevice, this->graphicsQueueIndex);
+        //ThreadPool::INSTANCE()->start(Helper::createCommandPool, this->logicalDevice, this->graphicsQueueIndex);
     }
     
     if (!this->updateRenderer()) return;
@@ -556,7 +556,7 @@ VkCommandBuffer Renderer::createCommandBuffer(uint16_t commandBufferIndex, const
     
     std::vector<VkCommandBuffer> commandBuffers;    
     VkCommandBufferInheritanceInfo cmdBufferInherit = {};
-    VkCommandBuffer commandBuffer = Helper::beginCommandBuffer(this->logicalDevice,this->commandPool);;
+    VkCommandBuffer commandBuffer = Helper::allocateAndBeginCommandBuffer(this->logicalDevice,this->commandPool);;
     
     if (useSecondaryBuffers) {
         cmdBufferInherit.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO;
@@ -626,9 +626,7 @@ bool Renderer::createCommandBuffers() {
     return true;
 }
 
-void Renderer::drawFrame() {
-    return;
-    
+void Renderer::drawFrame() {   
     std::chrono::high_resolution_clock::time_point frameStart = std::chrono::high_resolution_clock::now();
     
     if (this->requiresRenderUpdate) {
@@ -656,7 +654,10 @@ void Renderer::drawFrame() {
 
     // TODO: get command buffer
     
-    this->commandBuffers[imageIndex] = nullptr;
+    if (this->commandBuffers[imageIndex] != nullptr)
+        vkFreeCommandBuffers(this->logicalDevice, this->commandPool, 1, &this->commandBuffers[imageIndex]);
+
+    this->commandBuffers[imageIndex] = this->createCommandBuffer(imageIndex, false);
 
     this->updateUniformBuffer(imageIndex);
         
@@ -787,9 +788,7 @@ Renderer::~Renderer() {
     this->destroyRendererObjects();
     
     logInfo("Destroying Thread Pool...");
-    if (this->threadPool != nullptr) {
-        this->threadPool->stop();
-    }
+    ThreadPool::INSTANCE()->stop();
     
     if (this->logicalDevice != nullptr) {
         vkDestroyDevice(this->logicalDevice, nullptr);

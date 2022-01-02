@@ -385,7 +385,7 @@ void ModelsPipeline::drawModelsPrimaryBuffer(const VkCommandBuffer & commandBuff
 
 void ModelsPipeline::drawModelsSecondaryBuffer(std::vector<VkCommandBuffer> & commandBuffers, const uint16_t commandBufferIndex, const VkCommandBufferInheritanceInfo * cmdBufferInherit, const bool useIndices) {
 
-    VkCommandBuffer commandBuffer = Helper::beginCommandBuffer(this->renderer->getLogicalDevice(), this->renderer->getCommandPool(), cmdBufferInherit);
+    VkCommandBuffer commandBuffer = Helper::allocateAndBeginCommandBuffer(this->renderer->getLogicalDevice(), this->renderer->getCommandPool(), cmdBufferInherit);
 
     vkCmdBindDescriptorSets(
         commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, 

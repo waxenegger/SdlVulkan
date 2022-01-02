@@ -134,7 +134,7 @@ bool Helper::createBuffer(
     return true;
 }
 
-VkCommandBuffer Helper::beginCommandBuffer(const VkDevice & logicalDevice, const VkCommandPool & commandPool, const VkCommandBufferInheritanceInfo * cmdBufferInherit) {
+VkCommandBuffer Helper::allocateCommandBuffer(const VkDevice & logicalDevice, const VkCommandPool & commandPool, const VkCommandBufferInheritanceInfo * cmdBufferInherit) {
     VkCommandBufferAllocateInfo allocInfo{};
     allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
     allocInfo.level = cmdBufferInherit == nullptr ? VK_COMMAND_BUFFER_LEVEL_PRIMARY : VK_COMMAND_BUFFER_LEVEL_SECONDARY;
@@ -148,19 +148,40 @@ VkCommandBuffer Helper::beginCommandBuffer(const VkDevice & logicalDevice, const
         logError("Failed to Allocate Command Buffer!");
         return nullptr;
     }
+    
+    return commandBuffer;
+}
 
+bool Helper::beginCommandBuffer(VkCommandBuffer & commandBuffer, const VkCommandBufferInheritanceInfo * cmdBufferInherit) {
+    VkCommandBufferBeginInfo beginInfo{};
+    beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+    beginInfo.flags = cmdBufferInherit == nullptr ? VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT : VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT;
+    beginInfo.pInheritanceInfo = cmdBufferInherit;
+
+    VkResult ret = vkBeginCommandBuffer(commandBuffer, &beginInfo);
+    if (ret != VK_SUCCESS) {
+        logError("Failed to Begin Command Buffer!");
+        return false;
+    }
+    
+    return true;
+}
+
+
+VkCommandBuffer Helper::allocateAndBeginCommandBuffer(const VkDevice & logicalDevice, const VkCommandPool & commandPool, const VkCommandBufferInheritanceInfo * cmdBufferInherit) {
+    VkCommandBuffer commandBuffer = Helper::allocateCommandBuffer(logicalDevice, commandPool, cmdBufferInherit);
+    if (commandBuffer == nullptr) return nullptr;
 
     VkCommandBufferBeginInfo beginInfo{};
     beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
     beginInfo.flags = cmdBufferInherit == nullptr ? VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT : VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT | VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT;
     beginInfo.pInheritanceInfo = cmdBufferInherit;
 
-    ret = vkBeginCommandBuffer(commandBuffer, &beginInfo);
-    if (ret != VK_SUCCESS) {
-        logError("Failed to Begin Command Buffer!");
+    if (!Helper::beginCommandBuffer(commandBuffer, cmdBufferInherit)) {
+        vkFreeCommandBuffers(logicalDevice, commandPool, 1, &commandBuffer);
         return nullptr;
-    }
-
+    };
+    
     return commandBuffer;
 }
 
@@ -197,7 +218,7 @@ void Helper::copyBuffer(
     const VkDevice & logicalDevice, const VkCommandPool & commandPool, const VkQueue & graphicsQueue, 
     VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size) {
     
-    VkCommandBuffer commandBuffer = Helper::beginCommandBuffer(logicalDevice, commandPool);
+    VkCommandBuffer commandBuffer = Helper::allocateAndBeginCommandBuffer(logicalDevice, commandPool);
 
     VkBufferCopy copyRegion{};
     copyRegion.size = size;
@@ -212,7 +233,7 @@ void Helper::copyBufferToImage(
     VkBuffer & buffer, VkImage & image, uint32_t width, uint32_t height, uint16_t layerCount) {
     
     
-    VkCommandBuffer commandBuffer = Helper::beginCommandBuffer(logicalDevice, commandPool);
+    VkCommandBuffer commandBuffer = Helper::allocateAndBeginCommandBuffer(logicalDevice, commandPool);
     if (commandBuffer == nullptr) return;
 
     std::vector<VkBufferImageCopy> regions;
@@ -287,7 +308,7 @@ bool Helper::transitionImageLayout(
     const VkDevice & logicalDevice, const VkCommandPool & commandPool, const VkQueue & graphicsQueue, 
     VkImage image, VkImageLayout oldLayout, VkImageLayout newLayout, uint16_t layerCount) {
     
-    VkCommandBuffer commandBuffer = Helper::beginCommandBuffer(logicalDevice, commandPool);
+    VkCommandBuffer commandBuffer = Helper::allocateAndBeginCommandBuffer(logicalDevice, commandPool);
     if (commandBuffer == nullptr) return false;
 
     VkImageMemoryBarrier barrier{};
@@ -354,7 +375,7 @@ VkCommandPool Helper::createCommandPool(const VkDevice & logicalDevice, const ui
     
     VkCommandPoolCreateInfo poolInfo{};
     poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
-    poolInfo.flags = VK_COMMAND_POOL_CREATE_TRANSIENT_BIT;
+    poolInfo.flags = VK_COMMAND_POOL_RESET_RELEASE_RESOURCES_BIT;
     poolInfo.queueFamilyIndex = graphicsQueueIndex;
     
     VkCommandPool pool = nullptr;
