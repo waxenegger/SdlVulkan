@@ -654,10 +654,10 @@ void Renderer::drawFrame() {
 
     if (this->commandBuffers[imageIndex] != nullptr) {
         if (USE_SECONDARY_BUFFERS) {
-            vkFreeCommandBuffers(this->logicalDevice, this->commandPool, 1, &this->commandBuffers[imageIndex]);   
+            //vkResetCommandPool(this->logicalDevice, this->getCommandPool(), VK_COMMAND_POOL_RESET_RELEASE_RESOURCES_BIT);
         } else {
             // TODO: call only sporadically
-            vkResetCommandPool(this->logicalDevice, this->getCommandPool(), VK_COMMAND_POOL_RESET_RELEASE_RESOURCES_BIT);
+            //vkFreeCommandBuffers(this->logicalDevice, this->commandPool, 1, &this->commandBuffers[imageIndex]);
         }
     }
 
