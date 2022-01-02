@@ -42,6 +42,8 @@ void ThreadPool::start(std::function<VkCommandPool(const VkDevice &, const uint3
 }
 
 bool ThreadPool::isActive() {
+    if (this->threads.empty()) return false;
+    
     bool ret = true;
     
     for (auto & t : this->threads) {
@@ -52,6 +54,8 @@ bool ThreadPool::isActive() {
 }
 
 void ThreadPool::stop() {   
+    if (this->threads.empty()) return;
+
     for (auto & t : this->threads) {
         t->stop();        
     }

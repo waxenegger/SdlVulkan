@@ -794,6 +794,7 @@ Renderer::~Renderer() {
     logInfo("Destroying Thread Pool...");
     ThreadPool::INSTANCE()->stop();
     
+    logInfo("Destroying Logical Device...");
     if (this->logicalDevice != nullptr) {
         vkDestroyDevice(this->logicalDevice, nullptr);
     }
