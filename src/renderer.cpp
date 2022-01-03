@@ -698,6 +698,8 @@ void Renderer::drawFrame() {
     ret = vkQueueSubmit(this->graphicsQueue, 1, &submitInfo, this->inFlightFences[this->currentFrame]);
     if (ret != VK_SUCCESS) {
         logError("Failed to Submit Draw Command Buffer!");
+        this->requiresRenderUpdate = true;
+        return;
     }
     
     VkPresentInfoKHR presentInfo{};
@@ -737,6 +739,7 @@ bool Renderer::doesShowWireFrame() const {
 
 void Renderer::setShowWireFrame(bool showWireFrame) {
     this->showWireFrame = showWireFrame;
+    vkDeviceWaitIdle(this->logicalDevice);
     this->requiresRenderUpdate = true;
 }
 
@@ -755,7 +758,6 @@ bool Renderer::updateRenderer() {
     }
 
     this->destroySwapChainObjects();
-
     this->requiresRenderUpdate = false;
     
     if (!this->createSwapChain()) return false;

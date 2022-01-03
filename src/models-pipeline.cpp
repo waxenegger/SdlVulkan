@@ -396,20 +396,17 @@ void ModelsPipeline::drawModelsSecondaryBuffer(std::vector<VkCommandBuffer> & co
         auto allComponents = Components::INSTANCE()->getAllComponentsForModel(model->getId());
         auto meshes = model->getMeshes();
         
-        uint32_t instanceOffset = 0;
         for (Mesh & mesh : meshes) {
 
             for (auto & comp : allComponents) {
                 if (!comp->isVisible()) continue;
                 
                 if (useIndices) {                
-                    vkCmdDrawIndexed(commandBuffer, mesh.getIndices().size() , 1, mesh.getIndexOffset(), mesh.getIndexOffset(), comp->getSsboIndex() + instanceOffset);
+                    vkCmdDrawIndexed(commandBuffer, mesh.getIndices().size() , allComponents.size(), mesh.getIndexOffset(), mesh.getIndexOffset(), comp->getSsboIndex());
                 } else {
-                    vkCmdDraw(commandBuffer, mesh.getVertices().size(), 1, 0, comp->getSsboIndex() + instanceOffset);
+                    vkCmdDraw(commandBuffer, mesh.getVertices().size(), allComponents.size(), 0, comp->getSsboIndex());
                 }        
             }
-                 
-            instanceOffset++;
         }
     }
 
@@ -473,7 +470,7 @@ bool ModelsPipeline::createDescriptorSetLayout() {
     ssboLayoutBinding.descriptorCount = 1;
     ssboLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
     ssboLayoutBinding.pImmutableSamplers = nullptr;
-    ssboLayoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+    ssboLayoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
     layoutBindings.push_back(ssboLayoutBinding);
 
     uint32_t numberOfTextures = Models::INSTANCE()->getTextures().size();

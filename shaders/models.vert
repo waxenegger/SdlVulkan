@@ -37,9 +37,10 @@ layout(location = 1) out vec2 fragTexCoord;
 layout(location = 2) out vec3 fragNormals;
 layout(location = 3) out vec4 eye;
 layout(location = 4) out vec4 light;
-layout(location = 5) flat out ComponentProperties compProperties;
+layout(location = 5) flat out int instanceID;
 
 void main() {
+    instanceID = gl_InstanceIndex;
     ComponentProperties compProps = compPropertiesSSBO.props[gl_InstanceIndex];
 
     vec4 pos = compProps.matrix * vec4(inPosition, 1.0f);
@@ -53,7 +54,6 @@ void main() {
     fragNormals = normalize(invertTransposeModel * inNormal);
     eye = modelUniforms.camera;
     light = modelUniforms.sun;
-    compProperties = compProps;
 
     if (compProps.normalTexture != -1) {
         vec3 T = normalize(invertTransposeModel * inTangent);
