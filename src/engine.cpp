@@ -319,9 +319,4 @@ Engine::~Engine() {
     }
     
     Camera::INSTANCE()->destroy();
-    
-    if (this->components != nullptr) {
-        delete this->components;
-        this->components = nullptr;
-    }
 }
