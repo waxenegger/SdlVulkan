@@ -413,8 +413,8 @@ bool Renderer::createDepthResources() {
 }
 
 void Renderer::initRenderer() {
-    if (this->isReady()) {
-        //ThreadPool::INSTANCE()->start(Helper::createCommandPool, this->logicalDevice, this->graphicsQueueIndex);
+    if (this->isReady() && USE_SECONDARY_BUFFERS) {
+        ThreadPool::INSTANCE()->start(Helper::createCommandPool, this->logicalDevice, this->graphicsQueueIndex);
     }
     
     if (!this->updateRenderer()) return;
@@ -422,7 +422,7 @@ void Renderer::initRenderer() {
     if (!this->createSyncObjects()) return;
     if (!this->createUniformBuffers()) return;
     
-    if (!this->threadPool->isActive()) {
+    if (USE_SECONDARY_BUFFERS && !this->threadPool->isActive()) {
         logError("Failed to start Thread Pool");
     }
 }
@@ -654,12 +654,7 @@ void Renderer::drawFrame() {
     }
 
     if (this->commandBuffers[imageIndex] != nullptr) {
-        if (USE_SECONDARY_BUFFERS) {
-            //vkResetCommandPool(this->logicalDevice, this->getCommandPool(), VK_COMMAND_POOL_RESET_RELEASE_RESOURCES_BIT);
-        } else {
-            // TODO: call only sporadically
-            vkFreeCommandBuffers(this->logicalDevice, this->commandPool, 1, &this->commandBuffers[imageIndex]);
-        }
+        vkFreeCommandBuffers(this->logicalDevice, this->commandPool, 1, &this->commandBuffers[imageIndex]);
     }
 
     this->commandBuffers[imageIndex] = this->createCommandBuffer(imageIndex, USE_SECONDARY_BUFFERS);
@@ -794,8 +789,10 @@ Renderer::~Renderer() {
     logInfo("Destroying Renderer...");
     this->destroyRendererObjects();
     
-    logInfo("Destroying Thread Pool...");
-    ThreadPool::INSTANCE()->stop();
+    if (USE_SECONDARY_BUFFERS) {
+        logInfo("Destroying Thread Pool...");
+        ThreadPool::INSTANCE()->stop();
+    }
     
     logInfo("Destroying Logical Device...");
     if (this->logicalDevice != nullptr) {

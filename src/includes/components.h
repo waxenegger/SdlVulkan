@@ -64,7 +64,7 @@ class Components final {
         static Components * INSTANCE();
         Component * addComponent(Component * component);
         Component * addComponentFromModel(const std::string id, const std::string modelId);
-        std::vector<Component *> getAllComponentsForModel(std::string model);
+        std::map<std::string,  std::vector<Component *>> & getComponentsPerModel();
         std::vector<std::unique_ptr<Component>> & getComponents();
         Component * findComponent(const std::string id, const std::string modelId);
         ~Components();

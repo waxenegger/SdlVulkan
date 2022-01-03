@@ -176,18 +176,8 @@ Components::~Components() {
     this->components.clear();
 }
 
-std::vector<Component *> Components::getAllComponentsForModel(std::string model) {
-    std::vector<Component *> allMeshProperties;
-    
-    std::map<std::string, std::vector<Component*>>::iterator it = this->componentsByModel.find(model);
-    if (it == this->componentsByModel.end()) return allMeshProperties;
-    
-    std::vector<Component*> & comps = it->second;
-    for (Component * comp : comps) {
-        if (comp->hasModel()) allMeshProperties.push_back(comp);
-    }
-    
-    return allMeshProperties;
+std::map<std::string,  std::vector<Component *>> & Components::getComponentsPerModel() {
+    return this->componentsByModel;
 }
 
 bool Component::isVisible() {

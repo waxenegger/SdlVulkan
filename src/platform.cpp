@@ -36,7 +36,8 @@ int start(int argc, char* argv []) {
 
     auto t = std::thread([]() {
         while(true) {
-            auto all = Components::INSTANCE()->getAllComponentsForModel("nanosuit");
+            if (Components::INSTANCE()->getComponentsPerModel().count("nanosuit") == 0) break;
+            auto & all = Components::INSTANCE()->getComponentsPerModel()["nanosuit"];
             for (auto & a : all) {
                 a->rotate(10,0,0);
             }
