@@ -132,6 +132,7 @@ std::vector<std::unique_ptr<Component>> & Components::getComponents() {
 }
 
 Components::~Components() {
+    this->componentsByModel.clear();
     this->components.clear();
 }
 
