@@ -7,7 +7,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 set(CMAKE_DEBUG_POSTFIX "")
 
-set(SDL2_DIR "app/SDL2/SDL2-2.0.16")
+set(SDL2_DIR "app/SDL2/SDL2-2.0.18")
 add_subdirectory(${SDL2_DIR} EXCLUDE_FROM_ALL)
 find_library(SDL2main SDL2)
 
