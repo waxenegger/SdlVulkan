@@ -648,7 +648,18 @@ void Renderer::drawFrame() {
         return;
     }
 
-    VkResult ret = vkWaitForFences(this->logicalDevice, 1, &this->inFlightFences[this->currentFrame], VK_TRUE, UINT64_MAX);
+    uint32_t imageIndex;
+    VkResult ret = vkAcquireNextImageKHR(
+        this->logicalDevice, this->swapChain, IMAGE_ACQUIRE_TIMEOUT, this->imageAvailableSemaphores[this->currentFrame], VK_NULL_HANDLE, &imageIndex);    
+    if (ret != VK_SUCCESS) {
+        if (ret != VK_ERROR_OUT_OF_DATE_KHR) {
+            logError("Failed to Acquire Next Image");
+        }
+        this->requiresRenderUpdate = true;
+        return;
+    }
+
+    ret = vkWaitForFences(this->logicalDevice, 1, &this->inFlightFences[this->currentFrame], VK_TRUE, UINT64_MAX);
     if (ret != VK_SUCCESS) {
         this->requiresRenderUpdate = true;
         return;
@@ -657,18 +668,6 @@ void Renderer::drawFrame() {
     ret = vkResetFences(this->logicalDevice, 1, &this->inFlightFences[this->currentFrame]);
     if (ret != VK_SUCCESS) {
         logError("Failed to Reset Fence!");
-    }
-
-    
-    uint32_t imageIndex;
-    ret = vkAcquireNextImageKHR(
-        this->logicalDevice, this->swapChain, IMAGE_ACQUIRE_TIMEOUT, this->imageAvailableSemaphores[this->currentFrame], VK_NULL_HANDLE, &imageIndex);    
-    if (ret != VK_SUCCESS) {
-        if (ret != VK_ERROR_OUT_OF_DATE_KHR) {
-            logError("Failed to Acquire Next Image");
-        }
-        this->requiresRenderUpdate = true;
-        return;
     }
 
     if (this->commandBuffers[imageIndex] != nullptr) {
