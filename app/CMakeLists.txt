@@ -17,7 +17,7 @@ set(VulkanDir "${projectDir}/VulkanSDK/1.2.189.0/android")
 set(AssimpDir "${projectDir}/assimp-5.0.1")
 add_subdirectory(${AssimpDir})
 
-set(sdlDir "${projectDir}/SDL2/SDL2-2.0.16")
+set(sdlDir "${projectDir}/SDL2/SDL2-2.0.18")
 add_subdirectory(${sdlDir})
 set(SDL2MAIN_LIBRARY SDL2main)
 set(SDL2_LIBRARY SDL2)
