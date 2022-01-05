@@ -654,10 +654,15 @@ void Renderer::drawFrame() {
         return;
     }
     
+    ret = vkResetFences(this->logicalDevice, 1, &this->inFlightFences[this->currentFrame]);
+    if (ret != VK_SUCCESS) {
+        logError("Failed to Reset Fence!");
+    }
+
+    
     uint32_t imageIndex;
     ret = vkAcquireNextImageKHR(
-        this->logicalDevice, this->swapChain, IMAGE_ACQUIRE_TIMEOUT, this->imageAvailableSemaphores[this->currentFrame], VK_NULL_HANDLE, &imageIndex);
-    
+        this->logicalDevice, this->swapChain, IMAGE_ACQUIRE_TIMEOUT, this->imageAvailableSemaphores[this->currentFrame], VK_NULL_HANDLE, &imageIndex);    
     if (ret != VK_SUCCESS) {
         if (ret != VK_ERROR_OUT_OF_DATE_KHR) {
             logError("Failed to Acquire Next Image");
@@ -692,14 +697,6 @@ void Renderer::drawFrame() {
 
     this->updateUniformBuffer(imageIndex);
         
-    if (this->imagesInFlight[imageIndex] != VK_NULL_HANDLE) {
-        ret = vkWaitForFences(this->logicalDevice, 1, &this->imagesInFlight[imageIndex], VK_TRUE, UINT64_MAX);
-        if (ret != VK_SUCCESS) {
-             logError("vkWaitForFences 2 Failed");
-        }
-    }
-    this->imagesInFlight[imageIndex] = this->inFlightFences[this->currentFrame];
-
     VkSubmitInfo submitInfo{};
     submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
 
@@ -716,14 +713,11 @@ void Renderer::drawFrame() {
     submitInfo.signalSemaphoreCount = 1;
     submitInfo.pSignalSemaphores = signalSemaphores;
 
-    ret = vkResetFences(this->logicalDevice, 1, &this->inFlightFences[this->currentFrame]);
-    if (ret != VK_SUCCESS) {
-        logError("Failed to Reset Fence!");
-    }
-
     ret = vkQueueSubmit(this->graphicsQueue, 1, &submitInfo, this->inFlightFences[this->currentFrame]);
     if (ret != VK_SUCCESS) {
         logError("Failed to Submit Draw Command Buffer!");
+        this->requiresRenderUpdate = true;
+        return;
     }
     
     VkPresentInfoKHR presentInfo{};
@@ -744,6 +738,7 @@ void Renderer::drawFrame() {
         if (ret != VK_ERROR_OUT_OF_DATE_KHR) {
             logError("Failed to Present Swap Chain Image!");
         }
+        this->requiresRenderUpdate = true;
         return;
     }
     
