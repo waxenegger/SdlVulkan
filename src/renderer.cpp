@@ -634,16 +634,9 @@ void Renderer::drawFrame() {
         return;
     }
 
-    VkResult ret = vkWaitForFences(this->logicalDevice, 1, &this->inFlightFences[this->currentFrame], VK_TRUE, UINT64_MAX);
-    if (ret != VK_SUCCESS) {
-        this->requiresRenderUpdate = true;
-        return;
-    }
-    
     uint32_t imageIndex;
-    ret = vkAcquireNextImageKHR(
-        this->logicalDevice, this->swapChain, IMAGE_ACQUIRE_TIMEOUT, this->imageAvailableSemaphores[this->currentFrame], VK_NULL_HANDLE, &imageIndex);
-    
+    VkResult ret = vkAcquireNextImageKHR(
+        this->logicalDevice, this->swapChain, IMAGE_ACQUIRE_TIMEOUT, this->imageAvailableSemaphores[this->currentFrame], VK_NULL_HANDLE, &imageIndex);    
     if (ret != VK_SUCCESS) {
         if (ret != VK_ERROR_OUT_OF_DATE_KHR) {
             logError("Failed to Acquire Next Image");
@@ -652,26 +645,29 @@ void Renderer::drawFrame() {
         return;
     }
 
+    ret = vkWaitForFences(this->logicalDevice, 1, &this->inFlightFences[this->currentFrame], VK_TRUE, UINT64_MAX);
+    if (ret != VK_SUCCESS) {
+        this->requiresRenderUpdate = true;
+        return;
+    }
+    
+    ret = vkResetFences(this->logicalDevice, 1, &this->inFlightFences[this->currentFrame]);
+    if (ret != VK_SUCCESS) {
+        logError("Failed to Reset Fence!");
+    }
+
     if (this->commandBuffers[imageIndex] != nullptr) {
         if (USE_SECONDARY_BUFFERS) {
             //vkResetCommandPool(this->logicalDevice, this->getCommandPool(), VK_COMMAND_POOL_RESET_RELEASE_RESOURCES_BIT);
         } else {
             // TODO: call only sporadically
-            vkFreeCommandBuffers(this->logicalDevice, this->commandPool, 1, &this->commandBuffers[imageIndex]);
+            //vkFreeCommandBuffers(this->logicalDevice, this->commandPool, 1, &this->commandBuffers[imageIndex]);
         }
     }
 
     this->commandBuffers[imageIndex] = this->createCommandBuffer(imageIndex, USE_SECONDARY_BUFFERS);
 
     this->updateUniformBuffer(imageIndex);
-        
-    if (this->imagesInFlight[imageIndex] != VK_NULL_HANDLE) {
-        ret = vkWaitForFences(this->logicalDevice, 1, &this->imagesInFlight[imageIndex], VK_TRUE, UINT64_MAX);
-        if (ret != VK_SUCCESS) {
-             logError("vkWaitForFences 2 Failed");
-        }
-    }
-    this->imagesInFlight[imageIndex] = this->inFlightFences[this->currentFrame];
 
     VkSubmitInfo submitInfo{};
     submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
@@ -688,11 +684,6 @@ void Renderer::drawFrame() {
     VkSemaphore signalSemaphores[] = {this->renderFinishedSemaphores[this->currentFrame]};
     submitInfo.signalSemaphoreCount = 1;
     submitInfo.pSignalSemaphores = signalSemaphores;
-
-    ret = vkResetFences(this->logicalDevice, 1, &this->inFlightFences[this->currentFrame]);
-    if (ret != VK_SUCCESS) {
-        logError("Failed to Reset Fence!");
-    }
 
     ret = vkQueueSubmit(this->graphicsQueue, 1, &submitInfo, this->inFlightFences[this->currentFrame]);
     if (ret != VK_SUCCESS) {

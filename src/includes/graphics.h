@@ -9,10 +9,6 @@
 
 constexpr uint32_t VULKAN_VERSION = VK_MAKE_VERSION(1,0,0);
 
-static constexpr uint32_t MAX_BUFFERING = 2;
-static constexpr bool USE_SECONDARY_BUFFERS = false;
-static constexpr uint64_t IMAGE_ACQUIRE_TIMEOUT = 5 * 1000;
-
 const VkSurfaceFormatKHR SWAP_CHAIN_IMAGE_FORMAT = {
     #ifndef __ANDROID__
         VK_FORMAT_B8G8R8A8_SRGB,
