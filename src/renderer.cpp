@@ -99,8 +99,8 @@ GraphicsPipeline * Renderer::getPipeline(uint8_t index) {
 
 bool Renderer::canRender() const {
     return this->isReady() && this->hasAtLeastOneActivePipeline() && this->swapChain != nullptr && this->swapChainImages.size() == this->imageCount && 
-        this->swapChainImages.size() == this->swapChainImageViews.size() && this->imagesInFlight.size() == this->swapChainImages.size() &&
-        this->imageAvailableSemaphores.size() == this->imageCount && this->renderFinishedSemaphores.size() == this->imageCount && this->inFlightFences.size() == this->imageCount &&
+        this->swapChainImages.size() == this->swapChainImageViews.size() && this->imageAvailableSemaphores.size() == this->imageCount && 
+        this->renderFinishedSemaphores.size() == this->imageCount && this->inFlightFences.size() == this->imageCount &&
         this->swapChainFramebuffers.size() == this->swapChainImages.size() && this->depthImages.size() == this->swapChainImages.size() && 
         this->depthImagesMemory.size() == this->swapChainImages.size() && this->depthImagesView.size() == this->swapChainImages.size() && 
         this->commandPool != nullptr;
@@ -308,7 +308,6 @@ bool Renderer::createSyncObjects() {
     this->imageAvailableSemaphores.resize(this->imageCount);
     this->renderFinishedSemaphores.resize(this->imageCount);
     this->inFlightFences.resize(this->imageCount);
-    this->imagesInFlight.resize(this->swapChainImages.size(), VK_NULL_HANDLE);
 
     VkSemaphoreCreateInfo semaphoreInfo{};
     semaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
@@ -469,7 +468,6 @@ void Renderer::destroyRendererObjects() {
             
     this->renderFinishedSemaphores.clear();
     this->imageAvailableSemaphores.clear();
-    this->imagesInFlight.clear();
     this->inFlightFences.clear();
 
     if (this->logicalDevice != nullptr && this->commandPool != nullptr) {
@@ -634,8 +632,14 @@ void Renderer::drawFrame() {
         return;
     }
 
+    VkResult ret = vkWaitForFences(this->logicalDevice, 1, &this->inFlightFences[this->currentFrame], VK_TRUE, UINT64_MAX);
+    if (ret != VK_SUCCESS) {
+        this->requiresRenderUpdate = true;
+        return;
+    }
+
     uint32_t imageIndex;
-    VkResult ret = vkAcquireNextImageKHR(
+    ret = vkAcquireNextImageKHR(
         this->logicalDevice, this->swapChain, IMAGE_ACQUIRE_TIMEOUT, this->imageAvailableSemaphores[this->currentFrame], VK_NULL_HANDLE, &imageIndex);    
     if (ret != VK_SUCCESS) {
         if (ret != VK_ERROR_OUT_OF_DATE_KHR) {
@@ -643,17 +647,6 @@ void Renderer::drawFrame() {
         }
         this->requiresRenderUpdate = true;
         return;
-    }
-
-    ret = vkWaitForFences(this->logicalDevice, 1, &this->inFlightFences[this->currentFrame], VK_TRUE, UINT64_MAX);
-    if (ret != VK_SUCCESS) {
-        this->requiresRenderUpdate = true;
-        return;
-    }
-    
-    ret = vkResetFences(this->logicalDevice, 1, &this->inFlightFences[this->currentFrame]);
-    if (ret != VK_SUCCESS) {
-        logError("Failed to Reset Fence!");
     }
 
     if (this->commandBuffers[imageIndex] != nullptr) {
@@ -669,6 +662,11 @@ void Renderer::drawFrame() {
 
     this->updateUniformBuffer(imageIndex);
 
+    ret = vkResetFences(this->logicalDevice, 1, &this->inFlightFences[this->currentFrame]);
+    if (ret != VK_SUCCESS) {
+        logError("Failed to Reset Fence!");
+    }
+    
     VkSubmitInfo submitInfo{};
     submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
 

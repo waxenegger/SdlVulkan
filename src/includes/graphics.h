@@ -257,7 +257,6 @@ class Renderer final {
         std::vector<VkSemaphore> imageAvailableSemaphores;
         std::vector<VkSemaphore> renderFinishedSemaphores;
         std::vector<VkFence> inFlightFences;
-        std::vector<VkFence> imagesInFlight;
 
         bool createRenderPass();
         bool createSwapChain();
