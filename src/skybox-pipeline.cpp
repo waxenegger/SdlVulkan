@@ -377,42 +377,17 @@ bool SkyboxPipeline::createSkybox() {
     return true;
 }
 
-void SkyboxPipeline::draw(std::vector<VkCommandBuffer> & commandBuffers, const uint16_t commandBufferIndex, const VkCommandBufferInheritanceInfo * cmdBufferInherit) {
+void SkyboxPipeline::draw(const VkCommandBuffer & commandBuffer, const uint16_t commandBufferIndex) {
     if (this->isReady() && this->vertexBuffer != nullptr) {
-        // primary buffer use
-        if (cmdBufferInherit == nullptr) {
-            if (commandBuffers.empty()) return;
-            
-            const VkCommandBuffer commandBuffer = commandBuffers[0];
-            
-            vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, this->layout, 0, 1, &this->descriptorSets[commandBufferIndex], 0, nullptr);
+        vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, this->layout, 0, 1, &this->descriptorSets[commandBufferIndex], 0, nullptr);
 
-            vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, this->pipeline);
+        vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, this->pipeline);
 
-            VkDeviceSize offsets[] = {0};
-            VkBuffer vertexBuffers[] = {this->vertexBuffer};
-            vkCmdBindVertexBuffers(commandBuffer, 0, 1, vertexBuffers, offsets);
-            
-            vkCmdDraw(commandBuffer, SKYBOX_VERTICES.size(), 1, 0, 0);
-        } else {
-            // secondary buffer use
-            VkCommandBuffer commandBuffer = Helper::allocateAndBeginCommandBuffer(this->renderer->getLogicalDevice(),this->renderer->getCommandPool(), cmdBufferInherit);
-            if (commandBuffer == nullptr) return;
-            
-            vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, this->layout, 0, 1, &this->descriptorSets[commandBufferIndex], 0, nullptr);
-    
-            vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, this->pipeline);
-
-            VkDeviceSize offsets[] = {0};
-            VkBuffer vertexBuffers[] = {this->vertexBuffer};
-            vkCmdBindVertexBuffers(commandBuffer, 0, 1, vertexBuffers, offsets);
-            
-            vkCmdDraw(commandBuffer, SKYBOX_VERTICES.size(), 1, 0, 0);
-            
-            if (Helper::endCommandBuffer(commandBuffer)) {
-                commandBuffers.push_back(commandBuffer);
-            }
-        }
+        VkDeviceSize offsets[] = {0};
+        VkBuffer vertexBuffers[] = {this->vertexBuffer};
+        vkCmdBindVertexBuffers(commandBuffer, 0, 1, vertexBuffers, offsets);
+        
+        vkCmdDraw(commandBuffer, SKYBOX_VERTICES.size(), 1, 0, 0);
     }
 }
 

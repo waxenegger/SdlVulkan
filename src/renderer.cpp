@@ -126,6 +126,7 @@ void Renderer::removePipeline(const uint8_t optIndexToRemove) {
         
     if (optIndexToRemove < 0|| optIndexToRemove >= this->pipelines.size()) return;
     
+    this->stopCommandBufferQueue();
     vkDeviceWaitIdle(this->logicalDevice);
 
     delete this->pipelines[optIndexToRemove];
@@ -412,18 +413,10 @@ bool Renderer::createDepthResources() {
 }
 
 void Renderer::initRenderer() {
-    if (this->isReady()) {
-        //ThreadPool::INSTANCE()->start(Helper::createCommandPool, this->logicalDevice, this->graphicsQueueIndex);
-    }
-    
     if (!this->updateRenderer()) return;
     if (!this->createCommandPool()) return;
     if (!this->createSyncObjects()) return;
     if (!this->createUniformBuffers()) return;
-    
-    if (!this->threadPool->isActive()) {
-        logError("Failed to start Thread Pool");
-    }
 }
 
 void Renderer::destroyRendererObjects() {
@@ -549,25 +542,29 @@ VkPhysicalDevice Renderer::getPhysicalDevice() const {
     return this->physicalDevice;
 }
 
-VkCommandBuffer Renderer::createCommandBuffer(uint16_t commandBufferIndex, const bool useSecondaryBuffers) {
+void Renderer::startCommandBufferQueue() {
+    if (!this->canRender() || this->workerQueue.isRunning()) return;
+    
+    this->workerQueue.startQueue(
+        std::bind(&Renderer::createCommandBuffer, this, std::placeholders::_1),
+        std::bind(&Renderer::destroyCommandBuffer , this, std::placeholders::_1), 
+        this->swapChainFramebuffers.size());
+}
+
+void Renderer::stopCommandBufferQueue() {
+    this->workerQueue.stopQueue();
+}
+
+void Renderer::destroyCommandBuffer(VkCommandBuffer commandBuffer) {
+    if (!this->isReady()) return; 
+    
+    vkFreeCommandBuffers(this->logicalDevice, this->commandPool, 1, &commandBuffer);
+}
+
+VkCommandBuffer Renderer::createCommandBuffer(uint16_t commandBufferIndex) {
     if (this->requiresRenderUpdate) return nullptr;
     
-    std::vector<VkCommandBuffer> commandBuffers;    
-    VkCommandBufferInheritanceInfo cmdBufferInherit = {};
     VkCommandBuffer commandBuffer = Helper::allocateAndBeginCommandBuffer(this->logicalDevice,this->commandPool);;
-    
-    if (useSecondaryBuffers) {
-        cmdBufferInherit.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO;
-        cmdBufferInherit.pNext = NULL;
-        cmdBufferInherit.renderPass = this->renderPass;
-        cmdBufferInherit.subpass = 0;
-        cmdBufferInherit.framebuffer = this->swapChainFramebuffers[commandBufferIndex];
-        cmdBufferInherit.occlusionQueryEnable = VK_FALSE;
-        cmdBufferInherit.queryFlags = 0;
-        cmdBufferInherit.pipelineStatistics = 0;
-    } else {
-        commandBuffers.push_back(commandBuffer);
-    }
     if (commandBuffer == nullptr) return nullptr;
     
     VkRenderPassBeginInfo renderPassInfo{};
@@ -584,21 +581,12 @@ VkCommandBuffer Renderer::createCommandBuffer(uint16_t commandBufferIndex, const
     renderPassInfo.clearValueCount = static_cast<uint32_t>(clearValues.size());
     renderPassInfo.pClearValues = clearValues.data();
     
-    vkCmdBeginRenderPass(commandBuffer, &renderPassInfo, 
-        useSecondaryBuffers ? VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS : VK_SUBPASS_CONTENTS_INLINE);
+    vkCmdBeginRenderPass(commandBuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
         
     for (GraphicsPipeline * pipeline : this->pipelines) {
         if (!this->requiresRenderUpdate && pipeline->canRender()) {
-            if (useSecondaryBuffers) {
-                pipeline->draw(commandBuffers, commandBufferIndex, &cmdBufferInherit);
-            } else {
-                pipeline->draw(commandBuffers, commandBufferIndex);
-            }
+            pipeline->draw(commandBuffer, commandBufferIndex);
         }
-    }
-    
-    if (useSecondaryBuffers) {
-        vkCmdExecuteCommands(commandBuffer, commandBuffers.size(), commandBuffers.data());
     }
     
     vkCmdEndRenderPass(commandBuffer);
@@ -620,6 +608,8 @@ void Renderer::updateUniformBuffer(uint32_t currentImage) {
 
 bool Renderer::createCommandBuffers() {
     this->commandBuffers.resize(this->swapChainFramebuffers.size());
+    
+    this->startCommandBufferQueue();
 
     return true;
 }
@@ -637,10 +627,14 @@ void Renderer::drawFrame() {
         this->requiresRenderUpdate = true;
         return;
     }
-
+    
+    ret = vkResetFences(this->logicalDevice, 1, &this->inFlightFences[this->currentFrame]);
+    if (ret != VK_SUCCESS) {
+        logError("Failed to Reset Fence!");
+    }
+    
     uint32_t imageIndex;
-    ret = vkAcquireNextImageKHR(
-        this->logicalDevice, this->swapChain, IMAGE_ACQUIRE_TIMEOUT, this->imageAvailableSemaphores[this->currentFrame], VK_NULL_HANDLE, &imageIndex);    
+    ret = vkAcquireNextImageKHR(this->logicalDevice, this->swapChain, IMAGE_ACQUIRE_TIMEOUT, this->imageAvailableSemaphores[this->currentFrame], VK_NULL_HANDLE, &imageIndex);    
     if (ret != VK_SUCCESS) {
         if (ret != VK_ERROR_OUT_OF_DATE_KHR) {
             logError("Failed to Acquire Next Image");
@@ -649,24 +643,35 @@ void Renderer::drawFrame() {
         return;
     }
 
-    if (this->commandBuffers[imageIndex] != nullptr) {
-        if (USE_SECONDARY_BUFFERS) {
-            //vkResetCommandPool(this->logicalDevice, this->getCommandPool(), VK_COMMAND_POOL_RESET_RELEASE_RESOURCES_BIT);
-        } else {
-            // TODO: call only sporadically
-            vkFreeCommandBuffers(this->logicalDevice, this->commandPool, 1, &this->commandBuffers[imageIndex]);
-        }
-    }
 
-    this->commandBuffers[imageIndex] = this->createCommandBuffer(imageIndex, USE_SECONDARY_BUFFERS);
+    if (this->commandBuffers[imageIndex] != nullptr) {
+        this->workerQueue.queueCommandBufferForDeletion(this->commandBuffers[imageIndex]);
+    }
 
     this->updateUniformBuffer(imageIndex);
 
-    ret = vkResetFences(this->logicalDevice, 1, &this->inFlightFences[this->currentFrame]);
-    if (ret != VK_SUCCESS) {
-        logError("Failed to Reset Fence!");
+    VkCommandBuffer latestCommandBuffer = this->workerQueue.getNextCommandBuffer(imageIndex);
+    std::chrono::high_resolution_clock::time_point nextBufferFetchStart = std::chrono::high_resolution_clock::now();
+    while (latestCommandBuffer == nullptr) {
+        std::chrono::duration<double, std::milli> fetchPeriod = std::chrono::high_resolution_clock::now() - nextBufferFetchStart;
+        if (fetchPeriod.count() > 500) {
+            logInfo("Could not get new buffer for quite a while!");
+            break;
+        }
+        latestCommandBuffer = this->workerQueue.getNextCommandBuffer(imageIndex);
     }
+    std::chrono::duration<double, std::milli> timer = std::chrono::high_resolution_clock::now() - nextBufferFetchStart;
+    //if (timer.count() < 50) {
+    //    std::this_thread::sleep_for(std::chrono::duration<double, std::milli>(50 - timer.count()));
+    //}
+    //timer = std::chrono::high_resolution_clock::now() - nextBufferFetchStart;
+    //std::cout << "Fetch Time: " << timer.count() << " | " << this->workerQueue.getNumberOfItems(imageIndex) << std::endl;
     
+    if (latestCommandBuffer == nullptr) return;
+    this->commandBuffers[imageIndex] = latestCommandBuffer;
+
+    this->updateUniformBuffer(imageIndex);
+        
     VkSubmitInfo submitInfo{};
     submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
 
@@ -686,6 +691,8 @@ void Renderer::drawFrame() {
     ret = vkQueueSubmit(this->graphicsQueue, 1, &submitInfo, this->inFlightFences[this->currentFrame]);
     if (ret != VK_SUCCESS) {
         logError("Failed to Submit Draw Command Buffer!");
+        this->requiresRenderUpdate = true;
+        return;
     }
     
     VkPresentInfoKHR presentInfo{};
@@ -706,6 +713,7 @@ void Renderer::drawFrame() {
         if (ret != VK_ERROR_OUT_OF_DATE_KHR) {
             logError("Failed to Present Swap Chain Image!");
         }
+        this->requiresRenderUpdate = true;
         return;
     }
     
@@ -742,6 +750,8 @@ bool Renderer::updateRenderer() {
         return false;
     }
 
+    this->stopCommandBufferQueue();
+    
     this->destroySwapChainObjects();
 
     this->requiresRenderUpdate = false;
@@ -777,11 +787,10 @@ float Renderer::getDeltaTime() {
 }
 
 Renderer::~Renderer() {
+    this->stopCommandBufferQueue();
+
     logInfo("Destroying Renderer...");
     this->destroyRendererObjects();
-    
-    logInfo("Destroying Thread Pool...");
-    ThreadPool::INSTANCE()->stop();
     
     logInfo("Destroying Logical Device...");
     if (this->logicalDevice != nullptr) {

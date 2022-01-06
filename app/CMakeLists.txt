@@ -34,7 +34,6 @@ add_definitions(-DSDL_JOYSTICK=0)
 
 # Sources (relative to the project root dir).
 set(projectSources
-  ../src/threading.cpp
   ../src/android.cpp
   ../src/platform.cpp
   ../src/graphics.cpp
