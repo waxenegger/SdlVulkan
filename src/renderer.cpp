@@ -665,7 +665,7 @@ void Renderer::drawFrame() {
     //    std::this_thread::sleep_for(std::chrono::duration<double, std::milli>(50 - timer.count()));
     //}
     //timer = std::chrono::high_resolution_clock::now() - nextBufferFetchStart;
-    //std::cout << "Fetch Time: " << timer.count() << " | " << this->workerQueue.getNumberOfItems(imageIndex) << std::endl;
+    std::cout << "Fetch Time: " << timer.count() << " | " << this->workerQueue.getNumberOfItems(imageIndex) << std::endl;
     
     if (latestCommandBuffer == nullptr) return;
     this->commandBuffers[imageIndex] = latestCommandBuffer;
