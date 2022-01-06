@@ -628,6 +628,11 @@ void Renderer::drawFrame() {
         this->requiresRenderUpdate = true;
         return;
     }
+    ret = vkResetFences(this->logicalDevice, 1, &this->inFlightFences[this->currentFrame]);
+    if (ret != VK_SUCCESS) {
+        logError("Failed to Reset Fence!");
+    }
+
     
     uint32_t imageIndex;
     ret = vkAcquireNextImageKHR(
@@ -683,10 +688,6 @@ void Renderer::drawFrame() {
     submitInfo.signalSemaphoreCount = 1;
     submitInfo.pSignalSemaphores = signalSemaphores;
 
-    ret = vkResetFences(this->logicalDevice, 1, &this->inFlightFences[this->currentFrame]);
-    if (ret != VK_SUCCESS) {
-        logError("Failed to Reset Fence!");
-    }
 
     ret = vkQueueSubmit(this->graphicsQueue, 1, &submitInfo, this->inFlightFences[this->currentFrame]);
     if (ret != VK_SUCCESS) {

@@ -414,7 +414,7 @@ bool ModelsPipeline::createDescriptorSetLayout() {
     ssboLayoutBinding.descriptorCount = 1;
     ssboLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
     ssboLayoutBinding.pImmutableSamplers = nullptr;
-    ssboLayoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
+    ssboLayoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
     layoutBindings.push_back(ssboLayoutBinding);
 
     uint32_t numberOfTextures = Models::INSTANCE()->getTextures().size();

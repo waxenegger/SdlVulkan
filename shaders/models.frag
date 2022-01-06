@@ -6,7 +6,6 @@ layout(location = 1) in vec2 fragTexCoord;
 layout(location = 2) in vec3 fragNormals;
 layout(location = 3) in vec4 eye;
 layout(location = 4) in vec4 light;
-layout(location = 5) in flat int instanceID;
 
 struct ComponentProperties {
     int ambientTexture;
@@ -22,17 +21,13 @@ struct ComponentProperties {
     mat4 matrix;
 };
 
-layout(binding = 1) buffer SSBO {
-    ComponentProperties props[];
-} compPropertiesSSBO;
+layout(location = 5) in flat ComponentProperties compProperties;
 
 layout(binding = 2) uniform sampler2D samplers[25];
 
 layout(location = 0) out vec4 outColor;
 
 void main() {
-    ComponentProperties compProperties = compPropertiesSSBO.props[instanceID];
-
     bool hasTextures =
         compProperties.ambientTexture != -1 || compProperties.diffuseTexture != -1 ||
         compProperties.specularTexture != -1 || compProperties.normalTexture != -1;

@@ -37,10 +37,9 @@ layout(location = 1) out vec2 fragTexCoord;
 layout(location = 2) out vec3 fragNormals;
 layout(location = 3) out vec4 eye;
 layout(location = 4) out vec4 light;
-layout(location = 5) flat out int instanceID;
+layout(location = 5) flat out ComponentProperties compProperties;
 
 void main() {
-    instanceID = gl_InstanceIndex;
     ComponentProperties compProps = compPropertiesSSBO.props[gl_InstanceIndex];
 
     vec4 pos = compProps.matrix * vec4(inPosition, 1.0f);
@@ -48,6 +47,7 @@ void main() {
     gl_Position = modelUniforms.proj * modelUniforms.view * pos;
     fragPosition = vec3(pos);
     fragTexCoord = inUV;
+    compProperties = compProps;
     
     mat3 invertTransposeModel = mat3(transpose(inverse(compProps.matrix)));
     
