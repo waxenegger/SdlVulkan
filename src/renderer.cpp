@@ -99,8 +99,8 @@ GraphicsPipeline * Renderer::getPipeline(uint8_t index) {
 
 bool Renderer::canRender() const {
     return this->isReady() && this->hasAtLeastOneActivePipeline() && this->swapChain != nullptr && this->swapChainImages.size() == this->imageCount && 
-        this->swapChainImages.size() == this->swapChainImageViews.size() && this->imagesInFlight.size() == this->swapChainImages.size() &&
-        this->imageAvailableSemaphores.size() == this->imageCount && this->renderFinishedSemaphores.size() == this->imageCount && this->inFlightFences.size() == this->imageCount &&
+        this->swapChainImages.size() == this->swapChainImageViews.size() && this->imageAvailableSemaphores.size() == this->imageCount &&
+        this->renderFinishedSemaphores.size() == this->imageCount && this->inFlightFences.size() == this->imageCount &&
         this->swapChainFramebuffers.size() == this->swapChainImages.size() && this->depthImages.size() == this->swapChainImages.size() && 
         this->depthImagesMemory.size() == this->swapChainImages.size() && this->depthImagesView.size() == this->swapChainImages.size() && 
         this->commandPool != nullptr;
@@ -308,7 +308,6 @@ bool Renderer::createSyncObjects() {
     this->imageAvailableSemaphores.resize(this->imageCount);
     this->renderFinishedSemaphores.resize(this->imageCount);
     this->inFlightFences.resize(this->imageCount);
-    this->imagesInFlight.resize(this->swapChainImages.size(), VK_NULL_HANDLE);
 
     VkSemaphoreCreateInfo semaphoreInfo{};
     semaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
@@ -469,7 +468,6 @@ void Renderer::destroyRendererObjects() {
             
     this->renderFinishedSemaphores.clear();
     this->imageAvailableSemaphores.clear();
-    this->imagesInFlight.clear();
     this->inFlightFences.clear();
 
     if (this->logicalDevice != nullptr && this->commandPool != nullptr) {
@@ -661,14 +659,6 @@ void Renderer::drawFrame() {
 
     this->updateUniformBuffer(imageIndex);
         
-    if (this->imagesInFlight[imageIndex] != VK_NULL_HANDLE) {
-        ret = vkWaitForFences(this->logicalDevice, 1, &this->imagesInFlight[imageIndex], VK_TRUE, UINT64_MAX);
-        if (ret != VK_SUCCESS) {
-             logError("vkWaitForFences 2 Failed");
-        }
-    }
-    this->imagesInFlight[imageIndex] = this->inFlightFences[this->currentFrame];
-
     VkSubmitInfo submitInfo{};
     submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
 
