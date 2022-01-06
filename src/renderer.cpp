@@ -126,7 +126,10 @@ void Renderer::removePipeline(const uint8_t optIndexToRemove) {
         
     if (optIndexToRemove < 0|| optIndexToRemove >= this->pipelines.size()) return;
     
-    this->stopCommandBufferQueue();
+    if (USE_THREADS) {
+        this->stopCommandBufferQueue();
+    }
+    
     vkDeviceWaitIdle(this->logicalDevice);
 
     delete this->pipelines[optIndexToRemove];
@@ -609,7 +612,9 @@ void Renderer::updateUniformBuffer(uint32_t currentImage) {
 bool Renderer::createCommandBuffers() {
     this->commandBuffers.resize(this->swapChainFramebuffers.size());
     
-    this->startCommandBufferQueue();
+    if (USE_THREADS) {
+        this->startCommandBufferQueue();
+    }
 
     return true;
 }
@@ -645,31 +650,32 @@ void Renderer::drawFrame() {
 
 
     if (this->commandBuffers[imageIndex] != nullptr) {
-        this->workerQueue.queueCommandBufferForDeletion(this->commandBuffers[imageIndex]);
+        if (USE_THREADS) {
+            this->workerQueue.queueCommandBufferForDeletion(this->commandBuffers[imageIndex]);
+        } else {
+            vkFreeCommandBuffers(this->logicalDevice, this->commandPool, 1, &this->commandBuffers[imageIndex]);
+        }
     }
 
     this->updateUniformBuffer(imageIndex);
 
-    VkCommandBuffer latestCommandBuffer = this->workerQueue.getNextCommandBuffer(imageIndex);
-    std::chrono::high_resolution_clock::time_point nextBufferFetchStart = std::chrono::high_resolution_clock::now();
-    while (latestCommandBuffer == nullptr) {
-        std::chrono::duration<double, std::milli> fetchPeriod = std::chrono::high_resolution_clock::now() - nextBufferFetchStart;
-        if (fetchPeriod.count() > 500) {
-            logInfo("Could not get new buffer for quite a while!");
-            break;
+    if (USE_THREADS) {
+        VkCommandBuffer latestCommandBuffer = this->workerQueue.getNextCommandBuffer(imageIndex);
+        std::chrono::high_resolution_clock::time_point nextBufferFetchStart = std::chrono::high_resolution_clock::now();
+        while (latestCommandBuffer == nullptr) {
+            std::chrono::duration<double, std::milli> fetchPeriod = std::chrono::high_resolution_clock::now() - nextBufferFetchStart;
+            if (fetchPeriod.count() > 500) {
+                logInfo("Could not get new buffer for quite a while!");
+                break;
+            }
+            latestCommandBuffer = this->workerQueue.getNextCommandBuffer(imageIndex);
         }
-        latestCommandBuffer = this->workerQueue.getNextCommandBuffer(imageIndex);
+        if (latestCommandBuffer == nullptr) return;
+        this->commandBuffers[imageIndex] = latestCommandBuffer;
+    } else {
+        this->commandBuffers[imageIndex] = this->createCommandBuffer(imageIndex);        
     }
-    std::chrono::duration<double, std::milli> timer = std::chrono::high_resolution_clock::now() - nextBufferFetchStart;
-    //if (timer.count() < 50) {
-    //    std::this_thread::sleep_for(std::chrono::duration<double, std::milli>(50 - timer.count()));
-    //}
-    //timer = std::chrono::high_resolution_clock::now() - nextBufferFetchStart;
-    std::cout << "Fetch Time: " << timer.count() << " | " << this->workerQueue.getNumberOfItems(imageIndex) << std::endl;
     
-    if (latestCommandBuffer == nullptr) return;
-    this->commandBuffers[imageIndex] = latestCommandBuffer;
-
     this->updateUniformBuffer(imageIndex);
         
     VkSubmitInfo submitInfo{};
@@ -750,7 +756,9 @@ bool Renderer::updateRenderer() {
         return false;
     }
 
-    this->stopCommandBufferQueue();
+    if (USE_THREADS) {
+        this->stopCommandBufferQueue();
+    }
     
     this->destroySwapChainObjects();
 
@@ -787,7 +795,9 @@ float Renderer::getDeltaTime() {
 }
 
 Renderer::~Renderer() {
-    this->stopCommandBufferQueue();
+    if (USE_THREADS) {
+        this->stopCommandBufferQueue();
+    }
 
     logInfo("Destroying Renderer...");
     this->destroyRendererObjects();
