@@ -314,165 +314,49 @@ void ModelsPipeline::update() {
     this->updateSsboBuffersComponents();
 }
 
-void ModelsPipeline::draw(std::vector<VkCommandBuffer> & commandBuffers, const uint16_t commandBufferIndex, const VkCommandBufferInheritanceInfo * cmdBufferInherit) {
+void ModelsPipeline::draw(VkCommandBuffer & commandBuffer, const uint16_t commandBufferIndex) {
     if (this->isReady()) {
-        // primary buffer use
-        if (cmdBufferInherit == nullptr) {
-            if (commandBuffers.empty()) return;
-            
-            const VkCommandBuffer commandBuffer = commandBuffers[0];
-            if (this->vertexBuffer != nullptr) {
-                vkCmdBindDescriptorSets(
-                    commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, 
-                    this->layout, 0, 1, &this->descriptorSets[commandBufferIndex], 0, nullptr);
-                
-                vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, this->pipeline);
-
-                VkBuffer vertexBuffers[] = {this->vertexBuffer};
-                VkDeviceSize offsets[] = {0};
-                vkCmdBindVertexBuffers(commandBuffer, 0, 1, vertexBuffers, offsets);
-            }
-                
-            if (this->indexBuffer != nullptr) {
-                vkCmdBindIndexBuffer(commandBuffer, this->indexBuffer, 0, VK_INDEX_TYPE_UINT32);
-                this->drawModelsPrimaryBuffer(commandBuffer, true);
-            } else {
-                this->drawModelsPrimaryBuffer(commandBuffer, false);       
-            }
-        } else {
-            // secondary buffer use
-            if (this->indexBuffer != nullptr) {
-                this->drawModelsSecondaryBuffer(commandBuffers, commandBufferIndex, cmdBufferInherit, true);
-            } else {
-                this->drawModelsSecondaryBuffer(commandBuffers, commandBufferIndex, cmdBufferInherit, false);
-            }
-        }
-    }
-}
-
-void ModelsPipeline::drawModelsPrimaryBuffer(const VkCommandBuffer & commandBuffer, const bool useIndices) {
-    auto & allComponentsPerModel = Components::INSTANCE()->getComponentsPerModel();
-    
-    auto & allModels = Models::INSTANCE()->getModels();
-    for (auto & model :  allModels) {            
-        if (allComponentsPerModel.count(model->getId()) == 0) continue;
-        
-        auto meshes = model->getMeshes();
-        
-        uint32_t instanceOffset = 0;
-        for (Mesh & mesh : meshes) {
-
-            auto & allComponents = allComponentsPerModel[model->getId()];
-            for (auto & comp : allComponents) {
-                if (!comp->isVisible()) continue;
-                
-                if (useIndices) {                
-                    vkCmdDrawIndexed(commandBuffer, mesh.getIndices().size() , 1, mesh.getIndexOffset(), mesh.getIndexOffset(), comp->getSsboIndex() + instanceOffset);
-                } else {
-                    vkCmdDraw(commandBuffer, mesh.getVertices().size(), 1, 0, comp->getSsboIndex() + instanceOffset);
-                }        
-            }
-                 
-            instanceOffset++;
-        }
-    }
-}
-
-void ModelsPipeline::drawModelsSecondaryBuffer(std::vector<VkCommandBuffer> & commandBuffers, const uint16_t commandBufferIndex, const VkCommandBufferInheritanceInfo * cmdBufferInherit, const bool useIndices) {
-
-    auto & allComponentsPerModel = Components::INSTANCE()->getComponentsPerModel();
-    uint32_t compCount = 0;
-    for (auto & comps : allComponentsPerModel) {
-        if (!comps.first.empty()) {
-            auto model = Models::INSTANCE()->findModel(comps.first);
-            compCount+= comps.second.size() * model->getMeshes().size();
-        }
-    }
-    logInfo("Comp Count " + std::to_string(compCount));
-
-    const uint8_t numberOfThreads = ThreadPool::INSTANCE()->getNumberOfThreads();
-    uint32_t batchSize = compCount;
-    if (batchSize > numberOfThreads * 500) {
-        bool needsOneMore = compCount % numberOfThreads;
-        batchSize = static_cast<uint32_t>(static_cast<float>(compCount) / numberOfThreads);
-        if (needsOneMore) batchSize+=1;
-        logInfo("Batch Size " + std::to_string(batchSize));
-    }    
-    
-    for (uint32_t i=0;i<compCount;i+=batchSize) {
-        auto task = std::make_unique<std::function<void(WorkerThread *)>>([this, &commandBuffers, commandBufferIndex, cmdBufferInherit, useIndices, &allComponentsPerModel, i, batchSize](WorkerThread * worker) {
-            uint32_t processingStart = i;
-            uint32_t processingEnd = i+batchSize;
-            uint32_t processingIndex = 0;
-            bool breakProcessing = false;
-
-            //logInfo("Processing from " + std::to_string(processingStart) + " to " + std::to_string(processingEnd));
-            
-            VkCommandBuffer commandBuffer = Helper::allocateAndBeginCommandBuffer(this->renderer->getLogicalDevice(),worker->getCommandPool(), cmdBufferInherit);
-
+        if (this->vertexBuffer != nullptr) {
             vkCmdBindDescriptorSets(
                 commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, 
                 this->layout, 0, 1, &this->descriptorSets[commandBufferIndex], 0, nullptr);
             
             vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, this->pipeline);
-            
-            if (useIndices) {
-                vkCmdBindIndexBuffer(commandBuffer, this->indexBuffer, 0, VK_INDEX_TYPE_UINT32);
-            }
-            
+
             VkBuffer vertexBuffers[] = {this->vertexBuffer};
             VkDeviceSize offsets[] = {0};
             vkCmdBindVertexBuffers(commandBuffer, 0, 1, vertexBuffers, offsets);
-
-            auto & allModels = Models::INSTANCE()->getModels();
-            
-            for (auto & model :  allModels) {            
-                if (allComponentsPerModel.count(model->getId()) == 0) continue;
-                
-                if (breakProcessing) break;
-
-                auto meshes = model->getMeshes();
-                
-                uint32_t instanceOffset = 0;
-                for (Mesh & mesh : meshes) {
-                    if (breakProcessing) break;
-
-                    auto & allComponents = allComponentsPerModel[model->getId()];
-                    for (auto & comp : allComponents) {
-                        // move to start position
-                        if (processingIndex < processingStart) {
-                            processingIndex++;
-                            continue;
-                        } else if (processingIndex >= processingEnd) {
-                            breakProcessing = true;
-                            break;
-                        }
-                            
-                        processingIndex++;
-                        if (!comp->isVisible()) continue;
-                        
-                        if (useIndices) {                
-                            vkCmdDrawIndexed(commandBuffer, mesh.getIndices().size() , 1, mesh.getIndexOffset(), mesh.getIndexOffset(), comp->getSsboIndex() + instanceOffset);
-                        } else {
-                            vkCmdDraw(commandBuffer, mesh.getVertices().size(), 1, 0, comp->getSsboIndex() + instanceOffset);
-                        }        
-                    }
-                        
-                    instanceOffset++;
-                }
-            }
-            
-            //logInfo("Processing done at " + std::to_string(processingEnd));
-                    
-            Helper::endCommandBuffer(commandBuffer);
-            commandBuffers.push_back(commandBuffer);
-            worker->recycle(commandBuffer);
-        });
+        }
         
-        ThreadPool::INSTANCE()->addTask(task);
-    }
+        if (this->indexBuffer != nullptr) {
+            vkCmdBindIndexBuffer(commandBuffer, this->indexBuffer, 0, VK_INDEX_TYPE_UINT32);
+        }
+            
+        auto & allComponentsPerModel = Components::INSTANCE()->getComponentsPerModel();    
+        auto & allModels = Models::INSTANCE()->getModels();
+        for (auto & model :  allModels) {            
+            if (allComponentsPerModel.count(model->getId()) == 0) continue;
+            
+            auto meshes = model->getMeshes();
+            
+            uint32_t instanceOffset = 0;
+            for (Mesh & mesh : meshes) {
 
-    ThreadPool::INSTANCE()->waitForIdle();
+                auto & allComponents = allComponentsPerModel[model->getId()];
+                for (auto & comp : allComponents) {
+                    if (!comp->isVisible()) continue;
+                    
+                    if (this->indexBuffer != nullptr) {
+                        vkCmdDrawIndexed(commandBuffer, mesh.getIndices().size() , 1, mesh.getIndexOffset(), mesh.getIndexOffset(), comp->getSsboIndex() + instanceOffset);
+                    } else {
+                        vkCmdDraw(commandBuffer, mesh.getVertices().size(), 1, 0, comp->getSsboIndex() + instanceOffset);
+                    }        
+                }
+                    
+                instanceOffset++;
+            }
+        }
+    }
 }
     
 bool ModelsPipeline::createDescriptorPool() {

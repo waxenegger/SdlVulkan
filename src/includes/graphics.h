@@ -9,10 +9,6 @@
 
 constexpr uint32_t VULKAN_VERSION = VK_MAKE_VERSION(1,0,0);
 
-static constexpr uint32_t MAX_BUFFERING = 2;
-static constexpr bool USE_SECONDARY_BUFFERS = false;
-static constexpr uint64_t IMAGE_ACQUIRE_TIMEOUT = 5 * 1000;
-
 const VkSurfaceFormatKHR SWAP_CHAIN_IMAGE_FORMAT = {
     #ifndef __ANDROID__
         VK_FORMAT_B8G8R8A8_SRGB,
@@ -57,7 +53,7 @@ class GraphicsContext final {
         
         std::vector<const char *> vulkanExtensions;
         std::vector<const char *> vulkanLayers = {
-           //"VK_LAYER_KHRONOS_validation"
+           "VK_LAYER_KHRONOS_validation"
            //"VK_LAYER_ADRENO_debug"
         };
         
@@ -164,7 +160,7 @@ class GraphicsPipeline {
         bool createTextureSampler(VkSamplerAddressMode addressMode);
         void destroyPipelineObjects();
         
-        virtual void draw(std::vector<VkCommandBuffer> & commandBuffers, const uint16_t commandBufferIndex, const VkCommandBufferInheritanceInfo * cmdBufferInherit = nullptr) = 0;
+        virtual void draw(VkCommandBuffer & commandBuffers, const uint16_t commandBufferIndex) = 0;
         virtual void update() = 0;
         
         GraphicsPipeline(const Renderer * renderer);
@@ -182,8 +178,6 @@ class ModelsPipeline : public GraphicsPipeline {
         bool createDescriptorSets();
         
         void updateSsboBuffersComponents();
-        void drawModelsPrimaryBuffer(const VkCommandBuffer & commandBuffer, const bool useIndices);
-        void drawModelsSecondaryBuffer(std::vector<VkCommandBuffer> & commandBuffers, const uint16_t commandBufferIndex, const VkCommandBufferInheritanceInfo * cmdBufferInherit, const bool useIndices);
     public:
         ModelsPipeline(const Renderer * renderer);
         ModelsPipeline & operator=(ModelsPipeline) = delete;
@@ -192,7 +186,7 @@ class ModelsPipeline : public GraphicsPipeline {
         bool createGraphicsPipeline(const VkPushConstantRange & pushConstantRange);
         bool updateGraphicsPipeline();
         
-        void draw(std::vector<VkCommandBuffer> & commandBuffers, const uint16_t commandBufferIndex, const VkCommandBufferInheritanceInfo * cmdBufferInherit = nullptr);
+        void draw(VkCommandBuffer & commandBuffers, const uint16_t commandBufferIndex);
         void update();
 };
 
@@ -217,7 +211,7 @@ class SkyboxPipeline : public GraphicsPipeline {
         bool createGraphicsPipeline(const VkPushConstantRange & pushConstantRange);
         bool updateGraphicsPipeline();
         
-        void draw(std::vector<VkCommandBuffer> & commandBuffers, const uint16_t commandBufferIndex, const VkCommandBufferInheritanceInfo * cmdBufferInherit = nullptr);
+        void draw(VkCommandBuffer & commandBuffers, const uint16_t commandBufferIndex);
         void update();
         
         ~SkyboxPipeline();
@@ -230,7 +224,7 @@ class Renderer final {
         VkDevice logicalDevice = nullptr;
 
         VkCommandPool commandPool = nullptr;
-        ThreadPool * threadPool = ThreadPool::INSTANCE();
+        CommandBufferQueue workerQueue;
 
         std::vector<VkCommandBuffer> commandBuffers;
         
@@ -280,7 +274,8 @@ class Renderer final {
         bool createSyncObjects();
         
         bool createCommandBuffers();
-        VkCommandBuffer createCommandBuffer(uint16_t commandBufferIndex, const bool useSecondaryBuffers = false);
+        void destroyCommandBuffer(VkCommandBuffer commandBuffer);
+        VkCommandBuffer createCommandBuffer(uint16_t commandBufferIndex);
         
         bool createUniformBuffers();
         void updateUniformBuffer(uint32_t currentImage);
@@ -298,6 +293,9 @@ class Renderer final {
         uint8_t addPipeline(GraphicsPipeline * pipeline);
         void removePipeline(const uint8_t optIndexToRemove);
 
+        void startCommandBufferQueue();
+        void stopCommandBufferQueue();
+        
         bool isReady() const;
         bool hasAtLeastOneActivePipeline() const;
         bool canRender() const;

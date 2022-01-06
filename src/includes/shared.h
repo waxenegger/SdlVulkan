@@ -37,6 +37,9 @@
 
 int start(int argc, char* argv []);
 
+static constexpr uint32_t MAX_BUFFERING = 3;
+static constexpr uint64_t IMAGE_ACQUIRE_TIMEOUT = 5 * 1000;
+
 static constexpr uint64_t KILO_BYTE = 1000;
 static constexpr uint64_t MEGA_BYTE = KILO_BYTE * 1000;
 static constexpr uint64_t GIGA_BYTE = MEGA_BYTE * 1000;
