@@ -37,6 +37,7 @@
 
 int start(int argc, char* argv []);
 
+static constexpr bool USE_THREADS = false;
 static constexpr uint32_t MAX_BUFFERING = 3;
 static constexpr uint64_t IMAGE_ACQUIRE_TIMEOUT = 5 * 1000;
 
