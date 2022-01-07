@@ -38,6 +38,10 @@ bool GraphicsPipeline::createTextureSampler(VkSamplerAddressMode addressMode) {
     samplerInfo.compareEnable = VK_FALSE;
     samplerInfo.compareOp = VK_COMPARE_OP_ALWAYS;
     samplerInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
+    samplerInfo.minLod = 0.0f;
+    samplerInfo.maxLod = MIPMAP_LEVELS;
+    samplerInfo.mipLodBias = 0.0f;
+
 
     VkResult ret = vkCreateSampler(this->renderer->getLogicalDevice(), &samplerInfo, nullptr, &this->textureSampler);
     if (ret != VK_SUCCESS) {

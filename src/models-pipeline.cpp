@@ -105,18 +105,18 @@ void ModelsPipeline::prepareModelTextures() {
         if (!Helper::createImage(this->renderer->getPhysicalDevice(), this->renderer->getLogicalDevice(),
             texture.second->getWidth(), texture.second->getHeight(), 
             texture.second->getImageFormat(), 
-            VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, 
-            textureImage, textureImageMemory)) {
+            VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, 
+            textureImage, textureImageMemory,1, MIPMAP_LEVELS)) {
                 logError("Failed to Create Models Pipeline Texture Image");
                 return;
         }
 
         Helper::transitionImageLayout(this->renderer->getLogicalDevice(), this->renderer->getCommandPool(), this->renderer->getGraphicsQueue(), 
-            textureImage, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+            textureImage, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,1, MIPMAP_LEVELS);
         Helper::copyBufferToImage(this->renderer->getLogicalDevice(), this->renderer->getCommandPool(), this->renderer->getGraphicsQueue(),
             stagingBuffer, textureImage, static_cast<uint32_t>(texture.second->getWidth()), static_cast<uint32_t>(texture.second->getHeight()));
-        Helper::transitionImageLayout(this->renderer->getLogicalDevice(), this->renderer->getCommandPool(), this->renderer->getGraphicsQueue(), 
-            textureImage, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+        Helper::generateMipmaps(
+            this->renderer->getLogicalDevice(), this->renderer->getCommandPool(), this->renderer->getGraphicsQueue(), textureImage, texture.second->getWidth(), texture.second->getHeight(), MIPMAP_LEVELS);
 
         vkDestroyBuffer(this->renderer->getLogicalDevice(), stagingBuffer, nullptr);
         vkFreeMemory(this->renderer->getLogicalDevice(), stagingBufferMemory, nullptr);
@@ -124,10 +124,9 @@ void ModelsPipeline::prepareModelTextures() {
         if (textureImage != nullptr) texture.second->setTextureImage(textureImage);
         if (textureImageMemory != nullptr) texture.second->setTextureImageMemory(textureImageMemory);
         
-        
-        VkImageView textureImageView = Helper::createImageView(this->renderer->getLogicalDevice(), textureImage, texture.second->getImageFormat(), VK_IMAGE_ASPECT_COLOR_BIT);
+        VkImageView textureImageView = Helper::createImageView(this->renderer->getLogicalDevice(), textureImage, texture.second->getImageFormat(), VK_IMAGE_ASPECT_COLOR_BIT, 1, MIPMAP_LEVELS);
         if (textureImageView != nullptr) texture.second->setTextureImageView(textureImageView);
-        
+                
         texture.second->freeSurface();
     }
     
