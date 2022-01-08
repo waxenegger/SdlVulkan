@@ -28,8 +28,11 @@ int start(int argc, char* argv []) {
         cyborg->scale(10.0f);
     }
     
+    engine->setShowSkybox(true);
+    engine->setShowGuiOverlay(true);
     engine->init();
     
+    /*
     std::chrono::high_resolution_clock::time_point now = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double, std::milli> time_span = now - start;
     logInfo("Duration Init: " + std::to_string(time_span.count()));
@@ -45,7 +48,8 @@ int start(int argc, char* argv []) {
         }
     });
     t.detach();
-
+    */
+    
     engine->loop();
     
     return 0;

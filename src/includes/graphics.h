@@ -101,7 +101,8 @@ class GraphicsContext final {
         static bool findMemoryType(const VkPhysicalDevice & device, uint32_t typeFilter, VkMemoryPropertyFlags properties, uint32_t & memoryType);
         
         VkSurfaceKHR getVulkanSurface() const;
-        SDL_Window * getSdlWindow();
+        SDL_Window * getSdlWindow() const;
+        VkInstance getVulkanInstance() const;
         
         VkExtent2D getSwapChainExtent(VkSurfaceCapabilitiesKHR & surfaceCapabilities) const;
         bool getSurfaceCapabilities(const VkPhysicalDevice & physicalDevice, VkSurfaceCapabilitiesKHR & surfaceCapabilities) const;
@@ -117,6 +118,8 @@ class GraphicsPipeline {
     protected:
         std::map<std::string, const Shader *> shaders;
         const Renderer * renderer = nullptr;
+        
+        bool enabled = true;
         
         VkDescriptorSetLayout descriptorSetLayout = nullptr;
                 
@@ -151,8 +154,8 @@ class GraphicsPipeline {
         
         std::vector<VkPipelineShaderStageCreateInfo> getShaderStageCreateInfos();
         
-        bool isReady();
-        bool canRender();
+        bool isReady() const;
+        virtual bool canRender() const;
 
         virtual bool createGraphicsPipeline(const VkPushConstantRange & pushConstantRange) = 0;
         virtual bool updateGraphicsPipeline() = 0;
@@ -160,8 +163,11 @@ class GraphicsPipeline {
         bool createTextureSampler(VkSamplerAddressMode addressMode);
         void destroyPipelineObjects();
         
-        virtual void draw(VkCommandBuffer & commandBuffers, const uint16_t commandBufferIndex) = 0;
+        virtual void draw(VkCommandBuffer & commandBuffer, const uint16_t commandBufferIndex) = 0;
         virtual void update() = 0;
+        
+        bool isEnabled();
+        void setEnabled(const bool flag);
         
         GraphicsPipeline(const Renderer * renderer);
         virtual ~GraphicsPipeline();
@@ -186,7 +192,7 @@ class ModelsPipeline : public GraphicsPipeline {
         bool createGraphicsPipeline(const VkPushConstantRange & pushConstantRange);
         bool updateGraphicsPipeline();
         
-        void draw(VkCommandBuffer & commandBuffers, const uint16_t commandBufferIndex);
+        void draw(VkCommandBuffer & commandBuffer, const uint16_t commandBufferIndex);
         void update();
 };
 
@@ -211,10 +217,30 @@ class SkyboxPipeline : public GraphicsPipeline {
         bool createGraphicsPipeline(const VkPushConstantRange & pushConstantRange);
         bool updateGraphicsPipeline();
         
-        void draw(VkCommandBuffer & commandBuffers, const uint16_t commandBufferIndex);
+        void draw(VkCommandBuffer & commandBuffer, const uint16_t commandBufferIndex);
         void update();
         
         ~SkyboxPipeline();
+};
+
+class ImGuiPipeline : public GraphicsPipeline {
+    private:
+        bool createDescriptorPool();
+        bool createDescriptorSetLayout();
+        bool createDescriptorSets();
+        
+    public:
+        ImGuiPipeline(const Renderer * renderer);
+        ImGuiPipeline & operator=(ImGuiPipeline) = delete;
+
+        bool createGraphicsPipeline(const VkPushConstantRange & pushConstantRange);
+        bool updateGraphicsPipeline();
+        bool canRender() const;
+        
+        void draw(VkCommandBuffer & commandBuffer, const uint16_t commandBufferIndex);
+        void update();
+        
+        ~ImGuiPipeline();
 };
 
 class Renderer final {
@@ -238,10 +264,12 @@ class Renderer final {
 
         std::vector<VkBuffer> uniformBuffers;
         std::vector<VkDeviceMemory> uniformBuffersMemory;
-
+        
         std::vector<GraphicsPipeline *> pipelines;
         
-        float deltaTime = 0.16f;
+        std::vector<double> deltaTimes;
+        std::chrono::high_resolution_clock::time_point lastFrameRateUpdate;        
+        uint16_t frameRate = 0;
         size_t currentFrame = 0;
         
         bool requiresRenderUpdate = false;
@@ -291,14 +319,14 @@ class Renderer final {
         Renderer(const GraphicsContext * graphicsContext, const VkPhysicalDevice & physicalDevice, const int & queueIndex);
         
         uint8_t addPipeline(GraphicsPipeline * pipeline);
-        void removePipeline(const uint8_t optIndexToRemove);
+        void enablePipeline(const uint8_t index, const bool flag = true);
 
         void startCommandBufferQueue();
         void stopCommandBufferQueue();
         
         bool isReady() const;
         bool hasAtLeastOneActivePipeline() const;
-        bool canRender() const;
+        virtual bool canRender() const;
                 
         VkDevice getLogicalDevice() const;
         VkPhysicalDevice getPhysicalDevice() const;
@@ -322,7 +350,10 @@ class Renderer final {
 
         GraphicsPipeline * getPipeline(uint8_t index);
         
-        float getDeltaTime();
+        const GraphicsContext * getGraphicsContext() const;
+            
+        uint16_t getFrameRate() const;
+        void addDeltaTime(const std::chrono::high_resolution_clock::time_point now, const double deltaTime);
         
         void drawFrame();
         
@@ -370,7 +401,13 @@ class Engine final {
         Camera * camera = Camera::INSTANCE();
         Renderer * renderer = nullptr;
         
-        uint8_t modelPipelineIndex = 0;
+        bool showSkybox = false;
+        bool showComponents = true;
+        bool showGuiOverlay = false;
+        
+        int skyboxPipelineIndex = -1;
+        int modelPipelineIndex = -1;
+        int guiPipelineIndex = -1;
         
         bool quit = false;
 
@@ -378,6 +415,9 @@ class Engine final {
         void createModelPipeline();
         void updateModelPipeline();
         void createSkyboxPipeline();
+        void createImGuiPipeline();
+        
+        void inputLoop();
         
     public:
         Engine(const Engine&) = delete;
@@ -399,6 +439,10 @@ class Engine final {
         ~Engine();
         
         static std::filesystem::path getAppPath(APP_PATHS appPath);
+        
+        void setShowSkybox(const bool flag);
+        void setShowComponents(const bool flag);
+        void setShowGuiOverlay(const bool flag);
 };
 
 #endif

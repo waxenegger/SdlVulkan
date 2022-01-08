@@ -481,8 +481,12 @@ VkSurfaceKHR GraphicsContext::getVulkanSurface() const {
     return this->vulkanSurface;
 }
 
-SDL_Window * GraphicsContext::getSdlWindow() {
+SDL_Window * GraphicsContext::getSdlWindow() const {
     return this->sdlWindow;
+}
+
+VkInstance GraphicsContext::getVulkanInstance() const {
+    return this->vulkanInstance;
 }
 
 GraphicsContext::GraphicsContext() {}

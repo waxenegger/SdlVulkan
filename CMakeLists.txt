@@ -33,14 +33,23 @@ else()
     set(VULKAN_LIBRARIES vulkan)
 endif()
 
+set(IMGUI_DIR "app/imgui-1.86")
+
 # Sources
 set(projectSources
+    ${IMGUI_DIR}/imgui_impl_sdl.cpp
+    ${IMGUI_DIR}/imgui_impl_vulkan.cpp
+    ${IMGUI_DIR}/imgui.cpp
+    ${IMGUI_DIR}/imgui_tables.cpp
+    ${IMGUI_DIR}/imgui_widgets.cpp
+    ${IMGUI_DIR}/imgui_draw.cpp
     src/platform.cpp
     src/desktop.cpp
     src/graphics.cpp
     src/pipeline.cpp
     src/models-pipeline.cpp
     src/skybox-pipeline.cpp
+    src/imgui-pipeline.cpp
     src/shader.cpp
     src/models.cpp
     src/renderer.cpp
@@ -58,6 +67,7 @@ set(projectIncludeDirs ${projectIncludeDirs}
     "app/glm"
     ${VULKAN_DIR}/include
     ${ASSIMP_DIR}/include
+    ${IMGUI_DIR}
 )
 include_directories(${projectIncludeDirs})
 

@@ -97,7 +97,8 @@ GraphicsPipeline * Renderer::getPipeline(uint8_t index) {
     return this->pipelines[index];
 }
 
-bool Renderer::canRender() const {
+bool Renderer::canRender() const
+{
     return this->isReady() && this->hasAtLeastOneActivePipeline() && this->swapChain != nullptr && this->swapChainImages.size() == this->imageCount && 
         this->swapChainImages.size() == this->swapChainImageViews.size() && this->imageAvailableSemaphores.size() == this->imageCount &&
         this->renderFinishedSemaphores.size() == this->imageCount && this->inFlightFences.size() == this->imageCount &&
@@ -118,21 +119,17 @@ uint8_t Renderer::addPipeline(GraphicsPipeline * pipeline) {
     return this->pipelines.size()-1;
 }
 
-void Renderer::removePipeline(const uint8_t optIndexToRemove) {
+void Renderer::enablePipeline(const uint8_t index, const bool flag) {
     if (!this->isReady()) {
         logError("Render has not been properly initialized!");
         return;
     }
         
-    if (optIndexToRemove < 0|| optIndexToRemove >= this->pipelines.size()) return;
+    if (index < 0|| index >= this->pipelines.size()) return;
     
-    if (USE_THREADS) {
-        this->stopCommandBufferQueue();
-    }
-    
-    vkDeviceWaitIdle(this->logicalDevice);
+    //vkDeviceWaitIdle(this->logicalDevice);
 
-    delete this->pipelines[optIndexToRemove];
+    this->pipelines[index]->setEnabled(flag);
 }
 
 
@@ -426,7 +423,7 @@ void Renderer::destroyRendererObjects() {
     this->destroySwapChainObjects();
     
     if (this->logicalDevice == nullptr) return;
-    
+        
     for (size_t i = 0; i < this->uniformBuffers.size(); i++) {
         if (this->uniformBuffers[i] != nullptr) vkDestroyBuffer(this->logicalDevice, this->uniformBuffers[i], nullptr);
     }
@@ -465,7 +462,7 @@ void Renderer::destroyRendererObjects() {
     this->renderFinishedSemaphores.clear();
     this->imageAvailableSemaphores.clear();
     this->inFlightFences.clear();
-
+    
     if (this->logicalDevice != nullptr && this->commandPool != nullptr) {
         vkDestroyCommandPool(this->logicalDevice, this->commandPool, nullptr);
         this->commandPool = nullptr;
@@ -592,7 +589,7 @@ VkCommandBuffer Renderer::createCommandBuffer(uint16_t commandBufferIndex) {
             pipeline->draw(commandBuffer, commandBufferIndex);
         }
     }
-    
+        
     vkCmdEndRenderPass(commandBuffer);
 
     if (!Helper::endCommandBuffer(commandBuffer)) return nullptr;
@@ -612,6 +609,8 @@ void Renderer::updateUniformBuffer(uint32_t currentImage) {
 
 bool Renderer::createCommandBuffers() {
     this->commandBuffers.resize(this->swapChainFramebuffers.size());
+    
+    this->lastFrameRateUpdate = std::chrono::high_resolution_clock::now();
     
     if (USE_THREADS) {
         this->startCommandBufferQueue();
@@ -726,10 +725,28 @@ void Renderer::drawFrame() {
 
     std::chrono::high_resolution_clock::time_point now = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double, std::milli> time_span = now -frameStart;
-    this->deltaTime = time_span.count();
+    this->addDeltaTime(now, time_span.count());
+}
+
+void Renderer::addDeltaTime(const std::chrono::high_resolution_clock::time_point now, const double deltaTime) {
+    this->deltaTimes.push_back(deltaTime);
     
-    int frameRate = static_cast<int>(1000 / this->deltaTime);
-    logInfo(std::to_string(frameRate));
+    std::chrono::duration<double, std::milli> timeSinceLastFrameRateUpdate = now - this->lastFrameRateUpdate;
+    
+    if (timeSinceLastFrameRateUpdate.count() > 1000) {
+        double deltaTimeAccumulated = 0;
+        for (uint16_t i=0;i<this->deltaTimes.size(); i++) {
+            deltaTimeAccumulated += this->deltaTimes[i];
+        }
+        
+        this->frameRate = static_cast<uint16_t>((1000 / (deltaTimeAccumulated / this->deltaTimes.size())) * (timeSinceLastFrameRateUpdate.count() / 1000));
+        this->lastFrameRateUpdate = now;
+        this->deltaTimes.clear();
+    }    
+}
+
+uint16_t Renderer::getFrameRate() const {
+    return this->frameRate;
 }
 
 bool Renderer::doesShowWireFrame() const {
@@ -789,10 +806,6 @@ void Renderer::forceRenderUpdate() {
     this->requiresRenderUpdate = true;
 }
 
-float Renderer::getDeltaTime() {
-    return this->deltaTime;
-}
-
 Renderer::~Renderer() {
     if (USE_THREADS) {
         this->stopCommandBufferQueue();
@@ -812,3 +825,6 @@ uint32_t Renderer::getGraphicsQueueIndex() const {
     return this->graphicsQueueIndex;
 }
 
+const GraphicsContext * Renderer::getGraphicsContext() const {
+    return this->graphicsContext;
+}
