@@ -85,11 +85,11 @@ void GraphicsPipeline::destroyPipelineObjects() {
     }
 }
 
-bool GraphicsPipeline::isReady() {
+bool GraphicsPipeline::isReady() const {
     return this->pipeline != nullptr;
 }
 
-bool GraphicsPipeline::canRender() {
+bool GraphicsPipeline::canRender() const {
     uint8_t validShaders = 0;
     
     for (auto & shader : this->shaders) {
@@ -97,6 +97,14 @@ bool GraphicsPipeline::canRender() {
     }    
     
     return this->isReady() && validShaders >= 2;
+}
+
+void GraphicsPipeline::setEnabled(const bool flag) {
+    this->enabled = flag;
+}
+
+bool GraphicsPipeline::isEnabled() {
+    return this->enabled;
 }
 
 GraphicsPipeline::~GraphicsPipeline() {

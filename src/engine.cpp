@@ -50,13 +50,22 @@ void Engine::loop() {
     
     SDL_StartTextInput();
 
-    this->startInputCapture();
+    if (USE_THREADED_INPUT) {
+        this->startInputCapture();
+    }
     
     logInfo("Starting Render Loop...");
 
-    while(!this->quit) {
-        this->renderer->drawFrame();
+    if (USE_THREADED_INPUT) {
+        this->startInputCapture();
+        
+        while(!this->quit) {
+            this->renderer->drawFrame();
+        }
+    } else {
+        this->inputLoop();
     }
+
     
     SDL_StopTextInput();
     
@@ -98,10 +107,19 @@ void Engine::init() {
     this->createRenderer();
     if (this->renderer == nullptr) return;
 
-    renderer->initRenderer();    
+    renderer->initRenderer();
     
-    this->createSkyboxPipeline();
-    this->createModelPipeline();
+    if (this->showSkybox) {
+        this->createSkyboxPipeline();
+    }
+    
+    if (this->showComponents) {
+        this->createModelPipeline();
+    }
+
+    if (this->showGuiOverlay) {
+        this->createImGuiPipeline();
+    }
     
     VkExtent2D windowSize = this->renderer->getSwapChainExtent();
     this->camera->setAspectRatio(static_cast<float>(windowSize.width) / windowSize.height);
@@ -166,9 +184,26 @@ void Engine::createSkyboxPipeline() {
     
     if (pipeline->createGraphicsPipeline(pushConstantRange)) {
         
-        this->renderer->addPipeline(pipeline.release());
+        this->skyboxPipelineIndex = this->renderer->addPipeline(pipeline.release());
     
         logInfo("Added Skybox Pipeline");
+    }
+}
+
+void Engine::createImGuiPipeline() {
+    if (this->renderer == nullptr || !renderer->isReady()) return;    
+
+    logInfo("Creating ImGui Pipeline...");
+
+    std::unique_ptr<ImGuiPipeline> pipeline = std::make_unique<ImGuiPipeline>(this->renderer);
+
+    VkPushConstantRange pushConstantRange{};
+    
+    if (pipeline->createGraphicsPipeline(pushConstantRange)) {
+        
+        this->guiPipelineIndex = this->renderer->addPipeline(pipeline.release());
+    
+        logInfo("Added ImGui Pipeline");
     }
 }
 
@@ -191,116 +226,142 @@ void Engine::updateModelPipeline() {
     }
 }
 
-void Engine::startInputCapture() {
-    
-    std::thread inputThread([this]() {
-        SDL_Event e;
-        bool isFullScreen = false;
-        bool needsRestoreAfterFullScreen = false;
+void Engine::inputLoop() {
+    SDL_Event e;
+    bool isFullScreen = false;
+    bool needsRestoreAfterFullScreen = false;
 
-        float walkingSpeed = 0.5;
-        
-        while(!this->quit) {
-            while (SDL_PollEvent(&e) != 0) {
-                switch(e.type) {
-                    case SDL_WINDOWEVENT:
-                        if (e.window.event == SDL_WINDOWEVENT_RESIZED ||
-                            e.window.event == SDL_WINDOWEVENT_MAXIMIZED ||
-                            e.window.event == SDL_WINDOWEVENT_MINIMIZED ||
-                            e.window.event == SDL_WINDOWEVENT_RESTORED) {
-                                if (isFullScreen) SDL_SetWindowFullscreen(this->graphics->getSdlWindow(), SDL_TRUE);
-                        }
-                        break;
-                    case SDL_KEYDOWN:
-                        switch (e.key.keysym.scancode) {
-                            case SDL_SCANCODE_W:
-                                this->camera->move(Camera::KeyPress::UP, true, walkingSpeed);
-                                break;
-                            case SDL_SCANCODE_S:
-                                this->camera->move(Camera::KeyPress::DOWN, true, walkingSpeed);
-                                break;
-                            case SDL_SCANCODE_A:
-                                this->camera->move(Camera::KeyPress::LEFT, true, walkingSpeed);
-                                break;
-                            case SDL_SCANCODE_D:
-                                this->camera->move(Camera::KeyPress::RIGHT, true, walkingSpeed);
-                                break;
-                            case SDL_SCANCODE_F:{
-                                this->renderer->setShowWireFrame(!this->renderer->doesShowWireFrame());
-                                break;           
-                            }
-                            case SDL_SCANCODE_F12:
-                                isFullScreen = !isFullScreen;
-                                if (isFullScreen) {
-                                    if (SDL_GetWindowFlags(this->graphics->getSdlWindow()) & SDL_WINDOW_MAXIMIZED) {
-                                        SDL_SetWindowFullscreen(this->graphics->getSdlWindow(), SDL_TRUE);
-                                    } else {
-                                        needsRestoreAfterFullScreen = true;
-                                        SDL_MaximizeWindow(this->graphics->getSdlWindow());
-                                    }
+    float walkingSpeed = 1.0f;
+    
+    while(!this->quit) {
+        while (SDL_PollEvent(&e) != 0) {
+            switch(e.type) {
+                case SDL_WINDOWEVENT:
+                    if (e.window.event == SDL_WINDOWEVENT_RESIZED ||
+                        e.window.event == SDL_WINDOWEVENT_MAXIMIZED ||
+                        e.window.event == SDL_WINDOWEVENT_MINIMIZED ||
+                        e.window.event == SDL_WINDOWEVENT_RESTORED) {
+                            if (isFullScreen) SDL_SetWindowFullscreen(this->graphics->getSdlWindow(), SDL_TRUE);
+                    }
+                    break;
+                case SDL_KEYDOWN:
+                    switch (e.key.keysym.scancode) {
+                        case SDL_SCANCODE_W:
+                            this->camera->move(Camera::KeyPress::UP, true, walkingSpeed);
+                            break;
+                        case SDL_SCANCODE_S:
+                            this->camera->move(Camera::KeyPress::DOWN, true, walkingSpeed);
+                            break;
+                        case SDL_SCANCODE_A:
+                            this->camera->move(Camera::KeyPress::LEFT, true, walkingSpeed);
+                            break;
+                        case SDL_SCANCODE_D:
+                            this->camera->move(Camera::KeyPress::RIGHT, true, walkingSpeed);
+                            break;
+                        case SDL_SCANCODE_F:
+                            this->renderer->setShowWireFrame(!this->renderer->doesShowWireFrame());
+                            break;           
+                        case SDL_SCANCODE_M:
+                            this->showComponents = !this->showComponents;
+                            this->renderer->enablePipeline(this->modelPipelineIndex, this->showComponents);
+                            break;           
+                        case SDL_SCANCODE_G:
+                            this->showGuiOverlay = !this->showGuiOverlay;
+                            this->renderer->enablePipeline(this->guiPipelineIndex, this->showGuiOverlay);
+                            break;           
+                        case SDL_SCANCODE_B:
+                            this->showSkybox = !this->showSkybox;
+                            this->renderer->enablePipeline(this->skyboxPipelineIndex, this->showSkybox);
+                            break;
+                        case SDL_SCANCODE_F12:
+                            isFullScreen = !isFullScreen;
+                            if (isFullScreen) {
+                                if (SDL_GetWindowFlags(this->graphics->getSdlWindow()) & SDL_WINDOW_MAXIMIZED) {
+                                    SDL_SetWindowFullscreen(this->graphics->getSdlWindow(), SDL_TRUE);
                                 } else {
-                                    SDL_SetWindowFullscreen(this->graphics->getSdlWindow(), SDL_FALSE);
-                                    if (needsRestoreAfterFullScreen) {
-                                        SDL_RestoreWindow(this->graphics->getSdlWindow());
-                                        needsRestoreAfterFullScreen = false;
-                                    }
+                                    needsRestoreAfterFullScreen = true;
+                                    SDL_MaximizeWindow(this->graphics->getSdlWindow());
                                 }
-                                break;
-                            case SDL_SCANCODE_Q:
-                                quit = true;
-                                break;
-                            default:
-                                break;
-                        };
-                        break;
-                    case SDL_KEYUP:
-                        switch (e.key.keysym.scancode) {
-                            case SDL_SCANCODE_W:
-                                this->camera->move(Camera::KeyPress::UP);
-                                break;
-                            case SDL_SCANCODE_S:
-                                this->camera->move(Camera::KeyPress::DOWN);
-                                break;
-                            case SDL_SCANCODE_A:
-                                this->camera->move(Camera::KeyPress::LEFT);
-                                break;
-                            case SDL_SCANCODE_D:
-                                this->camera->move(Camera::KeyPress::RIGHT);
-                                break;
-                            default:
-                                break;
-                        };
-                        break;
-                    case SDL_MOUSEMOTION:
-                        if (SDL_GetRelativeMouseMode() == SDL_TRUE) {
-                            this->camera->updateDirection(
-                                static_cast<float>(e.motion.xrel),
-                                static_cast<float>(e.motion.yrel), 0.005f);
-                        }
-                        break;
-                    case SDL_MOUSEWHEEL:
-                    {
-                        const Sint32 delta = e.wheel.y * (e.wheel.direction == SDL_MOUSEWHEEL_NORMAL ? 1 : -1);
-                        float newFovy = this->camera->getFovY() - delta * 2;
-                        if (newFovy < 1) newFovy = 1;
-                        else if (newFovy > 45) newFovy = 45;
-                        this->camera->setFovY(newFovy);
-                        break;
-                    }                            
-                    case SDL_MOUSEBUTTONUP:
-                        SDL_SetRelativeMouseMode(SDL_GetRelativeMouseMode() == SDL_TRUE ? SDL_FALSE : SDL_TRUE);
-                        break;
-                    case SDL_QUIT:
-                        quit = true;
-                        break;
-                }
+                            } else {
+                                SDL_SetWindowFullscreen(this->graphics->getSdlWindow(), SDL_FALSE);
+                                if (needsRestoreAfterFullScreen) {
+                                    SDL_RestoreWindow(this->graphics->getSdlWindow());
+                                    needsRestoreAfterFullScreen = false;
+                                }
+                            }
+                            break;
+                        case SDL_SCANCODE_Q:
+                            quit = true;
+                            break;
+                        default:
+                            break;
+                    };
+                    break;
+                case SDL_KEYUP:
+                    switch (e.key.keysym.scancode) {
+                        case SDL_SCANCODE_W:
+                            this->camera->move(Camera::KeyPress::UP);
+                            break;
+                        case SDL_SCANCODE_S:
+                            this->camera->move(Camera::KeyPress::DOWN);
+                            break;
+                        case SDL_SCANCODE_A:
+                            this->camera->move(Camera::KeyPress::LEFT);
+                            break;
+                        case SDL_SCANCODE_D:
+                            this->camera->move(Camera::KeyPress::RIGHT);
+                            break;
+                        default:
+                            break;
+                    };
+                    break;
+                case SDL_MOUSEMOTION:
+                    if (SDL_GetRelativeMouseMode() == SDL_TRUE) {
+                        this->camera->updateDirection(
+                            static_cast<float>(e.motion.xrel),
+                            static_cast<float>(e.motion.yrel), 0.005f);
+                    }
+                    break;
+                case SDL_MOUSEWHEEL:
+                {
+                    const Sint32 delta = e.wheel.y * (e.wheel.direction == SDL_MOUSEWHEEL_NORMAL ? 1 : -1);
+                    float newFovy = this->camera->getFovY() - delta * 2;
+                    if (newFovy < 1) newFovy = 1;
+                    else if (newFovy > 45) newFovy = 45;
+                    this->camera->setFovY(newFovy);
+                    break;
+                }                            
+                case SDL_MOUSEBUTTONUP:
+                    SDL_SetRelativeMouseMode(SDL_GetRelativeMouseMode() == SDL_TRUE ? SDL_FALSE : SDL_TRUE);
+                    break;
+                case SDL_QUIT:
+                    quit = true;
+                    break;
             }
         }
-    });
+
+        if (!USE_THREADED_INPUT) {
+            this->renderer->drawFrame();
+        }
+    }
+}
+
+void Engine::startInputCapture() {
+    std::thread inputThread(&Engine::inputLoop, this);
     inputThread.detach();
 }
 
+void Engine::setShowSkybox(const bool flag) {
+    this->showSkybox = flag;
+}
 
+void Engine::setShowComponents(const bool flag) {
+    this->showComponents = flag;
+}
+
+void Engine::setShowGuiOverlay(const bool flag) {
+    this->showGuiOverlay = flag;
+}
 
 Engine::~Engine() {    
     if (this->renderer != nullptr) {

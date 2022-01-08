@@ -12,7 +12,7 @@ class CommandBufferQueue final {
         std::mutex lock2;
         std::vector<std::queue<VkCommandBuffer>> commmandBuffers;
         std::vector<VkCommandBuffer> trash;
-        uint16_t maxItems = MAX_BUFFERING - 1;
+        uint16_t maxItems = 1;
         
         void emptyTrash(std::function<void(VkCommandBuffer)> commandBufferDeletion) {
             for (auto & t : this->trash) {

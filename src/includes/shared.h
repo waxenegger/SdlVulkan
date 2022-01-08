@@ -35,11 +35,17 @@
 #include <assimp/scene.h>
 #include <assimp/postprocess.h>
 
+#include "imgui.h"
+#include "imgui_internal.h"
+#include "imgui_impl_sdl.h"
+#include "imgui_impl_vulkan.h"
+
 int start(int argc, char* argv []);
 
-static constexpr bool USE_THREADS = false;
+static constexpr bool USE_THREADS = true;
+static constexpr bool USE_THREADED_INPUT = true;
 static constexpr uint32_t MAX_BUFFERING = 3;
-static constexpr uint32_t MIPMAP_LEVELS = 3;
+static constexpr uint32_t MIPMAP_LEVELS = 8;
 static constexpr uint64_t IMAGE_ACQUIRE_TIMEOUT = 5 * 1000;
 
 static constexpr uint64_t KILO_BYTE = 1000;

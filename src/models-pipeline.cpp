@@ -310,7 +310,7 @@ bool ModelsPipeline::updateGraphicsPipeline() {
 }
 
 void ModelsPipeline::draw(const VkCommandBuffer & commandBuffer, const uint16_t commandBufferIndex) {
-    if (this->isReady()) {
+    if (this->isReady() && this->isEnabled()) {
         if (this->vertexBuffer != nullptr) {
             vkCmdBindDescriptorSets(
                 commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, 
@@ -353,7 +353,6 @@ void ModelsPipeline::draw(const VkCommandBuffer & commandBuffer, const uint16_t 
                 meshIndex++;
             }
         }
-        
     }
 }
     
