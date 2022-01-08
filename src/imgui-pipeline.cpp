@@ -100,7 +100,7 @@ bool ImGuiPipeline::createDescriptorSets() {
     return (this->renderer == nullptr || !this->renderer->isReady());
 }
 
-void ImGuiPipeline::draw(VkCommandBuffer & commandBuffer, const uint16_t commandBufferIndex) {
+void ImGuiPipeline::draw(const VkCommandBuffer & commandBuffer, const uint16_t commandBufferIndex) {
     if (this->renderer == nullptr || !this->renderer->isReady() || !this->isEnabled()) return;
     
     const VkExtent2D extent = this->renderer->getSwapChainExtent();

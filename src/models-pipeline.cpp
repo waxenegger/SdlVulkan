@@ -313,7 +313,7 @@ void ModelsPipeline::update() {
     this->updateSsboBuffersComponents();
 }
 
-void ModelsPipeline::draw(VkCommandBuffer & commandBuffer, const uint16_t commandBufferIndex) {
+void ModelsPipeline::draw(const VkCommandBuffer & commandBuffer, const uint16_t commandBufferIndex) {
     if (this->isReady() && this->isEnabled()) {
         if (this->vertexBuffer != nullptr) {
             vkCmdBindDescriptorSets(

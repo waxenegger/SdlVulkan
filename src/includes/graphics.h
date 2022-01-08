@@ -163,7 +163,7 @@ class GraphicsPipeline {
         bool createTextureSampler(VkSamplerAddressMode addressMode);
         void destroyPipelineObjects();
         
-        virtual void draw(VkCommandBuffer & commandBuffer, const uint16_t commandBufferIndex) = 0;
+        virtual void draw(const VkCommandBuffer & commandBuffer, const uint16_t commandBufferIndex) = 0;
         virtual void update() = 0;
         
         bool isEnabled();
@@ -192,7 +192,7 @@ class ModelsPipeline : public GraphicsPipeline {
         bool createGraphicsPipeline(const VkPushConstantRange & pushConstantRange);
         bool updateGraphicsPipeline();
         
-        void draw(VkCommandBuffer & commandBuffer, const uint16_t commandBufferIndex);
+        void draw(const VkCommandBuffer & commandBuffer, const uint16_t commandBufferIndex);
         void update();
 };
 
@@ -217,7 +217,7 @@ class SkyboxPipeline : public GraphicsPipeline {
         bool createGraphicsPipeline(const VkPushConstantRange & pushConstantRange);
         bool updateGraphicsPipeline();
         
-        void draw(VkCommandBuffer & commandBuffer, const uint16_t commandBufferIndex);
+        void draw(const VkCommandBuffer & commandBuffer, const uint16_t commandBufferIndex);
         void update();
         
         ~SkyboxPipeline();
@@ -237,7 +237,7 @@ class ImGuiPipeline : public GraphicsPipeline {
         bool updateGraphicsPipeline();
         bool canRender() const;
         
-        void draw(VkCommandBuffer & commandBuffer, const uint16_t commandBufferIndex);
+        void draw(const VkCommandBuffer & commandBuffer, const uint16_t commandBufferIndex);
         void update();
         
         ~ImGuiPipeline();

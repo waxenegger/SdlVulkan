@@ -381,7 +381,7 @@ bool SkyboxPipeline::createSkybox() {
     return true;
 }
 
-void SkyboxPipeline::draw(VkCommandBuffer & commandBuffer, const uint16_t commandBufferIndex) {
+void SkyboxPipeline::draw(const VkCommandBuffer & commandBuffer, const uint16_t commandBufferIndex) {
     if (this->isReady() && this->isEnabled() && this->vertexBuffer != nullptr) {
         vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, this->layout, 0, 1, &this->descriptorSets[commandBufferIndex], 0, nullptr);
 
