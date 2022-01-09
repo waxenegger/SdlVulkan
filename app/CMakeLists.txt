@@ -28,37 +28,46 @@ add_subdirectory(${SDL2ttfDir})
 set(SDL2imageDir "${projectDir}/SDL2/SDL2_image-2.0.5")
 add_subdirectory(${SDL2imageDir})
 
+set(IMGUI_DIR "${projectDir}/imgui-1.86")
 
 # Joysticks were causing trouble on android.
 add_definitions(-DSDL_JOYSTICK=0)
 
 # Sources (relative to the project root dir).
 set(projectSources
-  ../src/android.cpp
-  ../src/platform.cpp
-  ../src/graphics.cpp
-  ../src/pipeline.cpp
-  ../src/models-pipeline.cpp
-  ../src/skybox-pipeline.cpp
-  ../src/shader.cpp
-  ../src/models.cpp
-  ../src/renderer.cpp
-  ../src/helper.cpp
-  ../src/engine.cpp
-  ../src/components.cpp
-  ../src/camera.cpp
+    ${IMGUI_DIR}/imgui_impl_sdl.cpp
+    ${IMGUI_DIR}/imgui_impl_vulkan.cpp
+    ${IMGUI_DIR}/imgui.cpp
+    ${IMGUI_DIR}/imgui_tables.cpp
+    ${IMGUI_DIR}/imgui_widgets.cpp
+    ${IMGUI_DIR}/imgui_draw.cpp
+    ../src/android.cpp
+    ../src/platform.cpp
+    ../src/graphics.cpp
+    ../src/pipeline.cpp
+    ../src/models-pipeline.cpp
+    ../src/skybox-pipeline.cpp
+    ../src/imgui-pipeline.cpp
+    ../src/shader.cpp
+    ../src/models.cpp
+    ../src/renderer.cpp
+    ../src/helper.cpp
+    ../src/engine.cpp
+    ../src/components.cpp
+    ../src/camera.cpp
 )
 
 
 # Include dirs.
 set(projectIncludeDirs ${projectIncludeDirs}
-  "${sdlDir}/include"
-  "${sdlDir}/src/core/android/include"
-  ${SDL2ttfDir}/include
-  ${SDL2imageDir}/include
-  ${VulkanDir}/include
-  "${projectDir}/glm"
-  ${ASSIMP_DIR}/include
+    ${IMGUI_DIR}
+    "${sdlDir}/include"
+    "${sdlDir}/src/core/android/include"
+    ${SDL2ttfDir}/include
+    ${SDL2imageDir}/include
+    ${VulkanDir}/include
+    "${projectDir}/glm"
+    ${ASSIMP_DIR}/include
 )
 
 

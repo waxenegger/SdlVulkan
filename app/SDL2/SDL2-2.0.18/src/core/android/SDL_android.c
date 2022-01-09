@@ -168,6 +168,10 @@ JNIEXPORT void JNICALL SDL_JAVA_INTERFACE(nativePermissionResult)(
         JNIEnv* env, jclass cls,
         jint requestCode, jboolean result);
 
+JNIEXPORT jstring JNICALL SDL_JAVA_INTERFACE(nativeGetAssetContent)(
+        JNIEnv *env, jclass cls,
+        jstring name);
+
 static JNINativeMethod SDLActivity_tab[] = {
     { "nativeSetupJNI",             "()I", SDL_JAVA_INTERFACE(nativeSetupJNI) },
     { "nativeRunMain",              "(Ljava/lang/String;Ljava/lang/String;Ljava/lang/Object;)I", SDL_JAVA_INTERFACE(nativeRunMain) },
@@ -1311,6 +1315,32 @@ JNIEXPORT jstring JNICALL SDL_JAVA_INTERFACE(nativeGetHint)(
     return result;
 }
 
+JNIEXPORT jstring JNICALL SDL_JAVA_INTERFACE(nativeGetAssetContent)(
+                                    JNIEnv *env, jclass cls,
+                                    jstring name)
+{
+    const char *utfname = (*env)->GetStringUTFChars(env, name, NULL);
+
+    SDL_RWops ctx;
+    Android_JNI_FileOpen(&ctx, utfname, "r");
+
+    jstring result = NULL;
+    if (ctx.hidden.androidio.asset == NULL) {
+        result = (*env)->NewStringUTF(env, "");
+    } else {
+        const Sint64 length = AAsset_getLength64(ctx.hidden.androidio.asset);
+        char * content = malloc(length);
+        Android_JNI_FileRead(&ctx, content, length, 1);
+        Android_JNI_FileClose(&ctx);
+        result = (*env)->NewStringUTF(env, content);
+        free((void *) content);
+    }
+
+    (*env)->ReleaseStringUTFChars(env, name, utfname);
+
+    return result;
+}
+
 JNIEXPORT jboolean JNICALL SDL_JAVA_INTERFACE(nativeGetHintBoolean)(
                                     JNIEnv *env, jclass cls,
                                     jstring name, jboolean default_value)
@@ -1878,7 +1908,8 @@ int Android_JNI_FileOpen(SDL_RWops *ctx,
         return -1;
     }
 
-    asset = AAssetManager_open(asset_manager, fileName, AASSET_MODE_UNKNOWN);
+    //asset = AAssetManager_open(asset_manager, fileName, AASSET_MODE_UNKNOWN);
+    asset = AAssetManager_open(asset_manager, fileName, AASSET_MODE_BUFFER);
     if (asset == NULL) {
         return -1;
     }
@@ -2627,6 +2658,22 @@ Android_JNI_OpenURL(const char *url)
     const int ret = (*env)->CallStaticIntMethod(env, mActivityClass, midOpenURL, jurl);
     (*env)->DeleteLocalRef(env, jurl);
     return ret;
+}
+
+const char * SDL_AndroidGetAssetContent(const char * fileName, unsigned long * length)
+{
+    SDL_RWops ctx;
+    *length = 0;
+    Android_JNI_FileOpen(&ctx, fileName, "r");
+
+    if (ctx.hidden.androidio.asset != NULL) {
+        *length = AAsset_getLength64(ctx.hidden.androidio.asset);
+        const char * content = (const char *) AAsset_getBuffer(ctx.hidden.androidio.asset);
+        if (content == NULL) return "";
+
+        Android_JNI_FileClose(&ctx);
+        return strdup(content);
+    } else return "";
 }
 
 #endif /* __ANDROID__ */
