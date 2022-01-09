@@ -76,6 +76,7 @@ void Engine::preloadModels() {
     // TODO: read from location
     this->models->addModel("cyborg", Engine::getAppPath(MODELS) / "cyborg.obj");
     this->models->addModel("rock", Engine::getAppPath(MODELS) / "rock.obj");
+    this->models->addTextModel("text", Engine::getAppPath(FONTS) / "FreeMono.ttf", "Hello World", 50);
     this->models->addModel("nanosuit", Engine::getAppPath(MODELS) / "nanosuit.obj");
 }
 
@@ -120,6 +121,8 @@ void Engine::init() {
     if (this->showGuiOverlay) {
         this->createImGuiPipeline();
     }
+
+    this->setShowBoundingBoxes(this->showBoundingBoxes);
     
     VkExtent2D windowSize = this->renderer->getSwapChainExtent();
     this->camera->setAspectRatio(static_cast<float>(windowSize.width) / windowSize.height);
@@ -270,8 +273,7 @@ void Engine::inputLoop() {
                             this->renderer->enablePipeline(this->guiPipelineIndex, this->showGuiOverlay);
                             break;           
                         case SDL_SCANCODE_B:
-                            this->showSkybox = !this->showSkybox;
-                            this->renderer->enablePipeline(this->skyboxPipelineIndex, this->showSkybox);
+                            this->setShowBoundingBoxes(!this->showBoundingBoxes);
                             break;
                         case SDL_SCANCODE_F12:
                             isFullScreen = !isFullScreen;
@@ -361,6 +363,17 @@ void Engine::setShowComponents(const bool flag) {
 
 void Engine::setShowGuiOverlay(const bool flag) {
     this->showGuiOverlay = flag;
+}
+
+void Engine::setShowBoundingBoxes(const bool flag) {
+    this->showBoundingBoxes = flag;
+    
+    if (this->renderer == nullptr) return;
+    
+    GraphicsPipeline * modelPipeline = renderer->getPipeline(this->modelPipelineIndex);
+    if (modelPipeline != nullptr) {
+        modelPipeline->setShowBoundingBoxes(this->showBoundingBoxes);
+    }
 }
 
 Engine::~Engine() {    

@@ -335,19 +335,21 @@ void ModelsPipeline::draw(const VkCommandBuffer & commandBuffer, const uint16_t 
             uint32_t meshIndex = 0;
             for (Mesh & mesh : meshes) {
 
-                for (auto & comp : allComponents) {
-                    if (!comp->isVisible()) continue;
+                if (!mesh.isBoundingBoxMesh() || this->isShowingBoundingBoxes()) {
+                    for (auto & comp : allComponents) {
+                        if (!comp->isVisible()) continue;
 
-                        ModelProperties props = { comp->getModelMatrix()};
-                        vkCmdPushConstants(
-                            commandBuffer, this->layout,
-                            VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(struct ModelProperties), &props);
+                            ModelProperties props = { comp->getModelMatrix()};
+                            vkCmdPushConstants(
+                                commandBuffer, this->layout,
+                                VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(struct ModelProperties), &props);
 
-                        if (this->indexBuffer != nullptr) {                
-                            vkCmdDrawIndexed(commandBuffer, mesh.getIndices().size() , 1, mesh.getIndexOffset(), mesh.getVertexOffset(), model->getModelIndex() + meshIndex);
-                        } else {
-                            vkCmdDraw(commandBuffer, mesh.getVertices().size(), 1, 0, comp->getModel()->getModelIndex() + meshIndex);
-                        }
+                            if (this->indexBuffer != nullptr) {                
+                                vkCmdDrawIndexed(commandBuffer, mesh.getIndices().size() , 1, mesh.getIndexOffset(), mesh.getVertexOffset(), model->getModelIndex() + meshIndex);
+                            } else {
+                                vkCmdDraw(commandBuffer, mesh.getVertices().size(), 1, 0, comp->getModel()->getModelIndex() + meshIndex);
+                            }
+                    }
                 }
                 
                 meshIndex++;

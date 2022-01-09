@@ -71,7 +71,7 @@ float Camera::getFovY()
 
 void Camera::setPerspective()
 {
-    this->perspective = glm::perspective(glm::radians(this->fovy), this->aspect, 0.001f, 100000.0f);
+    this->perspective = glm::perspective(glm::radians(this->fovy), this->aspect, 0.1f, 1000.0f);
     if (this->flipY) {
         this->perspective[1][1] *= -1.0f;
     }

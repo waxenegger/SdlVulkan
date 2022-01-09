@@ -120,6 +120,7 @@ class GraphicsPipeline {
         const Renderer * renderer = nullptr;
         
         bool enabled = true;
+        bool showBoundingBoxes = false;
         
         VkDescriptorSetLayout descriptorSetLayout = nullptr;
                 
@@ -167,6 +168,9 @@ class GraphicsPipeline {
         
         bool isEnabled();
         void setEnabled(const bool flag);
+        
+        bool isShowingBoundingBoxes();
+        void setShowBoundingBoxes(const bool flag);
         
         GraphicsPipeline(const Renderer * renderer);
         virtual ~GraphicsPipeline();
@@ -395,6 +399,7 @@ class Engine final {
         bool showSkybox = false;
         bool showComponents = true;
         bool showGuiOverlay = false;
+        bool showBoundingBoxes = false;
         
         int skyboxPipelineIndex = -1;
         int modelPipelineIndex = -1;
@@ -434,6 +439,7 @@ class Engine final {
         void setShowSkybox(const bool flag);
         void setShowComponents(const bool flag);
         void setShowGuiOverlay(const bool flag);
+        void setShowBoundingBoxes(const bool flag);
 };
 
 #endif
