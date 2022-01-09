@@ -7,33 +7,35 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 set(CMAKE_DEBUG_POSTFIX "")
 
-set(SDL2_DIR "app/SDL2/SDL2-2.0.18")
+set(THIRD_PARTY_DIR "${PROJECT_SOURCE_DIR}/thirdParty")
+
+set(SDL2_DIR "${THIRD_PARTY_DIR}/SDL2/SDL2-2.0.18")
 add_subdirectory(${SDL2_DIR} EXCLUDE_FROM_ALL)
 find_library(SDL2main SDL2)
 
 set(SDL_STATIC_ENABLED_BY_DEFAULT, ON)
 
-set(SDL2_ttf_DIR "app/SDL2/SDL2_ttf-2.0.15")
+set(SDL2_ttf_DIR "${THIRD_PARTY_DIR}/SDL2/SDL2_ttf-2.0.15")
 add_subdirectory(${SDL2_ttf_DIR} EXCLUDE_FROM_ALL)
 find_library(SDL2_TTF SDL2_ttf)
 
-set(SDL2_image_DIR "app/SDL2/SDL2_image-2.0.5")
+set(SDL2_image_DIR "${THIRD_PARTY_DIR}/SDL2/SDL2_image-2.0.5")
 add_subdirectory(${SDL2_image_DIR} EXCLUDE_FROM_ALL)
 find_library(SDL2_IMAGE SDL2_image)
 
-set(Assimp_DIR "app/assimp-5.0.1")
+set(Assimp_DIR "${THIRD_PARTY_DIR}/assimp-5.0.1")
 add_subdirectory(${Assimp_DIR} EXCLUDE_FROM_ALL)
 find_library(ASSIMP Assimp)
 
 if (WIN32)
-    set(VULKAN_DIR "app/VulkanSDK/1.2.189.0/win64")
-    set(VULKAN_LIBRARIES ${PROJECT_SOURCE_DIR}/app/VulkanSDK/1.2.189.0/win64/lib/vulkan-1.lib)
+    set(VULKAN_DIR "${THIRD_PARTY_DIR}/VulkanSDK/1.2.189.0/win64")
+    set(VULKAN_LIBRARIES ${THIRD_PARTY_DIR}/VulkanSDK/1.2.189.0/win64/lib/vulkan-1.lib)
 else()
-    set(VULKAN_DIR "app/VulkanSDK/1.2.189.0/x86_64")
+    set(VULKAN_DIR "${THIRD_PARTY_DIR}/VulkanSDK/1.2.189.0/x86_64")
     set(VULKAN_LIBRARIES vulkan)
 endif()
 
-set(IMGUI_DIR "app/imgui-1.86")
+set(IMGUI_DIR "${THIRD_PARTY_DIR}/imgui-1.86")
 
 # Sources
 set(projectSources
@@ -64,7 +66,7 @@ set(projectIncludeDirs ${projectIncludeDirs}
     ${SDL2_DIR}/include
     ${SDL2_ttf_DIR}/include
     ${SDL2_image_DIR}/include
-    "app/glm"
+    ${THIRD_PARTY_DIR}/glm
     ${VULKAN_DIR}/include
     ${ASSIMP_DIR}/include
     ${IMGUI_DIR}
