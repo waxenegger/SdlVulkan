@@ -107,6 +107,14 @@ bool GraphicsPipeline::isEnabled() {
     return this->enabled;
 }
 
+bool GraphicsPipeline::isShowingBoundingBoxes() {
+    return this->showBoundingBoxes;
+}
+
+void GraphicsPipeline::setShowBoundingBoxes(const bool flag) {
+    this->showBoundingBoxes = flag;
+}    
+
 GraphicsPipeline::~GraphicsPipeline() {
     for (auto & shader : this->shaders) {
         if (shader.second != nullptr) {

@@ -341,15 +341,23 @@ void ModelsPipeline::draw(const VkCommandBuffer & commandBuffer, const uint16_t 
             uint32_t instanceOffset = 0;
             for (Mesh & mesh : meshes) {
 
-                auto & allComponents = allComponentsPerModel[model->getId()];
-                for (auto & comp : allComponents) {
-                    if (!comp->isVisible()) continue;
+                if (!mesh.isBoundingBoxMesh() || this->isShowingBoundingBoxes()) {
                     
-                    if (this->indexBuffer != nullptr) {
-                        vkCmdDrawIndexed(commandBuffer, mesh.getIndices().size() , 1, mesh.getIndexOffset(), mesh.getIndexOffset(), comp->getSsboIndex() + instanceOffset);
-                    } else {
-                        vkCmdDraw(commandBuffer, mesh.getVertices().size(), 1, 0, comp->getSsboIndex() + instanceOffset);
-                    }        
+                    auto & allComponents = allComponentsPerModel[model->getId()];
+                    for (auto & comp : allComponents) {
+                        if (!comp->isVisible()) continue;
+
+                            ModelProperties props = { comp->getModelMatrix()};
+                            vkCmdPushConstants(
+                                commandBuffer, this->layout,
+                                VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(struct ModelProperties), &props);
+
+                            if (this->indexBuffer != nullptr) {                
+                                vkCmdDrawIndexed(commandBuffer, mesh.getIndices().size() , 1, mesh.getIndexOffset(), mesh.getVertexOffset(), comp->getSsboIndex() + instanceOffset);
+                            } else {
+                                vkCmdDraw(commandBuffer, mesh.getVertices().size(), 1, 0, comp->getSsboIndex() + instanceOffset);
+                            }
+                    }
                 }
                     
                 instanceOffset++;

@@ -3,6 +3,12 @@
 
 #include "shared.h"
 
+struct BoundingBox final {
+    public:
+        glm::vec3 min = glm::vec3(INF);
+        glm::vec3 max = glm::vec3(NEG_INF);
+};
+
 enum ModelsContentType {
     VERTEX, INDEX, SSBO
 };
@@ -129,6 +135,8 @@ class Mesh final {
         std::string name = "";
         uint32_t indexOffset = 0;
         int32_t vertexOffset = 0;
+        BoundingBox bbox;
+        bool boundingBoxMesh = false;
     public:
         Mesh(const std::vector<ModelVertex> & vertices);
         Mesh(const std::vector<ModelVertex> & vertices, const std::vector<uint32_t> indices);
@@ -148,6 +156,11 @@ class Mesh final {
         int32_t getVertexOffset();
         void setIndexOffset(const uint32_t indexOffset);
         void setVertexOffset(const int32_t vertexOffset);
+        void setBoundingBox(const BoundingBox & bbox);
+        const BoundingBox & getBoundingBox();
+        void calculateBoundingBox();
+        bool isBoundingBoxMesh();
+        void markAsBoundingBoxMesh();
 };
 
 class Texture final {
@@ -195,6 +208,8 @@ class Model final {
         std::vector<Mesh> meshes;
         bool loaded = false;
         uint32_t modelIndex = 0;
+        BoundingBox bbox;
+        
         void processNode(const aiNode * node, const aiScene *scene);
         Mesh processMesh(const aiMesh *mesh, const aiScene *scene);
 
@@ -215,6 +230,7 @@ class Model final {
         
         uint32_t getModelIndex();
         void updateOffsets(uint32_t & modelIndex, int32_t & vertexOffset, uint32_t & indexOffset);
+        void calculateBoundingBox();
 };
 
 class Models final {

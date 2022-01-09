@@ -52,6 +52,9 @@ static constexpr uint64_t KILO_BYTE = 1000;
 static constexpr uint64_t MEGA_BYTE = KILO_BYTE * 1000;
 static constexpr uint64_t GIGA_BYTE = MEGA_BYTE * 1000;
 
+static constexpr float INF = std::numeric_limits<float>::infinity();
+static constexpr float NEG_INF = -1 * std::numeric_limits<float>::infinity();
+
 enum APP_PATHS {
     ROOT, SHADERS, MODELS, SKYBOX, FONTS, MAPS
 };

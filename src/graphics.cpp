@@ -108,7 +108,6 @@ void GraphicsContext::quitSdl() {
     }
     
     TTF_Quit();
-
     SDL_Quit();
 }
 
