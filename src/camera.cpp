@@ -1,5 +1,7 @@
 #include "includes/world.h"
 
+const float PI_HALF = glm::pi<float>() / 2;
+
 void Camera::updateViewMatrix() {
     glm::mat4 rotM = glm::mat4(1.0f);
     glm::mat4 transM;
@@ -90,6 +92,13 @@ void Camera::setRotation(glm::vec3 rotation) {
 
 void Camera::rotate(glm::vec3 delta) {
     this->rotation += delta;
+    
+    if (this->rotation.x < -PI_HALF) {
+        this->rotation.x = -PI_HALF;
+    } else if (this->rotation.x > PI_HALF) {
+        this->rotation.x = PI_HALF;
+    }
+    
     this->updateViewMatrix();
 }
 
