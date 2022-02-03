@@ -905,10 +905,15 @@ BufferSummary Models::getModelsBufferSizes(bool printInfo) {
         }
     }
     
+    if (bufferSizes.ssboBufferSize > 0) {
+        bufferSizes.reservedSsboBufferSize = bufferSizes.ssboBufferSize * MEGA_BYTE; 
+    }
+    
     if (printInfo) {
         logInfo("Models Vertex Buffer Size: " + this->formatMemoryUsage(bufferSizes.vertexBufferSize));
         logInfo("Models Index Buffer Size: " + this->formatMemoryUsage(bufferSizes.indexBufferSize));
         logInfo("Models SSBO Buffer Size: " + this->formatMemoryUsage(bufferSizes.ssboBufferSize));
+        logInfo("Models Reserved SSBO Buffer Size: " + this->formatMemoryUsage(bufferSizes.reservedSsboBufferSize));
     }
 
     return bufferSizes;
