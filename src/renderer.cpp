@@ -676,7 +676,8 @@ void Renderer::drawFrame() {
     }
     
     this->updateUniformBuffer(imageIndex);
-        
+    Components::INSTANCE()->update(this->getDeltaFactor());
+
     VkSubmitInfo submitInfo{};
     submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
 
@@ -725,16 +726,17 @@ void Renderer::drawFrame() {
     this->currentFrame = (this->currentFrame + 1) % this->imageCount;
 
     std::chrono::high_resolution_clock::time_point now = std::chrono::high_resolution_clock::now();
-    std::chrono::duration<double, std::milli> time_span = now -frameStart;
+    std::chrono::duration<float, std::milli> time_span = now - frameStart;
     this->addDeltaTime(now, time_span.count());
 }
 
-void Renderer::addDeltaTime(const std::chrono::high_resolution_clock::time_point now, const double deltaTime) {
+void Renderer::addDeltaTime(const std::chrono::high_resolution_clock::time_point now, const float deltaTime) {
+    this->lastDeltaTime = deltaTime;
     this->deltaTimes.push_back(deltaTime);
-    
+
     std::chrono::duration<double, std::milli> timeSinceLastFrameRateUpdate = now - this->lastFrameRateUpdate;
     
-    if (timeSinceLastFrameRateUpdate.count() > 1000) {
+    if (timeSinceLastFrameRateUpdate.count() >= 1000) {
         double deltaTimeAccumulated = 0;
         for (uint16_t i=0;i<this->deltaTimes.size(); i++) {
             deltaTimeAccumulated += this->deltaTimes[i];
@@ -743,7 +745,11 @@ void Renderer::addDeltaTime(const std::chrono::high_resolution_clock::time_point
         this->frameRate = static_cast<uint16_t>((1000 / (deltaTimeAccumulated / this->deltaTimes.size())) * (timeSinceLastFrameRateUpdate.count() / 1000));
         this->lastFrameRateUpdate = now;
         this->deltaTimes.clear();
-    }    
+    }
+}
+
+float Renderer::getDeltaFactor() {
+    return this->lastDeltaTime / DELTA_TIME_60FPS;
 }
 
 uint16_t Renderer::getFrameRate() const {

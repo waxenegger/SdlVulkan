@@ -20,7 +20,7 @@ glm::mat4 Component::getModelMatrix(bool includeRotation) {
     glm::mat4 transformation = glm::mat4(1.0f);
 
     transformation = glm::translate(transformation, this->position);
-
+    
     if (includeRotation) {
         if (this->rotation.x != 0.0f) transformation = glm::rotate(transformation, this->rotation.x, glm::vec3(1, 0, 0));
         if (this->rotation.y != 0.0f) transformation = glm::rotate(transformation, this->rotation.y, glm::vec3(0, 1, 0));
@@ -36,6 +36,12 @@ void Component::setPosition(float x, float y, float z) {
 
 void Component::setPosition(glm::vec3 position) {
     this->position = position;
+}
+
+void Component::update(const float delta) {
+    for (auto & behavior : this->componentBehavior) {
+        behavior->update(delta);
+    }
 }
 
 glm::vec3 Component::getPosition() {
@@ -54,6 +60,19 @@ void Component::move(float xAxis, float yAxis, float zAxis) {
     this->position.x += xAxis;
     this->position.y += yAxis;
     this->position.z += zAxis;
+}
+
+void Component::moveForward(const float delta) {
+    glm::vec3 frontOfComponent(
+        cos(this->rotation.x) * sin(this->rotation.y),
+        sin(this->rotation.x),
+        cos(this->rotation.x) * cos(this->rotation.y));
+    frontOfComponent = glm::normalize(frontOfComponent);
+    
+    glm::vec3 deltaPosition = this->position;
+    deltaPosition = frontOfComponent * delta;
+
+    this->move(deltaPosition.x, deltaPosition.y, deltaPosition.z);
 }
 
 void Component::setRotation(glm::vec3 rotation) {
@@ -79,6 +98,10 @@ uint32_t Component::getSsboIndex() {
 
 VkDeviceSize Component::getSsboSize() {
     return sizeof(struct MeshProperties);
+}
+
+Component::~Component() {
+    this->componentBehavior.clear();
 }
 
 Component * Components::addComponentFromModel(const std::string id, const std::string modelId) {
@@ -162,6 +185,16 @@ glm::vec3 Component::getRotation() {
     return this->rotation;
 }
 
+void Component::addComponentBehavior(ComponentBehavior * behavior) {
+    this->componentBehavior.push_back(std::unique_ptr<ComponentBehavior>(behavior));
+}
+
+void Components::update(const float delta) {
+    for (auto & comp : this->components) {
+        comp->update(delta);
+    }
+}
+
 Components * Components::INSTANCE() {
     if (Components::instance == nullptr) {
         Components::instance = new Components();
@@ -173,3 +206,25 @@ Components::Components() { }
 
 
 Components * Components::instance = nullptr;
+
+ComponentBehavior::ComponentBehavior(Component* component) : component(component) { }
+ComponentBehavior::~ComponentBehavior() {}
+
+RandomWalkBehavior::RandomWalkBehavior(Component* component) : ComponentBehavior(component) {
+    
+}
+
+void RandomWalkBehavior::update(const float delta) {
+    if (this->component == nullptr) return;
+
+    const float randFloat = Helper::getRandomFloatBetween0and1();
+    if (randFloat < 0.01f) {
+        this->component->rotate(0, 10,0);
+    } else if (randFloat > 0.99f) {
+        this->component->rotate(0, -10,0);
+    }
+    
+    this->component->moveForward((randFloat / 50) * delta);
+}
+
+RandomWalkBehavior::~RandomWalkBehavior() {}

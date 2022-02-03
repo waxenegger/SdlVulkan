@@ -31,7 +31,8 @@ int start(int argc, char* argv []) {
     Component * cyborg = Components::INSTANCE()->addComponentFromModel("cyborg", "cyborg");
     if (cyborg != nullptr) {
         cyborg->setPosition(0.0f,0.0f,10.0f);
-        cyborg->scale(1.0f);
+        cyborg->scale(2.0f);
+        cyborg->addComponentBehavior(new RandomWalkBehavior(cyborg));
     }
     
     engine->setShowSkybox(true);
@@ -41,19 +42,22 @@ int start(int argc, char* argv []) {
     engine->init();
 
     std::chrono::high_resolution_clock::time_point now = std::chrono::high_resolution_clock::now();
-    std::chrono::duration<double, std::milli> time_span = now - start;
+    std::chrono::duration<float, std::milli> time_span = now - start;
     logInfo("Duration Init: " + std::to_string(time_span.count()));
 
+    /*
     auto t = std::thread([]() {
         while(true) {
             auto all = Components::INSTANCE()->getAllComponentsForModel("nanosuit");
             for (auto & a : all) {
                 a->rotate(0,10,0);
-            }
+            }            
+
             std::this_thread::sleep_for(std::chrono::duration<double, std::milli>(150));
         }
     });
     t.detach();
+    */
     
     engine->loop();
     

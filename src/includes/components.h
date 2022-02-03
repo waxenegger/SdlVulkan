@@ -2,11 +2,51 @@
 #define SRC_INCLUDES_COMPONENTS_H_
 
 #include "models.h"
+#include "helper.h"
+
+struct ComponentProperties final {
+    public:
+        MeshProperties meshProperties;
+        ModelProperties modelProperties;
+};
+
+
+class Component;
+class ComponentBehavior {
+    protected:
+        Component * component = nullptr;
+        
+    public:
+        ComponentBehavior(const ComponentBehavior&) = delete;
+        ComponentBehavior& operator=(const ComponentBehavior &) = delete;
+        ComponentBehavior(ComponentBehavior &&) = delete;
+        
+        ComponentBehavior(Component * component);
+
+        virtual void update(const float delta) = 0;
+        virtual ~ComponentBehavior();
+};
+
+class RandomWalkBehavior : public ComponentBehavior {
+    public:
+        RandomWalkBehavior(const RandomWalkBehavior&) = delete;
+        RandomWalkBehavior& operator=(const RandomWalkBehavior &) = delete;
+        RandomWalkBehavior(RandomWalkBehavior &&) = delete;
+
+        RandomWalkBehavior(Component * component);
+        
+        void update(const float delta);
+        ~RandomWalkBehavior();
+};
+
 
 class Component final {
     private:
         Model * model = nullptr;
         uint32_t ssboIndex;
+
+        std::vector<ComponentProperties> compProps;
+        std::vector<std::unique_ptr<ComponentBehavior>> componentBehavior;
         
         std::string id = "";
         
@@ -16,9 +56,15 @@ class Component final {
         
         bool visible = true;
     public:
+        Component(const Component&) = delete;
+        Component& operator=(const Component &) = delete;
+        Component(Component &&) = delete;
+
         Component(std::string id);
         Component(std::string id, Model * model);
         MeshProperties & getModelProperties();
+        ~Component();
+        
         bool hasModel();
         Model * getModel();
         void setPosition(float x, float y, float z);
@@ -27,6 +73,7 @@ class Component final {
         void setRotation(glm::vec3 rotation);
         void rotate(int xAxis = 0, int yAxis = 0, int zAxis = 0);
         void move(float xAxis, float yAxis, float zAxis);
+        void moveForward(const float delta);
         void scale(float factor);
         glm::mat4 getModelMatrix(bool includeRotation = true);
         glm::vec3 getRotation();
@@ -36,6 +83,11 @@ class Component final {
         void setSsboIndex(const uint32_t index);
         uint32_t getSsboIndex();
         VkDeviceSize getSsboSize();
+
+        std::vector<ComponentProperties> & getProperties();
+        void addComponentProperties(const ComponentProperties props);
+        void addComponentBehavior(ComponentBehavior * behavior);
+        void update(const float delta);
 };
 
 class Components final {
@@ -57,6 +109,9 @@ class Components final {
         std::vector<Component *> getAllComponentsForModel(std::string model);
         std::vector<std::unique_ptr<Component>> & getComponents();
         Component * findComponent(const std::string id, const std::string modelId);
+        
+        void update(const float delta);
+        
         ~Components();
 };
 

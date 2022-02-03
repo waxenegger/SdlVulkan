@@ -462,3 +462,10 @@ void  Helper::generateMipmaps(const VkDevice & logicalDevice, const VkCommandPoo
 
     Helper::endCommandBufferWithSubmit(logicalDevice, commandPool, graphicsQueue, commandBuffer);
 }
+
+float Helper::getRandomFloatBetween0and1() {
+    return Helper::distribution(Helper::default_random_engine); 
+}
+
+std::uniform_real_distribution<float> Helper::distribution = std::uniform_real_distribution<float>(0.0, 1.0);
+std::default_random_engine Helper::default_random_engine = std::default_random_engine();

@@ -130,6 +130,12 @@ void Engine::init() {
     this->renderer->updateRenderer();
 }
 
+float Engine::getDeltaFactor() {
+    if (this->renderer == nullptr) return DELTA_TIME_60FPS;
+        
+    return this->renderer->getDeltaFactor();
+}
+
 void Engine::createRenderer() {
     logInfo("Creating Renderer...");
 
@@ -234,7 +240,8 @@ void Engine::inputLoop() {
     bool isFullScreen = false;
     bool needsRestoreAfterFullScreen = false;
 
-    float walkingSpeed = 1.0f;
+    float walkingSpeed = 0.5f;
+    float cameraSpeed = 0.0015f;
     
     while(!this->quit) {
         while (SDL_PollEvent(&e) != 0) {
@@ -321,7 +328,7 @@ void Engine::inputLoop() {
                     if (SDL_GetRelativeMouseMode() == SDL_TRUE) {
                         this->camera->updateDirection(
                             static_cast<float>(e.motion.xrel),
-                            static_cast<float>(e.motion.yrel), 0.005f);
+                            static_cast<float>(e.motion.yrel), cameraSpeed);
                     }
                     break;
                 case SDL_MOUSEWHEEL:

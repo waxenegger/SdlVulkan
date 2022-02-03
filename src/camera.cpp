@@ -33,8 +33,7 @@ bool Camera::moving()
     return this->keys.left || this->keys.right || this->keys.up || this->keys.down;
 }
 
-void Camera::move(KeyPress key, bool isPressed, float delta) {
-    
+void Camera::move(KeyPress key, bool isPressed, float delta) {    
     switch(key) {
         case LEFT:
             this->keys.left = isPressed;
