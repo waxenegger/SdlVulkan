@@ -585,6 +585,7 @@ VkCommandBuffer Renderer::createCommandBuffer(uint16_t commandBufferIndex) {
         
     for (GraphicsPipeline * pipeline : this->pipelines) {
         if (!this->requiresRenderUpdate && pipeline->canRender()) {
+            if (USE_SSBO_MEMORY) pipeline->update();
             pipeline->draw(commandBuffer, commandBufferIndex);
         }
     }

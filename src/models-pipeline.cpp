@@ -39,7 +39,7 @@ bool ModelsPipeline::createBuffersFromModel() {
     vkFreeMemory(this->renderer->getLogicalDevice(), stagingBufferMemory, nullptr);
     
     // meshes (SSBOs)
-    if (!this->createSsboBufferFromModel(bufferSizes.ssboBufferSize)) {
+    if (!USE_SSBO_MEMORY && !this->createSsboBufferFromModel(bufferSizes.ssboBufferSize)) {
         logError("Failed to create Models Pipeline SSBO");
         return false;        
     }
@@ -148,6 +148,12 @@ bool ModelsPipeline::createGraphicsPipeline(const VkPushConstantRange & pushCons
     
     this->prepareModelTextures();
 
+    // components SSBOs
+    if (USE_SSBO_MEMORY && !this->createSsboBuffersFromComponents()) {
+        logError("Failed to create Components Pipeline SSBO");
+        return false;        
+    }
+    
     this->pushConstantRange = pushConstantRange;
     
     if (!this->createTextureSampler(VK_SAMPLER_ADDRESS_MODE_REPEAT)) {
@@ -309,6 +315,10 @@ bool ModelsPipeline::updateGraphicsPipeline() {
     return true;
 }
 
+void ModelsPipeline::update() {
+    this->updateSsboBuffersComponents();
+}
+
 void ModelsPipeline::draw(const VkCommandBuffer & commandBuffer, const uint16_t commandBufferIndex) {
     if (this->isReady() && this->isEnabled()) {
         if (this->vertexBuffer != nullptr) {
@@ -326,6 +336,9 @@ void ModelsPipeline::draw(const VkCommandBuffer & commandBuffer, const uint16_t 
         if (this->indexBuffer != nullptr) {
             vkCmdBindIndexBuffer(commandBuffer, this->indexBuffer, 0, VK_INDEX_TYPE_UINT32);
         }
+        
+        // TODO: include memory branch
+        
         
         auto & allModels = Models::INSTANCE()->getModels();
         for (auto & model :  allModels) {            
@@ -439,6 +452,44 @@ bool ModelsPipeline::createDescriptorSetLayout() {
     return true;
 }
 
+bool ModelsPipeline::createSsboBuffersFromComponents() {
+    if (this->renderer == nullptr || !this->renderer->isReady()) return false;
+   
+    const BufferSummary bufferSizes = Models::INSTANCE()->getModelsBufferSizes(true);
+
+    if (bufferSizes.reservedSsboBufferSize == 0) return true;
+
+    if (this->ssboBuffer != nullptr) vkDestroyBuffer(this->renderer->getLogicalDevice(), this->ssboBuffer, nullptr);
+    if (this->ssboBufferMemory != nullptr) vkFreeMemory(this->renderer->getLogicalDevice(), this->ssboBufferMemory, nullptr);
+
+    if (!Helper::createBuffer(this->renderer->getPhysicalDevice(), this->renderer->getLogicalDevice(), bufferSizes.reservedSsboBufferSize,
+            VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+            this->ssboBuffer, this->ssboBufferMemory)) {
+        logError("Failed to get Create Models Pipeline Vertex Buffer");
+        return false;
+    }
+
+    void * data = nullptr;
+    vkMapMemory(this->renderer->getLogicalDevice(), ssboBufferMemory, 0, bufferSizes.reservedSsboBufferSize, 0, &data);
+    Helper::copyComponentsPropertiesIntoSsbo(data, bufferSizes.reservedSsboBufferSize);
+    vkUnmapMemory(this->renderer->getLogicalDevice(), ssboBufferMemory);
+    
+    return true;
+}
+
+void ModelsPipeline::updateSsboBuffersComponents() {
+    if (this->renderer == nullptr || !this->renderer->isReady() || this->ssboBufferMemory == nullptr) return;
+   
+    const BufferSummary bufferSizes = Models::INSTANCE()->getModelsBufferSizes();
+
+    if (bufferSizes.reservedSsboBufferSize == 0) return;
+
+    void * data = nullptr;
+    vkMapMemory(this->renderer->getLogicalDevice(), ssboBufferMemory, 0, bufferSizes.reservedSsboBufferSize, 0, &data);
+    Helper::copyComponentsPropertiesIntoSsbo(data, bufferSizes.reservedSsboBufferSize);
+    vkUnmapMemory(this->renderer->getLogicalDevice(), ssboBufferMemory);
+}
+
 bool ModelsPipeline::createSsboBufferFromModel(VkDeviceSize bufferSize, bool makeHostWritable) {
     if (this->renderer == nullptr || !this->renderer->isReady()) return false;
    
@@ -530,8 +581,10 @@ bool ModelsPipeline::createDescriptorSets() {
     VkDescriptorBufferInfo ssboBufferInfo{};
     ssboBufferInfo.buffer = this->ssboBuffer;
     ssboBufferInfo.offset = 0;
-    ssboBufferInfo.range = Models::INSTANCE()->getModelsBufferSizes().ssboBufferSize;
-
+    ssboBufferInfo.range = USE_SSBO_MEMORY ?
+        Models::INSTANCE()->getModelsBufferSizes().reservedSsboBufferSize :
+        Models::INSTANCE()->getModelsBufferSizes().ssboBufferSize;
+        
     for (size_t i = 0; i < this->descriptorSets.size(); i++) {
         VkDescriptorBufferInfo uniformBufferInfo{};
         uniformBufferInfo.buffer = this->renderer->getUniformBuffer(i);

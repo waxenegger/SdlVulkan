@@ -163,13 +163,20 @@ void Engine::createModelPipeline() {
 
     std::unique_ptr<GraphicsPipeline> pipeline = std::make_unique<ModelsPipeline>(this->renderer);
 
-    pipeline->addShader((Engine::getAppPath(SHADERS) / "models-vert.spv").string(), VK_SHADER_STAGE_VERTEX_BIT);
-    pipeline->addShader((Engine::getAppPath(SHADERS) / "models-frag.spv").string(), VK_SHADER_STAGE_FRAGMENT_BIT);
+    if (USE_SSBO_MEMORY) {
+        pipeline->addShader((Engine::getAppPath(SHADERS) / "models-memory-vert.spv").string(), VK_SHADER_STAGE_VERTEX_BIT);
+        pipeline->addShader((Engine::getAppPath(SHADERS) / "models-memory-frag.spv").string(), VK_SHADER_STAGE_FRAGMENT_BIT);
+    } else {
+        pipeline->addShader((Engine::getAppPath(SHADERS) / "models-vert.spv").string(), VK_SHADER_STAGE_VERTEX_BIT);
+        pipeline->addShader((Engine::getAppPath(SHADERS) / "models-frag.spv").string(), VK_SHADER_STAGE_FRAGMENT_BIT);        
+    }
 
     VkPushConstantRange pushConstantRange{};
-    pushConstantRange.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
-    pushConstantRange.offset = 0;
-    pushConstantRange.size = sizeof(struct ModelProperties);
+    if (!USE_SSBO_MEMORY) {
+        pushConstantRange.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+        pushConstantRange.offset = 0;
+        pushConstantRange.size = sizeof(struct ModelProperties);
+    }
     
     if (pipeline->createGraphicsPipeline(pushConstantRange)) {
         

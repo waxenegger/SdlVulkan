@@ -299,6 +299,21 @@ void Helper::copyModelsContentIntoBuffer(void* data, ModelsContentType modelsCon
     }
 }
 
+void Helper::copyComponentsPropertiesIntoSsbo(void* data, VkDeviceSize maxSize) {
+    VkDeviceSize overallSize = 0;
+    
+    auto & components = Components::INSTANCE()->getComponents();
+    
+    for (auto & c : components) {
+        const VkDeviceSize dataSize = c->getSsboSize();
+        if (overallSize + dataSize <= maxSize) {
+            memcpy(static_cast<char *>(data)+overallSize, c->getProperties().data(), dataSize);
+            overallSize += dataSize;
+        }
+    }
+}
+
+
 bool Helper::transitionImageLayout(
     const VkDevice & logicalDevice, const VkCommandPool & commandPool, const VkQueue & graphicsQueue, 
     VkImage image, VkImageLayout oldLayout, VkImageLayout newLayout, uint16_t layerCount, uint32_t mipLevels) {

@@ -36,6 +36,15 @@ void Component::setPosition(float x, float y, float z) {
 
 void Component::setPosition(glm::vec3 position) {
     this->position = position;
+    this->updateComponentProperties();
+}
+
+void Component::updateComponentProperties() {
+    if (!USE_SSBO_MEMORY || !this->hasModel()) return;
+
+    for (auto & p : this->compProps) {
+        p.modelProperties.matrix = this->getModelMatrix();
+    }
 }
 
 void Component::update(const float delta) {
@@ -54,12 +63,14 @@ void Component::rotate(int xAxis, int yAxis, int zAxis) {
     rot.y = glm::radians(static_cast<float>(yAxis));
     rot.z = glm::radians(static_cast<float>(zAxis));
     this->rotation += rot;
+    this->updateComponentProperties();
 }
 
 void Component::move(float xAxis, float yAxis, float zAxis) {
     this->position.x += xAxis;
     this->position.y += yAxis;
     this->position.z += zAxis;
+    this->updateComponentProperties();
 }
 
 void Component::moveForward(const float delta) {
@@ -82,6 +93,7 @@ void Component::setRotation(glm::vec3 rotation) {
 void Component::scale(float factor) {
     if (factor <= 0) return;
     this->scaleFactor = factor;
+    this->updateComponentProperties();
 }
 
 std::string Component::getId() {
@@ -97,7 +109,17 @@ uint32_t Component::getSsboIndex() {
 }
 
 VkDeviceSize Component::getSsboSize() {
-    return sizeof(struct MeshProperties);
+    return (USE_SSBO_MEMORY) ?
+        sizeof(struct ComponentProperties) * this->compProps.size() :
+        sizeof(struct MeshProperties);
+}
+
+void Component::addComponentProperties(const ComponentProperties props) {
+    this->compProps.push_back(props);
+}
+
+std::vector<ComponentProperties> & Component::getProperties() {
+    return this->compProps;
 }
 
 Component::~Component() {
@@ -117,6 +139,29 @@ Component * Components::addComponent(Component * component) {
 
     if (component->hasModel()) {
         auto & meshes = component->getModel()->getMeshes();
+
+        if (USE_SSBO_MEMORY) {
+            for (auto & m : meshes) {
+                ComponentProperties props = {};
+                TextureInformation textureInfo = m.getTextureInformation();
+                MaterialInformation materialInfo = m.getMaterialInformation();
+                props.meshProperties = { 
+                    textureInfo.ambientTexture,
+                    textureInfo.diffuseTexture,
+                    textureInfo.specularTexture,
+                    textureInfo.normalTexture,
+                    materialInfo.ambientColor,
+                    materialInfo.emissiveFactor,
+                    materialInfo.diffuseColor,
+                    materialInfo.opacity,
+                    materialInfo.specularColor,
+                    materialInfo.shininess
+                };
+                props.modelProperties.matrix = component->getModelMatrix();
+                component->addComponentProperties(props);
+            }
+        }
+
         if (!meshes.empty()) {
             component->setSsboIndex(this->ssboIndex);
             this->ssboIndex += meshes.size();

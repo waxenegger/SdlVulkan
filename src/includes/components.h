@@ -55,6 +55,8 @@ class Component final {
         float scaleFactor = 1.0f;
         
         bool visible = true;
+        
+        void updateComponentProperties();
     public:
         Component(const Component&) = delete;
         Component& operator=(const Component &) = delete;

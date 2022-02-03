@@ -17,6 +17,7 @@ struct BufferSummary {
     VkDeviceSize vertexBufferSize = 0;
     VkDeviceSize indexBufferSize = 0;
     VkDeviceSize ssboBufferSize = 0;
+    VkDeviceSize reservedSsboBufferSize = 0;
 };
 
 struct MeshProperties final {

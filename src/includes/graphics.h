@@ -165,6 +165,7 @@ class GraphicsPipeline {
         void destroyPipelineObjects();
         
         virtual void draw(const VkCommandBuffer & commandBuffer, const uint16_t commandBufferIndex) = 0;
+        virtual void update() = 0;
         
         bool isEnabled();
         void setEnabled(const bool flag);
@@ -186,14 +187,17 @@ class ModelsPipeline : public GraphicsPipeline {
         bool createDescriptorPool();
         bool createDescriptorSets();
         
+        void updateSsboBuffersComponents();
     public:
         ModelsPipeline(const Renderer * renderer);
         ModelsPipeline & operator=(ModelsPipeline) = delete;
 
+        bool createSsboBuffersFromComponents();
         bool createGraphicsPipeline(const VkPushConstantRange & pushConstantRange);
         bool updateGraphicsPipeline();
         
         void draw(const VkCommandBuffer & commandBuffer, const uint16_t commandBufferIndex);
+        void update();
 };
 
 class SkyboxPipeline : public GraphicsPipeline {
@@ -218,6 +222,8 @@ class SkyboxPipeline : public GraphicsPipeline {
         bool updateGraphicsPipeline();
         
         void draw(const VkCommandBuffer & commandBuffer, const uint16_t commandBufferIndex);
+        void update();
+        
         ~SkyboxPipeline();
 };
 
@@ -236,6 +242,8 @@ class ImGuiPipeline : public GraphicsPipeline {
         bool canRender() const;
         
         void draw(const VkCommandBuffer & commandBuffer, const uint16_t commandBufferIndex);
+        void update();
+        
         ~ImGuiPipeline();
 };
 

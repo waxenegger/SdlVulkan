@@ -131,6 +131,8 @@ bool ImGuiPipeline::canRender() const {
     return true;
 }
 
+void ImGuiPipeline::update() { }
+
 ImGuiPipeline::~ImGuiPipeline() {
     ImGui_ImplVulkan_Shutdown();
     ImGui_ImplSDL2_Shutdown();
