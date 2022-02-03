@@ -45,7 +45,7 @@ int start(int argc, char* argv []);
 
 static constexpr bool USE_THREADS = true;
 static constexpr bool USE_THREADED_INPUT = true;
-static constexpr bool USE_SSBO_MEMORY = false;
+static constexpr bool USE_SSBO_MEMORY = true;
 
 static constexpr uint32_t MAX_BUFFERING = 3;
 static constexpr uint32_t MIPMAP_LEVELS = 8;

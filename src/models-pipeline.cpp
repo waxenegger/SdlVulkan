@@ -337,35 +337,44 @@ void ModelsPipeline::draw(const VkCommandBuffer & commandBuffer, const uint16_t 
             vkCmdBindIndexBuffer(commandBuffer, this->indexBuffer, 0, VK_INDEX_TYPE_UINT32);
         }
         
-        // TODO: include memory branch
-        
-        
         auto & allModels = Models::INSTANCE()->getModels();
         for (auto & model :  allModels) {            
             auto allComponents = Components::INSTANCE()->getAllComponentsForModel(model->getId());
+            if (USE_SSBO_MEMORY && allComponents.empty()) continue;
 
             auto meshes = model->getMeshes();
-            uint32_t meshIndex = 0;
+            uint32_t instanceOffset = 0;
+            
             for (Mesh & mesh : meshes) {
 
                 if (!mesh.isBoundingBoxMesh() || this->isShowingBoundingBoxes()) {
                     for (auto & comp : allComponents) {
                         if (!comp->isVisible()) continue;
 
-                            ModelProperties props = { comp->getModelMatrix()};
-                            vkCmdPushConstants(
-                                commandBuffer, this->layout,
-                                VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(struct ModelProperties), &props);
-
-                            if (this->indexBuffer != nullptr) {                
-                                vkCmdDrawIndexed(commandBuffer, mesh.getIndices().size() , 1, mesh.getIndexOffset(), mesh.getVertexOffset(), model->getModelIndex() + meshIndex);
+                            if (!USE_SSBO_MEMORY) {
+                                ModelProperties props = { comp->getModelMatrix()};
+                                vkCmdPushConstants(
+                                    commandBuffer, this->layout,
+                                    VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(struct ModelProperties), &props);
+                            }
+                            
+                            if (this->indexBuffer != nullptr) {
+                                if (USE_SSBO_MEMORY) {
+                                    vkCmdDrawIndexed(commandBuffer, mesh.getIndices().size() , 1, mesh.getIndexOffset(), mesh.getVertexOffset(), comp->getSsboIndex() + instanceOffset);
+                                } else {
+                                    vkCmdDrawIndexed(commandBuffer, mesh.getIndices().size() , 1, mesh.getIndexOffset(), mesh.getVertexOffset(), model->getModelIndex() + instanceOffset);
+                                }
                             } else {
-                                vkCmdDraw(commandBuffer, mesh.getVertices().size(), 1, 0, comp->getModel()->getModelIndex() + meshIndex);
+                                if (USE_SSBO_MEMORY) {
+                                    vkCmdDraw(commandBuffer, mesh.getVertices().size(), 1, 0, comp->getSsboIndex() + instanceOffset);
+                                } else {
+                                    vkCmdDraw(commandBuffer, mesh.getVertices().size(), 1, 0, comp->getModel()->getModelIndex() + instanceOffset);
+                                }
                             }
                     }
                 }
                 
-                meshIndex++;
+                instanceOffset++;
             }
         }
     }
