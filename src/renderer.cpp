@@ -25,6 +25,7 @@ Renderer:: Renderer(const GraphicsContext * graphicsContext, const VkPhysicalDev
     deviceFeatures.samplerAnisotropy = VK_TRUE;
     deviceFeatures.multiDrawIndirect = VK_TRUE;
     deviceFeatures.fillModeNonSolid = VK_TRUE;
+    deviceFeatures.geometryShader = VK_TRUE;
 
     VkDeviceCreateInfo createInfo {};
     createInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;

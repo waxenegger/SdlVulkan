@@ -13,3 +13,6 @@
 /opt/projects/SdlVulkan/thirdParty/VulkanSDK/1.2.189.0/x86_64/bin/spirv-opt /tmp/skybox-vert.spv -o /opt/projects/SdlVulkan/assets/shaders/skybox-vert.spv
 /opt/projects/SdlVulkan/thirdParty/VulkanSDK/1.2.189.0/x86_64/bin/glslc --target-env=vulkan1.0 /opt/projects/SdlVulkan/shaders/skybox.frag -o /tmp/skybox-frag.spv
 /opt/projects/SdlVulkan/thirdParty/VulkanSDK/1.2.189.0/x86_64/bin/spirv-opt /tmp/skybox-frag.spv -o /opt/projects/SdlVulkan/assets/shaders/skybox-frag.spv
+#normals
+/opt/projects/SdlVulkan/thirdParty/VulkanSDK/1.2.189.0/x86_64/bin/glslc --target-env=vulkan1.0 /opt/projects/SdlVulkan/shaders/normals.geom -o /tmp/normals-geom.spv
+/opt/projects/SdlVulkan/thirdParty/VulkanSDK/1.2.189.0/x86_64/bin/spirv-opt /tmp/normals-geom.spv -o /opt/projects/SdlVulkan/assets/shaders/normals-geom.spv
