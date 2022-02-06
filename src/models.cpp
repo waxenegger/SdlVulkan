@@ -762,8 +762,8 @@ bool Models::addModel(const std::string id, const  std::filesystem::path file)
     return true;
 }
 
-void Models::addTextModel(std::string id, std::string font, std::string text, uint16_t size) {
-    TTF_Font * f = TTF_OpenFont(font.c_str(), size);
+void Models::addTextModel(std::string id, const std::filesystem::path font, std::string text, uint16_t size) {
+    TTF_Font * f = TTF_OpenFont(font.string().c_str(), size);
 
     if (f != nullptr) {
         TTF_SetFontStyle(f, TTF_STYLE_NORMAL);

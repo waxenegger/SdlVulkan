@@ -254,7 +254,7 @@ class Models final {
         Models(Models &&) = delete;
         
         bool addModel(const std::string id, const std::filesystem::path file);
-        void addTextModel(std::string id, std::string font, std::string text, uint16_t size);
+        void addTextModel(std::string id, const std::filesystem::path font, std::string text, uint16_t size);
         void clear();
         void setMaterialInformation(MaterialInformation & material);
         
