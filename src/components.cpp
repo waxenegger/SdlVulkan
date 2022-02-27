@@ -16,7 +16,7 @@ Model * Component::getModel() {
     return this->model;
 }
 
-glm::mat4 Component::getModelMatrix(bool includeRotation) {
+glm::mat4 Component::getModelMatrix(const bool includeRotation) {
     glm::mat4 transformation = glm::mat4(1.0f);
 
     transformation = glm::translate(transformation, this->position);
@@ -30,21 +30,39 @@ glm::mat4 Component::getModelMatrix(bool includeRotation) {
     return glm::scale(transformation, glm::vec3(this->scaleFactor));   
 }
 
+glm::mat4 Component::getModelMatrixForPosition(const glm::vec3 somePosition) {
+    glm::mat4 transformation = glm::mat4(1.0f);
+
+    transformation = glm::translate(transformation, somePosition);
+    
+    if (this->rotation.x != 0.0f) transformation = glm::rotate(transformation, this->rotation.x, glm::vec3(1, 0, 0));
+    if (this->rotation.y != 0.0f) transformation = glm::rotate(transformation, this->rotation.y, glm::vec3(0, 1, 0));
+    if (this->rotation.z != 0.0f) transformation = glm::rotate(transformation, this->rotation.z, glm::vec3(0, 0, 1));
+
+    return glm::scale(transformation, glm::vec3(this->scaleFactor));
+}
+
 void Component::setPosition(float x, float y, float z) {
     this->setPosition(glm::vec3(x,y,z));
 }
 
 void Component::setPosition(glm::vec3 position) {
     this->position = position;
-    this->updateComponentProperties();
 }
 
-void Component::updateComponentProperties() {
-    if (!USE_SSBO_MEMORY || !this->hasModel()) return;
+void Component::setColor(glm::vec3 color) {
+    if (!this->hasModel()) return;
 
-    for (auto & p : this->compProps) {
-        p.modelProperties.matrix = this->getModelMatrix();
+    auto & meshes = this->getModel()->getMeshes();
+    uint32_t i=0;
+    for (auto & m :  meshes) {
+        if (!m.isBoundingBoxMesh()) {
+            this->compProps[i].meshProperties.diffuseColor = color;
+            i++;
+        }
     }
+    
+    this->markAsDirty();
 }
 
 void Component::update(const float delta) {
@@ -63,14 +81,12 @@ void Component::rotate(int xAxis, int yAxis, int zAxis) {
     rot.y = glm::radians(static_cast<float>(yAxis));
     rot.z = glm::radians(static_cast<float>(zAxis));
     this->rotation += rot;
-    this->updateComponentProperties();
 }
 
 void Component::move(float xAxis, float yAxis, float zAxis) {
     this->position.x += xAxis;
     this->position.y += yAxis;
     this->position.z += zAxis;
-    this->updateComponentProperties();
 }
 
 void Component::moveForward(const float delta) {
@@ -93,7 +109,6 @@ void Component::setRotation(glm::vec3 rotation) {
 void Component::scale(float factor) {
     if (factor <= 0) return;
     this->scaleFactor = factor;
-    this->updateComponentProperties();
 }
 
 std::string Component::getId() {
@@ -109,9 +124,7 @@ uint32_t Component::getSsboIndex() {
 }
 
 VkDeviceSize Component::getSsboSize() {
-    return (USE_SSBO_MEMORY) ?
-        sizeof(struct ComponentProperties) * this->compProps.size() :
-        sizeof(struct MeshProperties);
+    return sizeof(struct ComponentProperties) * this->compProps.size();
 }
 
 void Component::addComponentProperties(const ComponentProperties props) {
@@ -120,6 +133,18 @@ void Component::addComponentProperties(const ComponentProperties props) {
 
 std::vector<ComponentProperties> & Component::getProperties() {
     return this->compProps;
+}
+
+bool Component::isDirty() {
+    return this->dirty;
+}
+
+void Component::markAsDirty() {
+    this->dirty = true;
+}
+
+void Component::markAsClean() {
+    this->dirty = false;
 }
 
 Component::~Component() {
@@ -140,26 +165,23 @@ Component * Components::addComponent(Component * component) {
     if (component->hasModel()) {
         auto & meshes = component->getModel()->getMeshes();
 
-        if (USE_SSBO_MEMORY) {
-            for (auto & m : meshes) {
-                ComponentProperties props = {};
-                TextureInformation textureInfo = m.getTextureInformation();
-                MaterialInformation materialInfo = m.getMaterialInformation();
-                props.meshProperties = { 
-                    textureInfo.ambientTexture,
-                    textureInfo.diffuseTexture,
-                    textureInfo.specularTexture,
-                    textureInfo.normalTexture,
-                    materialInfo.ambientColor,
-                    materialInfo.emissiveFactor,
-                    materialInfo.diffuseColor,
-                    materialInfo.opacity,
-                    materialInfo.specularColor,
-                    materialInfo.shininess
-                };
-                props.modelProperties.matrix = component->getModelMatrix();
-                component->addComponentProperties(props);
-            }
+        for (auto & m : meshes) {
+            ComponentProperties props = {};
+            TextureInformation textureInfo = m.getTextureInformation();
+            MaterialInformation materialInfo = m.getMaterialInformation();
+            props.meshProperties = { 
+                textureInfo.ambientTexture,
+                textureInfo.diffuseTexture,
+                textureInfo.specularTexture,
+                textureInfo.normalTexture,
+                materialInfo.ambientColor,
+                materialInfo.emissiveFactor,
+                materialInfo.diffuseColor,
+                materialInfo.opacity,
+                materialInfo.specularColor,
+                materialInfo.shininess
+            };
+            component->addComponentProperties(props);
         }
 
         if (!meshes.empty()) {
@@ -184,7 +206,15 @@ Component * Components::addComponent(Component * component) {
     return component;
 }
 
-Component * Components::findComponent(const std::string id, const std::string modelId) {
+Component * Components::findComponent(const std::string id, const std::string modelId = "") {
+    if (modelId.empty()) {
+        for (auto & c : this->components) {
+            if (c->getId() == id) return c.get();
+        }
+        
+        return nullptr;
+    }
+    
     std::map<std::string, std::vector<Component*>>::iterator it = this->componentsByModel.find(modelId);
     if (it != this->componentsByModel.end()) {
         for(auto & c : it->second) {
@@ -193,6 +223,23 @@ Component * Components::findComponent(const std::string id, const std::string mo
     }
     
     return nullptr;
+}
+
+bool Component::checkCollision(const glm::vec3 move) {
+    // very vary naive and bad, TODO: improve
+    auto & allComps = Components::INSTANCE()->getComponents();
+    
+    const glm::mat4 ownModelMatrix = this->getModelMatrixForPosition(this->position + move);
+    
+    for (auto & c : allComps) { 
+        if (c->getId() == this->getId()) continue;
+        
+        const glm::mat4 compModelMatrix = c->getModelMatrix();
+        
+        //TODO: intersection check bbox incl. model matrix multiply
+    }
+    
+    return false;
 }
 
 std::vector<std::unique_ptr<Component>> & Components::getComponents() {

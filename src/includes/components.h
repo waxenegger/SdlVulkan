@@ -7,7 +7,6 @@
 struct ComponentProperties final {
     public:
         MeshProperties meshProperties;
-        ModelProperties modelProperties;
 };
 
 
@@ -54,9 +53,9 @@ class Component final {
         glm::vec3 rotation = glm::vec3(0.0f);
         float scaleFactor = 1.0f;
         
+        bool dirty = true;
         bool visible = true;
         
-        void updateComponentProperties();
     public:
         Component(const Component&) = delete;
         Component& operator=(const Component &) = delete;
@@ -73,11 +72,13 @@ class Component final {
         void setPosition(glm::vec3 position);
         glm::vec3 getPosition();
         void setRotation(glm::vec3 rotation);
+        void setColor(glm::vec3 color);
         void rotate(int xAxis = 0, int yAxis = 0, int zAxis = 0);
         void move(float xAxis, float yAxis, float zAxis);
         void moveForward(const float delta);
         void scale(float factor);
-        glm::mat4 getModelMatrix(bool includeRotation = true);
+        glm::mat4 getModelMatrix(const bool includeRotation = true);
+        glm::mat4 getModelMatrixForPosition(const glm::vec3 position);
         glm::vec3 getRotation();
         bool isVisible();
         void setVisible(bool visible);
@@ -90,6 +91,12 @@ class Component final {
         void addComponentProperties(const ComponentProperties props);
         void addComponentBehavior(ComponentBehavior * behavior);
         void update(const float delta);
+        
+        bool isDirty();
+        void markAsDirty();
+        void markAsClean();
+        
+        bool checkCollision(const glm::vec3 move);
 };
 
 class Components final {
@@ -98,7 +105,7 @@ class Components final {
         std::vector<std::unique_ptr<Component>> components;
         std::map<std::string,  std::vector<Component *>> componentsByModel;
         uint32_t ssboIndex = 0;
-
+        
         Components();
     public:
         Components(const Components&) = delete;

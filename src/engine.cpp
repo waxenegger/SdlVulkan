@@ -76,6 +76,7 @@ void Engine::preloadModels() {
     // TODO: read from location
     this->models->addModel("cyborg", Engine::getAppPath(MODELS) / "cyborg.obj");
     this->models->addModel("rock", Engine::getAppPath(MODELS) / "rock.obj");
+    this->models->addModel("contraption", Engine::getAppPath(MODELS) / "contraption.obj");
     this->models->addTextModel("text", Engine::getAppPath(FONTS) / "FreeMono.ttf", "Hello World", 50);
     this->models->addModel("nanosuit", Engine::getAppPath(MODELS) / "nanosuit.obj");
 }
@@ -163,20 +164,13 @@ void Engine::createModelPipeline() {
 
     std::unique_ptr<GraphicsPipeline> pipeline = std::make_unique<ModelsPipeline>(this->renderer);
 
-    if (USE_SSBO_MEMORY) {
-        pipeline->addShader((Engine::getAppPath(SHADERS) / "models-memory-vert.spv").string(), VK_SHADER_STAGE_VERTEX_BIT);
-        pipeline->addShader((Engine::getAppPath(SHADERS) / "models-memory-frag.spv").string(), VK_SHADER_STAGE_FRAGMENT_BIT);
-    } else {
-        pipeline->addShader((Engine::getAppPath(SHADERS) / "models-vert.spv").string(), VK_SHADER_STAGE_VERTEX_BIT);
-        pipeline->addShader((Engine::getAppPath(SHADERS) / "models-frag.spv").string(), VK_SHADER_STAGE_FRAGMENT_BIT);        
-    }
+    pipeline->addShader((Engine::getAppPath(SHADERS) / "models-memory-vert.spv").string(), VK_SHADER_STAGE_VERTEX_BIT);
+    pipeline->addShader((Engine::getAppPath(SHADERS) / "models-memory-frag.spv").string(), VK_SHADER_STAGE_FRAGMENT_BIT);
 
     VkPushConstantRange pushConstantRange{};
-    if (!USE_SSBO_MEMORY) {
-        pushConstantRange.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
-        pushConstantRange.offset = 0;
-        pushConstantRange.size = sizeof(struct ModelProperties);
-    }
+    pushConstantRange.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+    pushConstantRange.offset = 0;
+    pushConstantRange.size = sizeof(struct ModelProperties);
     
     if (pipeline->createGraphicsPipeline(pushConstantRange)) {
         

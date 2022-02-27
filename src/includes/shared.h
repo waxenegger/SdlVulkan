@@ -15,6 +15,7 @@
 #include <array>
 #include <memory>
 #include <map>
+#include <set>
 #include <fstream>
 #include <filesystem>
 #include <string>

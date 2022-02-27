@@ -18,7 +18,6 @@ struct ComponentProperties {
     float opacity;
     vec3 specularColor;
     float shininess;
-    mat4 matrix;
 };
 
 layout(location = 5) in flat ComponentProperties compProperties;

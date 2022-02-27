@@ -304,12 +304,15 @@ void Helper::copyComponentsPropertiesIntoSsbo(void* data, VkDeviceSize maxSize) 
     
     auto & components = Components::INSTANCE()->getComponents();
     
-    for (auto & c : components) {
+    for (auto & c : components) {        
         const VkDeviceSize dataSize = c->getSsboSize();
-        if (overallSize + dataSize <= maxSize) {
+        if (overallSize + dataSize > maxSize) break;
+        
+        if (c->isDirty()) {
             memcpy(static_cast<char *>(data)+overallSize, c->getProperties().data(), dataSize);
-            overallSize += dataSize;
+            c->markAsClean();
         }
+        overallSize += dataSize;
     }
 }
 

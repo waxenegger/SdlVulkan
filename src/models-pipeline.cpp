@@ -38,12 +38,6 @@ bool ModelsPipeline::createBuffersFromModel() {
     vkDestroyBuffer(this->renderer->getLogicalDevice(), stagingBuffer, nullptr);
     vkFreeMemory(this->renderer->getLogicalDevice(), stagingBufferMemory, nullptr);
     
-    // meshes (SSBOs)
-    if (!USE_SSBO_MEMORY && !this->createSsboBufferFromModel(bufferSizes.ssboBufferSize)) {
-        logError("Failed to create Models Pipeline SSBO");
-        return false;        
-    }
-
     // indices
     if (bufferSizes.indexBufferSize == 0) return true;
 
@@ -149,7 +143,7 @@ bool ModelsPipeline::createGraphicsPipeline(const VkPushConstantRange & pushCons
     this->prepareModelTextures();
 
     // components SSBOs
-    if (USE_SSBO_MEMORY && !this->createSsboBuffersFromComponents()) {
+    if (!this->createSsboBuffersFromComponents()) {
         logError("Failed to create Components Pipeline SSBO");
         return false;        
     }
@@ -340,7 +334,7 @@ void ModelsPipeline::draw(const VkCommandBuffer & commandBuffer, const uint16_t 
         auto & allModels = Models::INSTANCE()->getModels();
         for (auto & model :  allModels) {            
             auto allComponents = Components::INSTANCE()->getAllComponentsForModel(model->getId());
-            if (USE_SSBO_MEMORY && allComponents.empty()) continue;
+            if (allComponents.empty()) continue;
 
             auto meshes = model->getMeshes();
             uint32_t instanceOffset = 0;
@@ -351,25 +345,16 @@ void ModelsPipeline::draw(const VkCommandBuffer & commandBuffer, const uint16_t 
                     for (auto & comp : allComponents) {
                         if (!comp->isVisible()) continue;
 
-                            if (!USE_SSBO_MEMORY) {
-                                ModelProperties props = { comp->getModelMatrix()};
-                                vkCmdPushConstants(
-                                    commandBuffer, this->layout,
-                                    VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(struct ModelProperties), &props);
-                            }
+
+                            ModelProperties props = { comp->getModelMatrix()};
+                            vkCmdPushConstants(
+                                commandBuffer, this->layout,
+                                VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(struct ModelProperties), &props);
                             
                             if (this->indexBuffer != nullptr) {
-                                if (USE_SSBO_MEMORY) {
-                                    vkCmdDrawIndexed(commandBuffer, mesh.getIndices().size() , 1, mesh.getIndexOffset(), mesh.getVertexOffset(), comp->getSsboIndex() + instanceOffset);
-                                } else {
-                                    vkCmdDrawIndexed(commandBuffer, mesh.getIndices().size() , 1, mesh.getIndexOffset(), mesh.getVertexOffset(), model->getModelIndex() + instanceOffset);
-                                }
+                                vkCmdDrawIndexed(commandBuffer, mesh.getIndices().size() , 1, mesh.getIndexOffset(), mesh.getVertexOffset(), comp->getSsboIndex() + instanceOffset);
                             } else {
-                                if (USE_SSBO_MEMORY) {
-                                    vkCmdDraw(commandBuffer, mesh.getVertices().size(), 1, 0, comp->getSsboIndex() + instanceOffset);
-                                } else {
-                                    vkCmdDraw(commandBuffer, mesh.getVertices().size(), 1, 0, comp->getModel()->getModelIndex() + instanceOffset);
-                                }
+                                vkCmdDraw(commandBuffer, mesh.getVertices().size(), 1, 0, comp->getSsboIndex() + instanceOffset);
                             }
                     }
                 }
@@ -590,9 +575,7 @@ bool ModelsPipeline::createDescriptorSets() {
     VkDescriptorBufferInfo ssboBufferInfo{};
     ssboBufferInfo.buffer = this->ssboBuffer;
     ssboBufferInfo.offset = 0;
-    ssboBufferInfo.range = USE_SSBO_MEMORY ?
-        Models::INSTANCE()->getModelsBufferSizes().reservedSsboBufferSize :
-        Models::INSTANCE()->getModelsBufferSizes().ssboBufferSize;
+    ssboBufferInfo.range = Models::INSTANCE()->getModelsBufferSizes().reservedSsboBufferSize;
         
     for (size_t i = 0; i < this->descriptorSets.size(); i++) {
         VkDescriptorBufferInfo uniformBufferInfo{};

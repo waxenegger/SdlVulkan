@@ -25,8 +25,11 @@ struct ComponentProperties {
     float opacity;
     vec3 specularColor;
     float shininess;
-    mat4 matrix;
 };
+
+layout(push_constant) uniform PushConstants {
+    mat4 matrix;
+} modelProperties;
 
 layout(binding = 1) buffer SSBO {
     ComponentProperties props[];
@@ -42,14 +45,14 @@ layout(location = 5) flat out ComponentProperties compProperties;
 void main() {
     ComponentProperties compProps = compPropertiesSSBO.props[gl_InstanceIndex];
 
-    vec4 pos = compProps.matrix * vec4(inPosition, 1.0f);
+    vec4 pos = modelProperties.matrix * vec4(inPosition, 1.0f);
 
     gl_Position = modelUniforms.proj * modelUniforms.view * pos;
     fragPosition = vec3(pos);
     fragTexCoord = inUV;
     compProperties = compProps;
     
-    mat3 invertTransposeModel = mat3(transpose(inverse(compProps.matrix)));
+    mat3 invertTransposeModel = mat3(transpose(inverse(modelProperties.matrix)));
     
     fragNormals = normalize(invertTransposeModel * inNormal);
     eye = modelUniforms.camera;

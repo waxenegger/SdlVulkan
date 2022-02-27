@@ -231,6 +231,7 @@ class Model final {
         uint32_t getModelIndex();
         void updateOffsets(uint32_t & modelIndex, int32_t & vertexOffset, uint32_t & indexOffset);
         void calculateBoundingBox();
+        const BoundingBox & getBoundingBox(const int meshIndex = -1);
 };
 
 class Models final {

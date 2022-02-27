@@ -710,6 +710,12 @@ Model::Model(std::string id) {
     this->id = id;
 }
 
+const BoundingBox & Model::getBoundingBox(const int meshIndex) {
+    if (meshIndex < 0 || meshIndex > this->meshes.size()) return this->bbox;
+    
+    return this->meshes[meshIndex].getBoundingBox();
+}
+
 Model::~Model() {}
 
 uint32_t Model::getModelIndex() {

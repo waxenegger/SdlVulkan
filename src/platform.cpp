@@ -27,7 +27,12 @@ int start(int argc, char* argv []) {
         text->setPosition(10.0f, 0.0f,20.0f);
         text->rotate(0.0f, 180.0f,0.0f);
     }
-    
+
+    Component * contraption = Components::INSTANCE()->addComponentFromModel("contraption1", "contraption");
+    if (contraption != nullptr) {
+        contraption->setPosition(10.0f, 30.0f,20.0f);
+    }
+
     Component * cyborg = Components::INSTANCE()->addComponentFromModel("cyborg", "cyborg");
     if (cyborg != nullptr) {
         cyborg->setPosition(0.0f,0.0f,10.0f);
