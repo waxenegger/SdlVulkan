@@ -42,6 +42,7 @@ class RandomWalkBehavior : public ComponentBehavior {
 class Component final {
     private:
         Model * model = nullptr;
+        glm::mat4 modelMatrix;
         uint32_t ssboIndex;
 
         std::vector<ComponentProperties> compProps;
@@ -55,7 +56,9 @@ class Component final {
         
         bool dirty = true;
         bool visible = true;
-        
+
+        void updateModelMatrix();
+
     public:
         Component(const Component&) = delete;
         Component& operator=(const Component &) = delete;
@@ -74,11 +77,9 @@ class Component final {
         void setRotation(glm::vec3 rotation);
         void setColor(glm::vec3 color);
         void rotate(int xAxis = 0, int yAxis = 0, int zAxis = 0);
-        void move(float xAxis, float yAxis, float zAxis);
         void moveForward(const float delta);
         void scale(float factor);
-        glm::mat4 getModelMatrix(const bool includeRotation = true);
-        glm::mat4 getModelMatrixForPosition(const glm::vec3 position);
+        glm::mat4 getModelMatrix();
         glm::vec3 getRotation();
         bool isVisible();
         void setVisible(bool visible);
@@ -95,8 +96,6 @@ class Component final {
         bool isDirty();
         void markAsDirty();
         void markAsClean();
-        
-        bool checkCollision(const glm::vec3 move);
 };
 
 class Components final {
@@ -120,6 +119,8 @@ class Components final {
         Component * findComponent(const std::string id, const std::string modelId);
         
         void update(const float delta);
+        
+        bool checkCollision(const BoundingBox bbox1);
         
         ~Components();
 };

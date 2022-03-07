@@ -35,6 +35,7 @@ class Helper final {
             VkImage image, VkImageLayout oldLayout, VkImageLayout newLayout, uint16_t layerCount = 1, uint32_t mipLevels = 1);
         static void generateMipmaps(const VkDevice & logicalDevice, const VkCommandPool & commandPool, const VkQueue & graphicsQueue, const VkImage & image, const int32_t width, const int32_t height, const uint32_t levels);
         static float getRandomFloatBetween0and1();
+        static bool  checkBBoxIntersection(const BoundingBox bbox1, const BoundingBox bbox2);
 };
 
 #endif

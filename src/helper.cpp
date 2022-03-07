@@ -485,5 +485,24 @@ float Helper::getRandomFloatBetween0and1() {
     return Helper::distribution(Helper::default_random_engine); 
 }
 
+bool  Helper::checkBBoxIntersection(const BoundingBox bbox1, const BoundingBox bbox2) {
+    const bool intersectsAlongX = 
+        (bbox1.min.x >= bbox2.min.x && bbox1.min.x <= bbox2.max.x) ||
+        (bbox1.max.x >= bbox2.min.x && bbox1.max.x <= bbox2.max.x) ||
+        (bbox1.min.x <= bbox2.min.x && bbox1.max.x >= bbox2.max.x);
+    
+    const bool intersectsAlongY = 
+        (bbox1.min.y >= bbox2.min.y && bbox1.min.y <= bbox2.max.y) ||
+        (bbox1.max.y >= bbox2.min.y && bbox1.max.y <= bbox2.max.y) ||
+        (bbox1.min.y <= bbox2.min.y && bbox1.max.y >= bbox2.max.y);
+
+    const bool intersectsAlongZ = 
+        (bbox1.min.z >= bbox2.min.z && bbox1.min.z <= bbox2.max.z) ||
+        (bbox1.max.z >= bbox2.min.z && bbox1.max.z <= bbox2.max.z) ||
+        (bbox1.min.z <= bbox2.min.z && bbox1.max.z >= bbox2.max.z);
+   
+    return (intersectsAlongX && intersectsAlongY && intersectsAlongZ);
+}
+
 std::uniform_real_distribution<float> Helper::distribution = std::uniform_real_distribution<float>(0.0, 1.0);
 std::default_random_engine Helper::default_random_engine = std::default_random_engine();

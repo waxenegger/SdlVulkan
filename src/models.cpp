@@ -656,9 +656,25 @@ void Model::calculateBoundingBox() {
         this->bbox.max.y = std::max(m.getBoundingBox().max.y, this->bbox.max.y);
         this->bbox.max.z = std::max(m.getBoundingBox().max.z, this->bbox.max.z);
     }
-    
+
     float padding = 0.01;
-    
+
+    if (this->bbox.min.x == this->bbox.max.x) {
+        this->bbox.min.x -= padding;
+        this->bbox.max.x += padding;
+    }
+
+    if (this->bbox.min.y == this->bbox.max.y) {
+        this->bbox.min.y -= padding;
+        this->bbox.max.y += padding;
+    }
+
+
+    if (this->bbox.min.z == this->bbox.max.z) {
+        this->bbox.min.z -= padding;
+        this->bbox.max.z += padding;
+    }
+
     std::vector<ModelVertex> bboxVertices = {
         ModelVertex(glm::vec3(this->bbox.min.x-padding, this->bbox.min.y-padding, this->bbox.min.z-padding)),            
         ModelVertex(glm::vec3(this->bbox.min.x-padding, this->bbox.max.y+padding, this->bbox.min.z-padding)),

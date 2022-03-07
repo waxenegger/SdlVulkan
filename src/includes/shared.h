@@ -68,4 +68,10 @@ enum APP_PATHS {
 
 typedef unsigned int uint;
 
+struct BoundingBox final {
+    public:
+        glm::vec3 min = glm::vec3(INF);
+        glm::vec3 max = glm::vec3(NEG_INF);
+};
+
 #endif

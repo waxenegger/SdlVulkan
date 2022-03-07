@@ -147,6 +147,21 @@ void Camera::update(const float delta) {
     }
 };
 
+BoundingBox Camera::getBoundingBox() {
+    const float buffer = 0.15;
+    
+    glm::vec3 pos = this->position;
+    
+    BoundingBox bbox = 
+    {
+        .min = glm::vec3(-pos.x-buffer, pos.y-buffer, -pos.z-buffer),
+        .max = glm::vec3(-pos.x+buffer, pos.y+buffer, -pos.z+buffer)
+    };
+    
+    return bbox;
+}
+
+
 void Camera::updateDirection(const float deltaX, const float  deltaY, float delta) {    
     glm::vec3 rot(0.0f);
     rot.y = deltaX * delta;

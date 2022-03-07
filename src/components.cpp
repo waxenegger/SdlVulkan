@@ -6,6 +6,7 @@ Component::Component(std::string id) {
 
 Component::Component(std::string id, Model * model) : Component(id) {
     this->model = model;
+    this->updateModelMatrix();
 }
 
 bool Component::hasModel() {
@@ -16,30 +17,20 @@ Model * Component::getModel() {
     return this->model;
 }
 
-glm::mat4 Component::getModelMatrix(const bool includeRotation) {
+glm::mat4 Component::getModelMatrix() {
+    return this->modelMatrix;
+}
+
+void Component::updateModelMatrix() {
     glm::mat4 transformation = glm::mat4(1.0f);
 
     transformation = glm::translate(transformation, this->position);
-    
-    if (includeRotation) {
-        if (this->rotation.x != 0.0f) transformation = glm::rotate(transformation, this->rotation.x, glm::vec3(1, 0, 0));
-        if (this->rotation.y != 0.0f) transformation = glm::rotate(transformation, this->rotation.y, glm::vec3(0, 1, 0));
-        if (this->rotation.z != 0.0f) transformation = glm::rotate(transformation, this->rotation.z, glm::vec3(0, 0, 1));
-    }
-
-    return glm::scale(transformation, glm::vec3(this->scaleFactor));   
-}
-
-glm::mat4 Component::getModelMatrixForPosition(const glm::vec3 somePosition) {
-    glm::mat4 transformation = glm::mat4(1.0f);
-
-    transformation = glm::translate(transformation, somePosition);
     
     if (this->rotation.x != 0.0f) transformation = glm::rotate(transformation, this->rotation.x, glm::vec3(1, 0, 0));
     if (this->rotation.y != 0.0f) transformation = glm::rotate(transformation, this->rotation.y, glm::vec3(0, 1, 0));
     if (this->rotation.z != 0.0f) transformation = glm::rotate(transformation, this->rotation.z, glm::vec3(0, 0, 1));
 
-    return glm::scale(transformation, glm::vec3(this->scaleFactor));
+    this->modelMatrix = glm::scale(transformation, glm::vec3(this->scaleFactor));
 }
 
 void Component::setPosition(float x, float y, float z) {
@@ -48,6 +39,7 @@ void Component::setPosition(float x, float y, float z) {
 
 void Component::setPosition(glm::vec3 position) {
     this->position = position;
+    this->updateModelMatrix();
 }
 
 void Component::setColor(glm::vec3 color) {
@@ -81,12 +73,7 @@ void Component::rotate(int xAxis, int yAxis, int zAxis) {
     rot.y = glm::radians(static_cast<float>(yAxis));
     rot.z = glm::radians(static_cast<float>(zAxis));
     this->rotation += rot;
-}
-
-void Component::move(float xAxis, float yAxis, float zAxis) {
-    this->position.x += xAxis;
-    this->position.y += yAxis;
-    this->position.z += zAxis;
+    this->updateModelMatrix();
 }
 
 void Component::moveForward(const float delta) {
@@ -98,8 +85,8 @@ void Component::moveForward(const float delta) {
     
     glm::vec3 deltaPosition = this->position;
     deltaPosition = frontOfComponent * delta;
-
-    this->move(deltaPosition.x, deltaPosition.y, deltaPosition.z);
+    
+    this->setPosition(this->position.x + deltaPosition.x, this->position.y + deltaPosition.y, this->position.z + deltaPosition.z);
 }
 
 void Component::setRotation(glm::vec3 rotation) {
@@ -225,23 +212,6 @@ Component * Components::findComponent(const std::string id, const std::string mo
     return nullptr;
 }
 
-bool Component::checkCollision(const glm::vec3 move) {
-    // very vary naive and bad, TODO: improve
-    auto & allComps = Components::INSTANCE()->getComponents();
-    
-    const glm::mat4 ownModelMatrix = this->getModelMatrixForPosition(this->position + move);
-    
-    for (auto & c : allComps) { 
-        if (c->getId() == this->getId()) continue;
-        
-        const glm::mat4 compModelMatrix = c->getModelMatrix();
-        
-        //TODO: intersection check bbox incl. model matrix multiply
-    }
-    
-    return false;
-}
-
 std::vector<std::unique_ptr<Component>> & Components::getComponents() {
     return this->components;
 }
@@ -285,6 +255,31 @@ void Components::update(const float delta) {
     for (auto & comp : this->components) {
         comp->update(delta);
     }
+}
+
+bool Components::checkCollision(const BoundingBox bbox) {
+    // very vary naive and bad, TODO: improve
+    auto & allComps = Components::INSTANCE()->getComponents();
+        
+    for (auto & c : allComps) { 
+        const glm::mat4 compModelMatrix = c->getModelMatrix();
+        const BoundingBox compModelBbox = {
+            .min = compModelMatrix * glm::vec4(c->getModel()->getBoundingBox().min,1.0),
+            .max = compModelMatrix * glm::vec4(c->getModel()->getBoundingBox().max,1.0)
+        };
+
+        if (Helper::checkBBoxIntersection(bbox, compModelBbox)) {
+            for (auto & m : c->getModel()->getMeshes()) {
+                const BoundingBox compMeshBbox = {
+                    .min = compModelMatrix * glm::vec4(m.getBoundingBox().min,1.0),
+                    .max = compModelMatrix * glm::vec4(m.getBoundingBox().max,1.0)                    
+                };
+                if (Helper::checkBBoxIntersection(bbox, compMeshBbox)) return true;
+            }
+        }
+    }; 
+    
+    return false;
 }
 
 Components * Components::INSTANCE() {

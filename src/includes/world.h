@@ -60,6 +60,7 @@ class Camera
         void move(KeyPress key, bool isPressed = false, float delta = 1.0f);
         void updateDirection(const float deltaX, const float  deltaY, float deltaTime = 1.0f);
         glm::vec3 getCameraFront();
+        BoundingBox getBoundingBox();
         void destroy();
 };
 

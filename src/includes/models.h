@@ -3,12 +3,6 @@
 
 #include "shared.h"
 
-struct BoundingBox final {
-    public:
-        glm::vec3 min = glm::vec3(INF);
-        glm::vec3 max = glm::vec3(NEG_INF);
-};
-
 enum ModelsContentType {
     VERTEX, INDEX, SSBO
 };
