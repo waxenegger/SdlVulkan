@@ -485,6 +485,30 @@ float Helper::getRandomFloatBetween0and1() {
     return Helper::distribution(Helper::default_random_engine); 
 }
 
+
+BoundingBox Helper::getBoundingBox(const glm::vec3 pos, const float buffer) {
+    return BoundingBox {
+        .min = glm::vec3(-pos.x-buffer, pos.y-buffer, -pos.z-buffer),
+        .max = glm::vec3(-pos.x+buffer, pos.y+buffer, -pos.z+buffer)
+    };
+}
+
+BoundingBox Helper::getBBoxAfterModelMatrixMultiply(const BoundingBox bbox, const glm::mat4 modelMatrix) {
+    const glm::vec3 minMultiplied = modelMatrix * glm::vec4(bbox.min,1.0);
+    const glm::vec3 maxMultiplied = modelMatrix * glm::vec4(bbox.max,1.0);
+    
+    return BoundingBox {
+        .min = glm::vec3(
+            glm::min(minMultiplied.x, maxMultiplied.x),
+            glm::min(minMultiplied.y, maxMultiplied.y),
+            glm::min(minMultiplied.z, maxMultiplied.z)),
+        .max = glm::vec3(
+            glm::max(minMultiplied.x, maxMultiplied.x),
+            glm::max(minMultiplied.y, maxMultiplied.y),
+            glm::max(minMultiplied.z, maxMultiplied.z))
+    };
+}
+
 bool  Helper::checkBBoxIntersection(const BoundingBox bbox1, const BoundingBox bbox2) {
     const bool intersectsAlongX = 
         (bbox1.min.x >= bbox2.min.x && bbox1.min.x <= bbox2.max.x) ||

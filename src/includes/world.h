@@ -2,6 +2,7 @@
 #define SRC_INCLUDES_WORLD_H_
 
 #include "shared.h"
+#include "helper.h"
 
 #define GLM_FORCE_RADIANS
 #define GLM_FORCE_DEPTH_ZERO_TO_ONE
@@ -51,13 +52,13 @@ class Camera
         void rotate(glm::vec3 delta);
         void setTranslation(glm::vec3 translation);
         void translate(glm::vec3 delta);
-        void update(const float delta);
+        void update(const float delta, const std::function<bool(BoundingBox)> collisionCheck = nullptr);
         glm::mat4 getViewMatrix();
         glm::mat4 getProjectionMatrix();
         static Camera * INSTANCE(glm::vec3 pos);
         static Camera * INSTANCE();
         void setType(CameraType type);
-        void move(KeyPress key, bool isPressed = false, float delta = 1.0f);
+        void move(KeyPress key, bool isPressed = false, float delta = 1.0f, const std::function<bool(BoundingBox)> collisionCheck = nullptr);
         void updateDirection(const float deltaX, const float  deltaY, float deltaTime = 1.0f);
         glm::vec3 getCameraFront();
         BoundingBox getBoundingBox();

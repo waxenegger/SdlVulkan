@@ -258,22 +258,17 @@ void Components::update(const float delta) {
 }
 
 bool Components::checkCollision(const BoundingBox bbox) {
-    // very vary naive and bad, TODO: improve
+    // very very naive and bad, TODO: improve
     auto & allComps = Components::INSTANCE()->getComponents();
         
     for (auto & c : allComps) { 
-        const glm::mat4 compModelMatrix = c->getModelMatrix();
-        const BoundingBox compModelBbox = {
-            .min = compModelMatrix * glm::vec4(c->getModel()->getBoundingBox().min,1.0),
-            .max = compModelMatrix * glm::vec4(c->getModel()->getBoundingBox().max,1.0)
-        };
+        const BoundingBox compModelBbox = 
+            Helper::getBBoxAfterModelMatrixMultiply(c->getModel()->getBoundingBox(), c->getModelMatrix());
 
-        if (Helper::checkBBoxIntersection(bbox, compModelBbox)) {
+        if (Helper::checkBBoxIntersection(bbox, compModelBbox)) {                
             for (auto & m : c->getModel()->getMeshes()) {
-                const BoundingBox compMeshBbox = {
-                    .min = compModelMatrix * glm::vec4(m.getBoundingBox().min,1.0),
-                    .max = compModelMatrix * glm::vec4(m.getBoundingBox().max,1.0)                    
-                };
+                const BoundingBox compMeshBbox = 
+                    Helper::getBBoxAfterModelMatrixMultiply(m.getBoundingBox(), c->getModelMatrix());
                 if (Helper::checkBBoxIntersection(bbox, compMeshBbox)) return true;
             }
         }

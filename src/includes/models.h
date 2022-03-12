@@ -3,10 +3,6 @@
 
 #include "shared.h"
 
-enum ModelsContentType {
-    VERTEX, INDEX, SSBO
-};
-
 struct BufferSummary {
     VkDeviceSize vertexBufferSize = 0;
     VkDeviceSize indexBufferSize = 0;

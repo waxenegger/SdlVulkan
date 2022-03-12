@@ -4,7 +4,6 @@
 #include "shared.h"
 #include "threading.h"
 #include "models.h"
-#include "helper.h"
 #include "components.h"
 #include "world.h"
 

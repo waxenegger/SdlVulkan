@@ -74,4 +74,8 @@ struct BoundingBox final {
         glm::vec3 max = glm::vec3(NEG_INF);
 };
 
+enum ModelsContentType {
+    VERTEX, INDEX, SSBO
+};
+
 #endif

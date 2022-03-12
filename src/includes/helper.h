@@ -36,6 +36,8 @@ class Helper final {
         static void generateMipmaps(const VkDevice & logicalDevice, const VkCommandPool & commandPool, const VkQueue & graphicsQueue, const VkImage & image, const int32_t width, const int32_t height, const uint32_t levels);
         static float getRandomFloatBetween0and1();
         static bool  checkBBoxIntersection(const BoundingBox bbox1, const BoundingBox bbox2);
+        static BoundingBox getBBoxAfterModelMatrixMultiply(const BoundingBox bbox, const glm::mat4 modelMatrix);
+        static BoundingBox getBoundingBox(const glm::vec3 pos, const float buffer = 0.15f);
 };
 
 #endif

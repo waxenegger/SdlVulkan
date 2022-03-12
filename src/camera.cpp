@@ -33,7 +33,7 @@ bool Camera::moving()
     return this->keys.left || this->keys.right || this->keys.up || this->keys.down;
 }
 
-void Camera::move(KeyPress key, bool isPressed, float delta) {    
+void Camera::move(KeyPress key, bool isPressed, float delta, const std::function<bool(BoundingBox)> collisionCheck) {    
     switch(key) {
         case LEFT:
             this->keys.left = isPressed;
@@ -51,7 +51,7 @@ void Camera::move(KeyPress key, bool isPressed, float delta) {
             break;
     }
     
-    if (isPressed) this->update(delta);
+    if (isPressed) this->update(delta, collisionCheck);
 }
 
 void Camera::setAspectRatio(float aspect) {
@@ -122,45 +122,33 @@ glm::vec3 Camera::getCameraFront() {
     return camFront;
 }
 
-void Camera::update(const float delta) {
+void Camera::update(const float delta, const std::function<bool(BoundingBox)> collisionCheck) {
     if (type == CameraType::firstperson) {
         if (moving()) {
             glm::vec3 camFront = this->getCameraFront();
-
+            glm::vec3 pos = this->position;
+                        
             if (this->keys.up) {
-                this->position += camFront * delta;
+                pos += camFront * delta;
             }
             if (this->keys.down) {
-                this->position -= camFront * delta;
+                pos -= camFront * delta;
             }
             if (this->keys.left) {
-                this->position -= glm::normalize(glm::cross(camFront, glm::vec3(0.0f, 1.0f, 0.0f))) * delta;
+                pos -= glm::normalize(glm::cross(camFront, glm::vec3(0.0f, 1.0f, 0.0f))) * delta;
             }
             if (this->keys.right) {
-                this->position += glm::normalize(glm::cross(camFront, glm::vec3(0.0f, 1.0f, 0.0f))) * delta;
+                pos += glm::normalize(glm::cross(camFront, glm::vec3(0.0f, 1.0f, 0.0f))) * delta;
             }
             
-            //this->position.y = terrainHeight + CameraHeight;
+            if (collisionCheck != nullptr && collisionCheck(Helper::getBoundingBox(pos))) return;
+            
+            this->position = pos;
 
             this->updateViewMatrix();
         }
     }
 };
-
-BoundingBox Camera::getBoundingBox() {
-    const float buffer = 0.15;
-    
-    glm::vec3 pos = this->position;
-    
-    BoundingBox bbox = 
-    {
-        .min = glm::vec3(-pos.x-buffer, pos.y-buffer, -pos.z-buffer),
-        .max = glm::vec3(-pos.x+buffer, pos.y+buffer, -pos.z+buffer)
-    };
-    
-    return bbox;
-}
-
 
 void Camera::updateDirection(const float deltaX, const float  deltaY, float delta) {    
     glm::vec3 rot(0.0f);

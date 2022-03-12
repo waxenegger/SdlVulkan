@@ -244,6 +244,8 @@ void Engine::inputLoop() {
     float walkingSpeed = 0.5f;
     float cameraSpeed = 0.0015f;
     
+    std::function<bool(BoundingBox)> collisionFunc = std::bind(&Components::checkCollision, Components::INSTANCE(), std::placeholders::_1);
+    
     while(!this->quit) {
         while (SDL_PollEvent(&e) != 0) {
             switch(e.type) {
@@ -258,16 +260,16 @@ void Engine::inputLoop() {
                 case SDL_KEYDOWN:
                     switch (e.key.keysym.scancode) {
                         case SDL_SCANCODE_W:
-                            this->camera->move(Camera::KeyPress::UP, true, walkingSpeed);
+                            this->camera->move(Camera::KeyPress::UP, true, walkingSpeed, collisionFunc);
                             break;
                         case SDL_SCANCODE_S:
-                            this->camera->move(Camera::KeyPress::DOWN, true, walkingSpeed);
+                            this->camera->move(Camera::KeyPress::DOWN, true, walkingSpeed, collisionFunc);
                             break;
                         case SDL_SCANCODE_A:
-                            this->camera->move(Camera::KeyPress::LEFT, true, walkingSpeed);
+                            this->camera->move(Camera::KeyPress::LEFT, true, walkingSpeed, collisionFunc);
                             break;
                         case SDL_SCANCODE_D:
-                            this->camera->move(Camera::KeyPress::RIGHT, true, walkingSpeed);
+                            this->camera->move(Camera::KeyPress::RIGHT, true, walkingSpeed, collisionFunc);
                             break;
                         case SDL_SCANCODE_F:
                             this->renderer->setShowWireFrame(!this->renderer->doesShowWireFrame());
