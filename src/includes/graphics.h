@@ -52,7 +52,7 @@ class GraphicsContext final {
         
         std::vector<const char *> vulkanExtensions;
         std::vector<const char *> vulkanLayers = {
-           //"VK_LAYER_KHRONOS_validation"
+           "VK_LAYER_KHRONOS_validation"
            //"VK_LAYER_ADRENO_debug"
         };
         
@@ -179,7 +179,8 @@ class GraphicsPipeline {
 class ModelsPipeline : public GraphicsPipeline {
     private:
         bool createSsboBufferFromModel(VkDeviceSize bufferSize, bool makeHostWritable = false);
-        bool createBuffersFromModel();
+        bool createDeviceBuffersFromModel();
+        bool createLocalBuffersFromModel();
         void prepareModelTextures();
 
         bool createDescriptorSetLayout();
@@ -196,6 +197,7 @@ class ModelsPipeline : public GraphicsPipeline {
         bool updateGraphicsPipeline();
         
         void draw(const VkCommandBuffer & commandBuffer, const uint16_t commandBufferIndex);
+        bool updateLocalModelBuffers();
         void update();
 };
 

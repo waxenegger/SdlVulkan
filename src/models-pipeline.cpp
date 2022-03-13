@@ -2,7 +2,80 @@
 
 ModelsPipeline::ModelsPipeline(const Renderer * renderer) : GraphicsPipeline(renderer) { }
 
-bool ModelsPipeline::createBuffersFromModel() {
+bool ModelsPipeline::createLocalBuffersFromModel() {
+    if (this->renderer == nullptr || !this->renderer->isReady()) return false;
+    
+    BufferSummary bufferSizes = Models::INSTANCE()->getModelsBufferSizes(true);
+    
+    logError(std::to_string(bufferSizes.reservedSsboBufferSize));
+    
+    if (bufferSizes.vertexBufferSize == 0) return true;
+
+    if (this->vertexBuffer != nullptr) vkDestroyBuffer(this->renderer->getLogicalDevice(), this->vertexBuffer, nullptr);
+    if (this->vertexBufferMemory != nullptr) vkFreeMemory(this->renderer->getLogicalDevice(), this->vertexBufferMemory, nullptr);
+
+    if (!Helper::createBuffer(this->renderer->getPhysicalDevice(), this->renderer->getLogicalDevice(), bufferSizes.reservedVertexBufferSize,
+            VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+            this->vertexBuffer, this->vertexBufferMemory)) {
+        logError("Failed to get Create Models Pipeline Vertex Buffer");
+        return false;
+    }
+
+    void * data = nullptr;
+    vkMapMemory(this->renderer->getLogicalDevice(), this->vertexBufferMemory, 0, bufferSizes.vertexBufferSize, 0, &data);
+    Helper::copyModelsContentIntoBuffer(data, VERTEX, bufferSizes.vertexBufferSize);
+    vkUnmapMemory(this->renderer->getLogicalDevice(), this->vertexBufferMemory);
+
+    // indices
+    if (bufferSizes.indexBufferSize == 0) return true;
+
+    if (this->indexBuffer != nullptr) vkDestroyBuffer(this->renderer->getLogicalDevice(), this->indexBuffer, nullptr);
+    if (this->indexBufferMemory != nullptr) vkFreeMemory(this->renderer->getLogicalDevice(), this->indexBufferMemory, nullptr);
+
+    if (!Helper::createBuffer(this->renderer->getPhysicalDevice(), this->renderer->getLogicalDevice(), bufferSizes.reservedIndexBufferSize,
+            VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+            this->indexBuffer, this->indexBufferMemory)) {
+        logError("Failed to get Create Models Pipeline Index Buffer");
+        return false;
+    }
+
+    data = nullptr;
+    vkMapMemory(this->renderer->getLogicalDevice(), this->indexBufferMemory, 0, bufferSizes.indexBufferSize, 0, &data);
+    Helper::copyModelsContentIntoBuffer(data, INDEX, bufferSizes.indexBufferSize);
+    vkUnmapMemory(this->renderer->getLogicalDevice(), this->indexBufferMemory);
+
+    return true;
+}
+
+bool ModelsPipeline::updateLocalModelBuffers() {
+    if (this->renderer == nullptr || !this->renderer->isReady()) return false;
+    
+    BufferSummary bufferSizes = Models::INSTANCE()->getModelsBufferSizes(true);
+     
+    if (bufferSizes.vertexBufferSize == 0) return true;
+
+    logError(std::to_string(bufferSizes.reservedIndexBufferSize));
+    logError(std::to_string(bufferSizes.indexBufferSize));
+
+    
+    void * data = nullptr;
+    vkMapMemory(this->renderer->getLogicalDevice(), this->vertexBufferMemory, 0, bufferSizes.vertexBufferSize, 0, &data);
+    Helper::copyModelsContentIntoBuffer(data, VERTEX, bufferSizes.vertexBufferSize);
+    vkUnmapMemory(this->renderer->getLogicalDevice(), this->vertexBufferMemory);
+
+    // indices
+    if (bufferSizes.indexBufferSize == 0) return true;
+
+    data = nullptr;
+    vkMapMemory(this->renderer->getLogicalDevice(), this->indexBufferMemory, 0, bufferSizes.indexBufferSize, 0, &data);
+    Helper::copyModelsContentIntoBuffer(data, INDEX, bufferSizes.indexBufferSize);
+    vkUnmapMemory(this->renderer->getLogicalDevice(), this->indexBufferMemory);
+
+    return true;
+}
+
+
+bool ModelsPipeline::createDeviceBuffersFromModel() {
     if (this->renderer == nullptr || !this->renderer->isReady()) return false;
     
     BufferSummary bufferSizes = Models::INSTANCE()->getModelsBufferSizes(true);
@@ -59,7 +132,7 @@ bool ModelsPipeline::createBuffersFromModel() {
     if (!Helper::createBuffer(this->renderer->getPhysicalDevice(), this->renderer->getLogicalDevice(), bufferSizes.indexBufferSize,
             VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
             this->indexBuffer, this->indexBufferMemory)) {
-        logError("Failed to get Create Models Pipeline Vertex Buffer");
+        logError("Failed to get Create Models Pipeline Index Buffer");
         return false;
     }
     
@@ -136,7 +209,7 @@ void ModelsPipeline::prepareModelTextures() {
 bool ModelsPipeline::createGraphicsPipeline(const VkPushConstantRange & pushConstantRange) {
     if (this->renderer == nullptr || !this->renderer->isReady()) return false;
     
-    if (!this->createBuffersFromModel()) {
+    if (!this->createLocalBuffersFromModel()) {
         logError("Failed to create Buffers from Models");        
     }
     
@@ -459,7 +532,7 @@ bool ModelsPipeline::createSsboBuffersFromComponents() {
     if (!Helper::createBuffer(this->renderer->getPhysicalDevice(), this->renderer->getLogicalDevice(), bufferSizes.reservedSsboBufferSize,
             VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
             this->ssboBuffer, this->ssboBufferMemory)) {
-        logError("Failed to get Create Models Pipeline Vertex Buffer");
+        logError("Failed to get Create Models Pipeline Ssbo Buffer");
         return false;
     }
 
@@ -479,9 +552,9 @@ void ModelsPipeline::updateSsboBuffersComponents() {
     if (bufferSizes.reservedSsboBufferSize == 0) return;
 
     void * data = nullptr;
-    vkMapMemory(this->renderer->getLogicalDevice(), ssboBufferMemory, 0, bufferSizes.reservedSsboBufferSize, 0, &data);
+    vkMapMemory(this->renderer->getLogicalDevice(), this->ssboBufferMemory, 0, bufferSizes.reservedSsboBufferSize, 0, &data);
     Helper::copyComponentsPropertiesIntoSsbo(data, bufferSizes.reservedSsboBufferSize);
-    vkUnmapMemory(this->renderer->getLogicalDevice(), ssboBufferMemory);
+    vkUnmapMemory(this->renderer->getLogicalDevice(), this->ssboBufferMemory);
 }
 
 bool ModelsPipeline::createSsboBufferFromModel(VkDeviceSize bufferSize, bool makeHostWritable) {
