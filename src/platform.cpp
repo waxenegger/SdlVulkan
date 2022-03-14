@@ -5,18 +5,24 @@ std::filesystem::path Engine::base  = "";
 int start(int argc, char* argv []) {
     const std::unique_ptr<Engine> engine = std::make_unique<Engine>("Sdl Vulkan App", argc > 1 ? argv[1] : "");
 
-   std::chrono::high_resolution_clock::time_point start = std::chrono::high_resolution_clock::now();
-
-    engine->preloadModels();
-
+    
+    // adding models
+    engine->addModel("cyborg", "cyborg.obj");
+    engine->addModel("contraption", "contraption.obj");
+    engine->addTextModel("text", "FreeMono.ttf", "Hello World", 50);
+    engine->addModel("nanosuit", "nanosuit.obj");
+    
+    
+    
+    // adding model instances
     Component * rock = Components::INSTANCE()->addComponentFromModel("rock", "rock");
     if (rock != nullptr) {
         rock->setPosition(10.0f,0.0f,10.0f);
         rock->scale(2.0f);
     }
 
-    for (int i=0;i<10;i++) {
-        for (int j=0;j<10;j++) {
+    for (int i=0;i<1;i++) {
+        for (int j=0;j<1;j++) {
             Component * nanosuit = Components::INSTANCE()->addComponentFromModel("nanosuit" + std::to_string(i) + "_" + std::to_string(j), "nanosuit");
             if (nanosuit != nullptr) nanosuit->setPosition(0.0f + j*10.0f,10.0f,-11.0f+i* 10.0f);
         }
@@ -40,30 +46,18 @@ int start(int argc, char* argv []) {
         cyborg->addComponentBehavior(new RandomWalkBehavior(cyborg));
     }
     
+    
+    // show everything (pretty much)
     engine->setShowSkybox(true);
     engine->setShowGuiOverlay(true);
     engine->setShowBoundingBoxes(false);
+
     
+    // initialize
     engine->init();
 
-    std::chrono::high_resolution_clock::time_point now = std::chrono::high_resolution_clock::now();
-    std::chrono::duration<float, std::milli> time_span = now - start;
-    logInfo("Duration Init: " + std::to_string(time_span.count()));
-
-    /*
-    auto t = std::thread([]() {
-        while(true) {
-            auto all = Components::INSTANCE()->getAllComponentsForModel("nanosuit");
-            for (auto & a : all) {
-                a->rotate(0,10,0);
-            }            
-
-            std::this_thread::sleep_for(std::chrono::duration<double, std::milli>(150));
-        }
-    });
-    t.detach();
-    */
     
+    // main loop
     engine->loop();
     
     return 0;

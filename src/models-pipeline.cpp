@@ -7,9 +7,7 @@ bool ModelsPipeline::createLocalBuffersFromModel() {
     
     BufferSummary bufferSizes = Models::INSTANCE()->getModelsBufferSizes(true);
     
-    logError(std::to_string(bufferSizes.reservedSsboBufferSize));
-    
-    if (bufferSizes.vertexBufferSize == 0) return true;
+    if (bufferSizes.reservedVertexBufferSize == 0) return true;
 
     if (this->vertexBuffer != nullptr) vkDestroyBuffer(this->renderer->getLogicalDevice(), this->vertexBuffer, nullptr);
     if (this->vertexBufferMemory != nullptr) vkFreeMemory(this->renderer->getLogicalDevice(), this->vertexBufferMemory, nullptr);
@@ -27,7 +25,7 @@ bool ModelsPipeline::createLocalBuffersFromModel() {
     vkUnmapMemory(this->renderer->getLogicalDevice(), this->vertexBufferMemory);
 
     // indices
-    if (bufferSizes.indexBufferSize == 0) return true;
+    if (bufferSizes.reservedIndexBufferSize == 0) return true;
 
     if (this->indexBuffer != nullptr) vkDestroyBuffer(this->renderer->getLogicalDevice(), this->indexBuffer, nullptr);
     if (this->indexBufferMemory != nullptr) vkFreeMemory(this->renderer->getLogicalDevice(), this->indexBufferMemory, nullptr);
@@ -47,31 +45,25 @@ bool ModelsPipeline::createLocalBuffersFromModel() {
     return true;
 }
 
-bool ModelsPipeline::updateLocalModelBuffers() {
-    if (this->renderer == nullptr || !this->renderer->isReady()) return false;
+void ModelsPipeline::updateLocalModelBuffers() {
+    if (this->renderer == nullptr || !this->renderer->isReady()) return;
     
     BufferSummary bufferSizes = Models::INSTANCE()->getModelsBufferSizes(true);
      
-    if (bufferSizes.vertexBufferSize == 0) return true;
+    if (bufferSizes.vertexBufferSize == 0) return;
 
-    logError(std::to_string(bufferSizes.reservedIndexBufferSize));
-    logError(std::to_string(bufferSizes.indexBufferSize));
-
-    
     void * data = nullptr;
     vkMapMemory(this->renderer->getLogicalDevice(), this->vertexBufferMemory, 0, bufferSizes.vertexBufferSize, 0, &data);
     Helper::copyModelsContentIntoBuffer(data, VERTEX, bufferSizes.vertexBufferSize);
     vkUnmapMemory(this->renderer->getLogicalDevice(), this->vertexBufferMemory);
 
     // indices
-    if (bufferSizes.indexBufferSize == 0) return true;
-
+    if (bufferSizes.indexBufferSize == 0) return;
+    
     data = nullptr;
     vkMapMemory(this->renderer->getLogicalDevice(), this->indexBufferMemory, 0, bufferSizes.indexBufferSize, 0, &data);
     Helper::copyModelsContentIntoBuffer(data, INDEX, bufferSizes.indexBufferSize);
     vkUnmapMemory(this->renderer->getLogicalDevice(), this->indexBufferMemory);
-
-    return true;
 }
 
 
@@ -146,7 +138,7 @@ bool ModelsPipeline::createDeviceBuffersFromModel() {
 
 void ModelsPipeline::prepareModelTextures() {    
     if (this->renderer == nullptr || !this->renderer->isReady()) return;
-        
+
     auto & textures = Models::INSTANCE()->getTextures();
     
     // put in one dummy one to satify shader if we have none...
@@ -204,6 +196,74 @@ void ModelsPipeline::prepareModelTextures() {
     }
     
     logInfo("Number of Model Textures: " + std::to_string(textures.size()));
+}
+
+void ModelsPipeline::updateDescriptorSets() {    
+    std::map<std::string, std::unique_ptr<Texture>> & textures = Models::INSTANCE()->getTextures();
+    uint32_t numberOfTextures =  textures.size();        
+
+    std::vector<VkDescriptorImageInfo> descriptorImageInfos;
+    if (numberOfTextures > 0) {
+        for (uint32_t i = 0; i < numberOfTextures; ++i) {
+            VkDescriptorImageInfo texureDescriptorInfo = {};
+            texureDescriptorInfo.sampler = this->textureSampler;
+            texureDescriptorInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+            texureDescriptorInfo.imageView = Models::INSTANCE()->findTextureImageViewById(i);
+            descriptorImageInfos.push_back(texureDescriptorInfo);
+        }
+    } else {
+            VkDescriptorImageInfo texureDescriptorInfo = {};
+            texureDescriptorInfo.sampler = nullptr;
+            texureDescriptorInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+            texureDescriptorInfo.imageView = Models::INSTANCE()->findTextureImageViewById(-1);
+            descriptorImageInfos.push_back(texureDescriptorInfo);        
+    }
+
+    VkDescriptorBufferInfo ssboBufferInfo{};
+    ssboBufferInfo.buffer = this->ssboBuffer;
+    ssboBufferInfo.offset = 0;
+    ssboBufferInfo.range = Models::INSTANCE()->getModelsBufferSizes().reservedSsboBufferSize;
+        
+    for (size_t i = 0; i < this->descriptorSets.size(); i++) {
+        VkDescriptorBufferInfo uniformBufferInfo{};
+        uniformBufferInfo.buffer = this->renderer->getUniformBuffer(i);
+        uniformBufferInfo.offset = 0;
+        uniformBufferInfo.range = sizeof(struct ModelUniforms);
+
+        std::vector<VkWriteDescriptorSet> descriptorWrites;
+
+        VkWriteDescriptorSet uniformDescriptorSet = {};
+        uniformDescriptorSet.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        uniformDescriptorSet.dstSet = this->descriptorSets[i];
+        uniformDescriptorSet.dstBinding = 0;
+        uniformDescriptorSet.dstArrayElement = 0;
+        uniformDescriptorSet.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+        uniformDescriptorSet.descriptorCount = 1;
+        uniformDescriptorSet.pBufferInfo = &uniformBufferInfo;
+        descriptorWrites.push_back(uniformDescriptorSet);
+
+        VkWriteDescriptorSet ssboDescriptorSet = {};
+        ssboDescriptorSet.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        ssboDescriptorSet.dstSet = this->descriptorSets[i];
+        ssboDescriptorSet.dstBinding = 1;
+        ssboDescriptorSet.dstArrayElement = 0;
+        ssboDescriptorSet.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+        ssboDescriptorSet.descriptorCount = 1;
+        ssboDescriptorSet.pBufferInfo = &ssboBufferInfo;
+        descriptorWrites.push_back(ssboDescriptorSet);
+
+        VkWriteDescriptorSet samplerDescriptorSet = {};
+        samplerDescriptorSet.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        samplerDescriptorSet.dstBinding = 2;
+        samplerDescriptorSet.dstArrayElement = 0;
+        samplerDescriptorSet.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+        samplerDescriptorSet.descriptorCount = numberOfTextures;
+        samplerDescriptorSet.pImageInfo = descriptorImageInfos.data();
+        samplerDescriptorSet.dstSet = this->descriptorSets[i];
+        descriptorWrites.push_back(samplerDescriptorSet);
+
+        vkUpdateDescriptorSets(this->renderer->getLogicalDevice(), static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0, nullptr);
+    }
 }
 
 bool ModelsPipeline::createGraphicsPipeline(const VkPushConstantRange & pushConstantRange) {
@@ -453,7 +513,7 @@ bool ModelsPipeline::createDescriptorPool() {
     poolSizes[1].type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
     poolSizes[1].descriptorCount = this->renderer->getImageCount();
     poolSizes[2].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-    poolSizes[2].descriptorCount = static_cast<uint32_t>(this->renderer->getImageCount() * Models::INSTANCE()->getTextures().size());
+    poolSizes[2].descriptorCount = static_cast<uint32_t>(this->renderer->getImageCount() *  Models::INSTANCE()->getTextures().size());
 
     VkDescriptorPoolCreateInfo poolInfo{};
     poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
@@ -496,10 +556,9 @@ bool ModelsPipeline::createDescriptorSetLayout() {
     ssboLayoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
     layoutBindings.push_back(ssboLayoutBinding);
 
-    uint32_t numberOfTextures = Models::INSTANCE()->getTextures().size();
     VkDescriptorSetLayoutBinding samplersLayoutBinding{};
     samplersLayoutBinding.binding = 2;
-    samplersLayoutBinding.descriptorCount = numberOfTextures > 0 ? numberOfTextures : 0;
+    samplersLayoutBinding.descriptorCount = Models::INSTANCE()->getTextures().size() > 0 ? MAX_TEXTURES : 0;
     samplersLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
     samplersLayoutBinding.pImmutableSamplers = nullptr;
     samplersLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
@@ -522,7 +581,7 @@ bool ModelsPipeline::createDescriptorSetLayout() {
 bool ModelsPipeline::createSsboBuffersFromComponents() {
     if (this->renderer == nullptr || !this->renderer->isReady()) return false;
    
-    const BufferSummary bufferSizes = Models::INSTANCE()->getModelsBufferSizes(true);
+    const BufferSummary bufferSizes = Models::INSTANCE()->getModelsBufferSizes();
 
     if (bufferSizes.reservedSsboBufferSize == 0) return true;
 
@@ -608,6 +667,12 @@ bool ModelsPipeline::createSsboBufferFromModel(VkDeviceSize bufferSize, bool mak
     return true;
 }
 
+void ModelsPipeline::updateModels() {
+    this->updateLocalModelBuffers();
+    this->prepareModelTextures();
+    this->updateDescriptorSets();    
+}
+
 bool ModelsPipeline::createDescriptorSets() {
     if (this->renderer == nullptr || !this->renderer->isReady()) return false;
     
@@ -625,71 +690,7 @@ bool ModelsPipeline::createDescriptorSets() {
         return false;
     }
 
-    std::map<std::string, std::unique_ptr<Texture>> & textures = Models::INSTANCE()->getTextures();
-    uint32_t numberOfTextures = textures.size();        
-
-    std::vector<VkDescriptorImageInfo> descriptorImageInfos;
-    if (numberOfTextures > 0) {
-        for (uint32_t i = 0; i < numberOfTextures; ++i) {
-            VkDescriptorImageInfo texureDescriptorInfo = {};
-            texureDescriptorInfo.sampler = this->textureSampler;
-            texureDescriptorInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-            texureDescriptorInfo.imageView = Models::INSTANCE()->findTextureImageViewById(i);
-            descriptorImageInfos.push_back(texureDescriptorInfo);
-        }
-    } else {
-            VkDescriptorImageInfo texureDescriptorInfo = {};
-            texureDescriptorInfo.sampler = nullptr;
-            texureDescriptorInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-            texureDescriptorInfo.imageView = Models::INSTANCE()->findTextureImageViewById(-1);
-            descriptorImageInfos.push_back(texureDescriptorInfo);        
-    }
-
-    VkDescriptorBufferInfo ssboBufferInfo{};
-    ssboBufferInfo.buffer = this->ssboBuffer;
-    ssboBufferInfo.offset = 0;
-    ssboBufferInfo.range = Models::INSTANCE()->getModelsBufferSizes().reservedSsboBufferSize;
-        
-    for (size_t i = 0; i < this->descriptorSets.size(); i++) {
-        VkDescriptorBufferInfo uniformBufferInfo{};
-        uniformBufferInfo.buffer = this->renderer->getUniformBuffer(i);
-        uniformBufferInfo.offset = 0;
-        uniformBufferInfo.range = sizeof(struct ModelUniforms);
-
-        std::vector<VkWriteDescriptorSet> descriptorWrites;
-
-        VkWriteDescriptorSet uniformDescriptorSet = {};
-        uniformDescriptorSet.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-        uniformDescriptorSet.dstSet = this->descriptorSets[i];
-        uniformDescriptorSet.dstBinding = 0;
-        uniformDescriptorSet.dstArrayElement = 0;
-        uniformDescriptorSet.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-        uniformDescriptorSet.descriptorCount = 1;
-        uniformDescriptorSet.pBufferInfo = &uniformBufferInfo;
-        descriptorWrites.push_back(uniformDescriptorSet);
-
-        VkWriteDescriptorSet ssboDescriptorSet = {};
-        ssboDescriptorSet.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-        ssboDescriptorSet.dstSet = this->descriptorSets[i];
-        ssboDescriptorSet.dstBinding = 1;
-        ssboDescriptorSet.dstArrayElement = 0;
-        ssboDescriptorSet.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-        ssboDescriptorSet.descriptorCount = 1;
-        ssboDescriptorSet.pBufferInfo = &ssboBufferInfo;
-        descriptorWrites.push_back(ssboDescriptorSet);
-
-        VkWriteDescriptorSet samplerDescriptorSet = {};
-        samplerDescriptorSet.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-        samplerDescriptorSet.dstBinding = 2;
-        samplerDescriptorSet.dstArrayElement = 0;
-        samplerDescriptorSet.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-        samplerDescriptorSet.descriptorCount = numberOfTextures;
-        samplerDescriptorSet.pImageInfo = descriptorImageInfos.data();
-        samplerDescriptorSet.dstSet = this->descriptorSets[i];
-        descriptorWrites.push_back(samplerDescriptorSet);
-
-        vkUpdateDescriptorSets(this->renderer->getLogicalDevice(), static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0, nullptr);
-    }
+    this->updateDescriptorSets();
     
     return true;
 }

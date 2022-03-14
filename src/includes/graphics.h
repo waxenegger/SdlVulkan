@@ -52,10 +52,10 @@ class GraphicsContext final {
         
         std::vector<const char *> vulkanExtensions;
         std::vector<const char *> vulkanLayers = {
-           "VK_LAYER_KHRONOS_validation"
+           //"VK_LAYER_KHRONOS_validation"
            //"VK_LAYER_ADRENO_debug"
         };
-        
+                
         std::vector<VkPhysicalDevice> physicalDevices;
                 
         bool queryVulkanInstanceExtensions();
@@ -106,7 +106,7 @@ class GraphicsContext final {
         VkExtent2D getSwapChainExtent(VkSurfaceCapabilitiesKHR & surfaceCapabilities) const;
         bool getSurfaceCapabilities(const VkPhysicalDevice & physicalDevice, VkSurfaceCapabilitiesKHR & surfaceCapabilities) const;
         std::vector<VkPresentModeKHR> queryDeviceSwapModes(const VkPhysicalDevice & physicalDevice) const;
-        
+                
         GraphicsContext();
         ~GraphicsContext();
 };
@@ -181,13 +181,16 @@ class ModelsPipeline : public GraphicsPipeline {
         bool createSsboBufferFromModel(VkDeviceSize bufferSize, bool makeHostWritable = false);
         bool createDeviceBuffersFromModel();
         bool createLocalBuffersFromModel();
-        void prepareModelTextures();
 
         bool createDescriptorSetLayout();
         bool createDescriptorPool();
         bool createDescriptorSets();
+        void updateDescriptorSets();
         
         void updateSsboBuffersComponents();
+        void updateLocalModelBuffers();
+        void prepareModelTextures();        
+
     public:
         ModelsPipeline(const Renderer * renderer);
         ModelsPipeline & operator=(ModelsPipeline) = delete;
@@ -197,8 +200,8 @@ class ModelsPipeline : public GraphicsPipeline {
         bool updateGraphicsPipeline();
         
         void draw(const VkCommandBuffer & commandBuffer, const uint16_t commandBufferIndex);
-        bool updateLocalModelBuffers();
         void update();
+        void updateModels();
 };
 
 class SkyboxPipeline : public GraphicsPipeline {
@@ -278,9 +281,12 @@ class Renderer final {
         uint16_t frameRate = FRAME_RATE_60;
         size_t currentFrame = 0;
         
+        bool paused = true;
         bool requiresRenderUpdate = false;
         bool showWireFrame = false;
-         
+        bool maximized = false;
+        bool fullScreen = false;
+
         VkRenderPass renderPass = nullptr;
         VkExtent2D swapChainExtent;
         
@@ -363,6 +369,12 @@ class Renderer final {
         float getDeltaFactor();
         
         void drawFrame();
+        void pause();
+        bool isPaused();
+        void resume();
+        
+        bool isMaximized();
+        bool isFullScreen();
         
         ~Renderer();
 };
@@ -395,6 +407,8 @@ class Engine final {
         
         void inputLoop();
         
+        bool beforeModelAddition();
+        void afterModelAddition(const bool resume, const std::string id);
     public:
         Engine(const Engine&) = delete;
         Engine& operator=(const Engine &) = delete;
@@ -408,8 +422,9 @@ class Engine final {
         
         void startInputCapture();
 
-        void preloadModels();
-        void updateModels(const std::string id, const std::filesystem::path file);
+        void addModel(const std::string id, const std::filesystem::path file);
+        void addModel(Model * model);
+        void addTextModel(std::string id, const std::filesystem::path font, std::string text, uint16_t size);
         
         Engine(const std::string & appName, const std::string root = "", const uint32_t version = VULKAN_VERSION);
         ~Engine();

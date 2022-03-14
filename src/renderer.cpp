@@ -128,8 +128,6 @@ void Renderer::enablePipeline(const uint8_t index, const bool flag) {
         
     if (index < 0|| index >= this->pipelines.size()) return;
     
-    //vkDeviceWaitIdle(this->logicalDevice);
-
     this->pipelines[index]->setEnabled(flag);
 }
 
@@ -223,6 +221,9 @@ bool Renderer::createSwapChain() {
     if (!this->graphicsContext->getSurfaceCapabilities(this->physicalDevice, surfaceCapabilities)) return false;
 
     this->swapChainExtent = this->graphicsContext->getSwapChainExtent(surfaceCapabilities);
+    
+    this->maximized = (SDL_GetWindowFlags(this->graphicsContext->getSdlWindow()) & SDL_WINDOW_MAXIMIZED);
+    this->fullScreen = (SDL_GetWindowFlags(this->graphicsContext->getSdlWindow()) & SDL_WINDOW_FULLSCREEN);
 
     if (surfaceCapabilities.maxImageCount > 0 && this->imageCount > surfaceCapabilities.maxImageCount) {
         this->imageCount = surfaceCapabilities.maxImageCount;
@@ -257,7 +258,7 @@ bool Renderer::createSwapChain() {
 
     VkResult ret = vkCreateSwapchainKHR(this->logicalDevice, &createInfo, nullptr, &this->swapChain);
     if (ret != VK_SUCCESS) {
-        logError("Failed to Creat Swap Chain!");
+        logError("Failed to Create Swap Chain!");
         return false;
     }
 
@@ -585,7 +586,7 @@ VkCommandBuffer Renderer::createCommandBuffer(uint16_t commandBufferIndex) {
     vkCmdBeginRenderPass(commandBuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
         
     for (GraphicsPipeline * pipeline : this->pipelines) {
-        if (!this->requiresRenderUpdate && pipeline->canRender()) {
+        if (!this->requiresRenderUpdate && pipeline->isEnabled() && pipeline->canRender()) {
             pipeline->update();
             pipeline->draw(commandBuffer, commandBufferIndex);
         }
@@ -613,20 +614,20 @@ bool Renderer::createCommandBuffers() {
     
     this->lastFrameRateUpdate = std::chrono::high_resolution_clock::now();
     
-    if (USE_THREADS) {
-        this->startCommandBufferQueue();
-    }
-
     return true;
 }
 
-void Renderer::drawFrame() {   
-    std::chrono::high_resolution_clock::time_point frameStart = std::chrono::high_resolution_clock::now();
-    
+void Renderer::drawFrame() {
     if (this->requiresRenderUpdate) {
+        this->pause();
         this->updateRenderer();
+        this->resume();
         return;
     }
+
+    if (this->paused) return;
+    
+    std::chrono::high_resolution_clock::time_point frameStart = std::chrono::high_resolution_clock::now();
 
     VkResult ret = vkWaitForFences(this->logicalDevice, 1, &this->inFlightFences[this->currentFrame], VK_TRUE, UINT64_MAX);
     if (ret != VK_SUCCESS) {
@@ -651,7 +652,7 @@ void Renderer::drawFrame() {
 
 
     if (this->commandBuffers[imageIndex] != nullptr) {
-        if (USE_THREADS) {
+        if (USE_THREADED_COMMAND_BUFFERS) {
             this->workerQueue.queueCommandBufferForDeletion(this->commandBuffers[imageIndex]);
         } else {
             vkFreeCommandBuffers(this->logicalDevice, this->commandPool, 1, &this->commandBuffers[imageIndex]);
@@ -660,7 +661,7 @@ void Renderer::drawFrame() {
 
     this->updateUniformBuffer(imageIndex);
 
-    if (USE_THREADS) {
+    if (USE_THREADED_COMMAND_BUFFERS) {
         VkCommandBuffer latestCommandBuffer = this->workerQueue.getNextCommandBuffer(imageIndex);
         std::chrono::high_resolution_clock::time_point nextBufferFetchStart = std::chrono::high_resolution_clock::now();
         while (latestCommandBuffer == nullptr) {
@@ -780,11 +781,7 @@ bool Renderer::updateRenderer() {
         logError("Renderer has not been initialized!");
         return false;
     }
-
-    if (USE_THREADS) {
-        this->stopCommandBufferQueue();
-    }
-    
+        
     this->destroySwapChainObjects();
 
     this->requiresRenderUpdate = false;
@@ -815,8 +812,38 @@ void Renderer::forceRenderUpdate() {
     this->requiresRenderUpdate = true;
 }
 
+bool Renderer::isPaused() {
+    return this->paused;
+}
+
+void Renderer::pause() {
+    this->paused = true;
+
+    if (USE_THREADED_COMMAND_BUFFERS) {
+        this->stopCommandBufferQueue();
+    }
+
+    vkQueueWaitIdle(this->graphicsQueue);
+}
+
+void Renderer::resume() {
+    if (USE_THREADED_COMMAND_BUFFERS) {
+        this->startCommandBufferQueue();
+    }
+
+    this->paused = false;    
+}
+
+bool Renderer::isMaximized() {
+    return this->maximized;
+}
+
+bool Renderer::isFullScreen() {
+    return this->fullScreen;
+}
+
 Renderer::~Renderer() {
-    if (USE_THREADS) {
+    if (USE_THREADED_COMMAND_BUFFERS) {
         this->stopCommandBufferQueue();
     }
 

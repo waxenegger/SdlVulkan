@@ -246,8 +246,10 @@ class Models final {
         Models& operator=(const Models &) = delete;
         Models(Models &&) = delete;
         
+        bool addModel(Model * model);
         bool addModel(const std::string id, const std::filesystem::path file);
-        void addTextModel(std::string id, const std::filesystem::path font, std::string text, uint16_t size);
+        bool addTextModel(std::string id, const std::filesystem::path font, std::string text, uint16_t size);
+        Model * createTextModel(std::string id, const std::filesystem::path font, std::string text, uint16_t size);
         void clear();
         void setMaterialInformation(MaterialInformation & material);
         

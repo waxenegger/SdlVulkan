@@ -47,6 +47,7 @@ bool Engine::isReady() {
 
 void Engine::loop() {
     if (!this->isReady()) return;
+    this->renderer->resume();
     
     SDL_StartTextInput();
 
@@ -72,35 +73,65 @@ void Engine::loop() {
     logInfo("Ended Render Loop");
 }
 
-void Engine::preloadModels() {
-    // TODO: read from location
-    this->models->addModel("cyborg", Engine::getAppPath(MODELS) / "cyborg.obj");
-    this->models->addModel("rock", Engine::getAppPath(MODELS) / "rock.obj");
-    this->models->addModel("contraption", Engine::getAppPath(MODELS) / "contraption.obj");
-    this->models->addTextModel("text", Engine::getAppPath(FONTS) / "FreeMono.ttf", "Hello World", 50);
-    this->models->addModel("nanosuit", Engine::getAppPath(MODELS) / "nanosuit.obj");
+bool Engine::beforeModelAddition() {
+    logInfo("Adding Model...");
+
+    bool hasBeenPaused = true;
+    
+    if (this->renderer != nullptr && renderer->isReady() && !renderer->isPaused()) {
+        this->renderer->pause();
+    } else hasBeenPaused = false;
+
+    return hasBeenPaused;
 }
 
-void Engine::updateModels(const std::string id, const std::filesystem::path file) {
-    if (this->renderer == nullptr || !renderer->isReady()) return;
 
-    std::chrono::high_resolution_clock::time_point start = std::chrono::high_resolution_clock::now();
+void Engine::afterModelAddition(const bool resume, const std::string id) {
+    logInfo("Added Model " + id);
+
+    if (this->renderer == nullptr || !renderer->isReady()) return;
+                
+    GraphicsPipeline * pipeline = this->renderer->getPipeline(this->modelPipelineIndex);
+    if (pipeline != nullptr) {
+        ((ModelsPipeline *) pipeline)->updateModels();
+    }
     
-    logInfo("Adding Model...");
+    if (resume) this->renderer->resume();
+}
+
+void Engine::addModel(Model * model) {
+    if (model == nullptr) return;
+        
+    bool hasBeenPaused = this->beforeModelAddition();
     
-    Models::INSTANCE()->removeDummyTexture(this->renderer->getLogicalDevice());
-    if (!this->models->addModel(id, file)) {
-        Models::INSTANCE()->addDummyTexture(this->renderer->getSwapChainExtent());
+    if (!this->models->addModel(model)) {
+        this->renderer->resume();
         return;
     }
     
-    this->updateModelPipeline();
+    this->afterModelAddition(hasBeenPaused, model->getId());
+}
+
+void Engine::addModel(const std::string id, const std::filesystem::path file) {
+    bool hasBeenPaused = this->beforeModelAddition();
     
-    this->renderer->updateRenderer();
+    if (!this->models->addModel(id, Engine::getAppPath(MODELS) / file)) {
+        this->renderer->resume();
+        return;
+    }
     
-    std::chrono::high_resolution_clock::time_point now = std::chrono::high_resolution_clock::now();
-    std::chrono::duration<double, std::milli> time_span = now - start;
-    logInfo("Duration Update Models: " + std::to_string(time_span.count()));
+    this->afterModelAddition(hasBeenPaused, id);
+}
+
+void Engine::addTextModel(std::string id, const std::filesystem::path font, std::string text, uint16_t size) {
+    bool hasBeenPaused = this->beforeModelAddition();
+    
+    if (!this->models->addTextModel(id, Engine::getAppPath(FONTS) / font, text, size)) {
+        this->renderer->resume();
+        return;
+    }
+    
+    this->afterModelAddition(hasBeenPaused, id);
 }
 
 void Engine::init() {
@@ -254,7 +285,11 @@ void Engine::inputLoop() {
                         e.window.event == SDL_WINDOWEVENT_MAXIMIZED ||
                         e.window.event == SDL_WINDOWEVENT_MINIMIZED ||
                         e.window.event == SDL_WINDOWEVENT_RESTORED) {
-                            if (isFullScreen) SDL_SetWindowFullscreen(this->graphics->getSdlWindow(), SDL_TRUE);
+                            if (this->renderer != nullptr && !this->renderer->isPaused()) {
+                                if (isFullScreen && this->renderer->isMaximized()) {
+                                    SDL_SetWindowFullscreen(this->graphics->getSdlWindow(), SDL_WINDOW_FULLSCREEN);
+                                }
+                            }
                     }
                     break;
                 case SDL_KEYDOWN:
@@ -286,19 +321,21 @@ void Engine::inputLoop() {
                             this->setShowBoundingBoxes(!this->showBoundingBoxes);
                             break;
                         case SDL_SCANCODE_F12:
-                            isFullScreen = !isFullScreen;
-                            if (isFullScreen) {
-                                if (SDL_GetWindowFlags(this->graphics->getSdlWindow()) & SDL_WINDOW_MAXIMIZED) {
-                                    SDL_SetWindowFullscreen(this->graphics->getSdlWindow(), SDL_TRUE);
+                            if (this->renderer != nullptr && !this->renderer->isPaused()) {
+                                isFullScreen = !this->renderer->isFullScreen();
+                                if (isFullScreen) {
+                                    if (this->renderer->isMaximized()) {
+                                        SDL_SetWindowFullscreen(this->graphics->getSdlWindow(), SDL_WINDOW_FULLSCREEN);
+                                    } else {
+                                        needsRestoreAfterFullScreen = true;
+                                        SDL_MaximizeWindow(this->graphics->getSdlWindow());
+                                    }
                                 } else {
-                                    needsRestoreAfterFullScreen = true;
-                                    SDL_MaximizeWindow(this->graphics->getSdlWindow());
-                                }
-                            } else {
-                                SDL_SetWindowFullscreen(this->graphics->getSdlWindow(), SDL_FALSE);
-                                if (needsRestoreAfterFullScreen) {
-                                    SDL_RestoreWindow(this->graphics->getSdlWindow());
-                                    needsRestoreAfterFullScreen = false;
+                                    SDL_SetWindowFullscreen(this->graphics->getSdlWindow(), SDL_FALSE);
+                                    if (needsRestoreAfterFullScreen) {
+                                        SDL_RestoreWindow(this->graphics->getSdlWindow());
+                                        needsRestoreAfterFullScreen = false;
+                                    }
                                 }
                             }
                             break;

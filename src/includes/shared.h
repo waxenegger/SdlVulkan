@@ -45,9 +45,10 @@
 int start(int argc, char* argv []);
 
 static constexpr bool USE_THREADS = true;
-static constexpr bool USE_THREADED_INPUT = true;
-static constexpr bool USE_SSBO_MEMORY = false;
+static constexpr bool USE_THREADED_COMMAND_BUFFERS = USE_THREADS && true;
+static constexpr bool USE_THREADED_INPUT = USE_THREADS && true;
 
+static constexpr uint16_t MAX_TEXTURES = 250;
 static constexpr uint32_t MAX_BUFFERING = 3;
 static constexpr uint32_t MIPMAP_LEVELS = 8;
 static constexpr uint64_t IMAGE_ACQUIRE_TIMEOUT = 5 * 1000;

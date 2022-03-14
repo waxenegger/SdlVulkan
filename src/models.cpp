@@ -784,59 +784,84 @@ bool Models::addModel(const std::string id, const  std::filesystem::path file)
     return true;
 }
 
-void Models::addTextModel(std::string id, const std::filesystem::path font, std::string text, uint16_t size) {
-    TTF_Font * f = TTF_OpenFont(font.string().c_str(), size);
+bool Models::addModel(Model * model)
+{
+    const Model * existingModel = this->findModel(model->getId());
+    if (existingModel != nullptr)  {
+        logError("Model cannot be added. Same id exists already!");
+        return false;
+    }
+ 
+    this->models.push_back(std::unique_ptr<Model>(model));
+    
+    return true;
+}
 
-    if (f != nullptr) {
-        TTF_SetFontStyle(f, TTF_STYLE_NORMAL);
-        const SDL_Color bg = { 255, 255, 255 };
-        const SDL_Color fg = { 0, 0, 0 };
 
-        SDL_Surface * tmp = TTF_RenderUTF8_Shaded(f, text.c_str(), fg, bg);
-        
-        bool succeeded = false;
-        if (tmp != nullptr) {
+bool Models::addTextModel(std::string id, const std::filesystem::path font, std::string text, uint16_t size) {
+    const Model * existingModel = this->findModel(id);
+    if (existingModel != nullptr)  {
+        logError("Text Model cannot be added. Same id exists already!");
+        return false;
+    }
 
-            SDL_PixelFormat *format = SDL_AllocFormat(SDL_PIXELFORMAT_RGBA8888);
-            std::unique_ptr<Texture> tex = std::make_unique<Texture>(SDL_ConvertSurface(tmp, format, 0));
-
-            SDL_FreeFormat(format);
-            SDL_FreeSurface(tmp);
-            
-            if (tex != nullptr && tex->isValid()) {
-                VkExtent2D extent = {
-                  tex->getWidth(), tex->getHeight()  
-                };
-                std::unique_ptr<Model> m(Models::createPlaneModel(id, extent));
-                if (m != nullptr && m->hasBeenLoaded()) {
-                    
-                    tex->setId(static_cast<int>(this->textures.empty() ? 0 : this->textures.size()));
-                    tex->setPath(m->getId());
-
-                    TextureInformation texInfo;
-                    texInfo.diffuseTexture = tex->getId();
-                    texInfo.diffuseTextureLocation = m->getId();
-                    m->getMeshes()[0].setTextureInformation(texInfo);
-                    
-                    m->getMeshes()[0].calculateBoundingBox();
-                    
-                    this->textures[m->getId()] = std::move(tex);                    
-                    m->calculateBoundingBox();
-                    m->updateOffsets(this->modelIndex, this->vertexOffset, this->indexOffset);
-                    
-                    this->models.push_back(std::move(m));
-                    
-                    succeeded = true;
-                }
-            }
-        }
-
-        TTF_CloseFont(f);
-        
-        if (succeeded) return;
+    Model * m = this->createTextModel(id, font, text, size);
+    if (m == nullptr) {
+        logError("Failed to create Text Model");
+        return false;
     }
     
-    logError("Failed to add Text Model");
+    this->models.push_back(std::unique_ptr<Model>(m));
+
+    return true;
+}
+
+Model * Models::createTextModel(std::string id, const std::filesystem::path font, std::string text, uint16_t size) {
+    TTF_Font * f = TTF_OpenFont(font.string().c_str(), size);
+
+    if (f == nullptr) return nullptr;
+
+    TTF_SetFontStyle(f, TTF_STYLE_NORMAL);
+    const SDL_Color bg = { 255, 255, 255 };
+    const SDL_Color fg = { 0, 0, 0 };
+
+    SDL_Surface * tmp = TTF_RenderUTF8_Shaded(f, text.c_str(), fg, bg);
+    if (tmp == nullptr) {
+        TTF_CloseFont(f);
+        return nullptr;
+    }
+    
+    SDL_PixelFormat *format = SDL_AllocFormat(SDL_PIXELFORMAT_RGBA8888);
+    std::unique_ptr<Texture> tex = std::make_unique<Texture>(SDL_ConvertSurface(tmp, format, 0));
+
+    SDL_FreeFormat(format);
+    SDL_FreeSurface(tmp);
+    TTF_CloseFont(f);
+
+    if (tex == nullptr || !tex->isValid()) return nullptr;
+    
+    VkExtent2D extent = {
+        tex->getWidth(), tex->getHeight()  
+    };
+        
+    Model * m = Models::createPlaneModel(id, extent);
+    if (m != nullptr && m->hasBeenLoaded()) {
+        tex->setId(static_cast<int>(this->textures.empty() ? 0 : this->textures.size()));
+        tex->setPath(m->getId());
+
+        TextureInformation texInfo;
+        texInfo.diffuseTexture = tex->getId();
+        texInfo.diffuseTextureLocation = m->getId();
+        m->getMeshes()[0].setTextureInformation(texInfo);
+        
+        m->getMeshes()[0].calculateBoundingBox();
+        
+        this->textures[m->getId()] = std::move(tex);                    
+        m->calculateBoundingBox();
+        m->updateOffsets(this->modelIndex, this->vertexOffset, this->indexOffset);
+    }
+    
+    return m;
 }
 
 Model * Models::createPlaneModel(std::string id, VkExtent2D extent) {

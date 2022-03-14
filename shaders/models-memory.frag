@@ -22,7 +22,7 @@ struct ComponentProperties {
 
 layout(location = 5) in flat ComponentProperties compProperties;
 
-layout(binding = 2) uniform sampler2D samplers[25];
+layout(binding = 2) uniform sampler2D samplers[50];
 
 layout(location = 0) out vec4 outColor;
 
