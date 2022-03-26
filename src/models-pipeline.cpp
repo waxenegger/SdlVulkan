@@ -20,10 +20,13 @@ bool ModelsPipeline::createLocalBuffersFromModel() {
     }
 
     void * data = nullptr;
-    vkMapMemory(this->renderer->getLogicalDevice(), this->vertexBufferMemory, 0, bufferSizes.vertexBufferSize, 0, &data);
-    Helper::copyModelsContentIntoBuffer(data, VERTEX, bufferSizes.vertexBufferSize);
-    vkUnmapMemory(this->renderer->getLogicalDevice(), this->vertexBufferMemory);
 
+    if (bufferSizes.vertexBufferSize > 0) {
+        vkMapMemory(this->renderer->getLogicalDevice(), this->vertexBufferMemory, 0, bufferSizes.vertexBufferSize, 0, &data);
+        Helper::copyModelsContentIntoBuffer(data, VERTEX, bufferSizes.vertexBufferSize);
+        vkUnmapMemory(this->renderer->getLogicalDevice(), this->vertexBufferMemory);
+    }
+    
     // indices
     if (bufferSizes.reservedIndexBufferSize == 0) return true;
 
@@ -36,6 +39,8 @@ bool ModelsPipeline::createLocalBuffersFromModel() {
         logError("Failed to get Create Models Pipeline Index Buffer");
         return false;
     }
+
+    if (bufferSizes.indexBufferSize == 0) return true;
 
     data = nullptr;
     vkMapMemory(this->renderer->getLogicalDevice(), this->indexBufferMemory, 0, bufferSizes.indexBufferSize, 0, &data);
@@ -513,7 +518,7 @@ bool ModelsPipeline::createDescriptorPool() {
     poolSizes[1].type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
     poolSizes[1].descriptorCount = this->renderer->getImageCount();
     poolSizes[2].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-    poolSizes[2].descriptorCount = static_cast<uint32_t>(this->renderer->getImageCount() *  Models::INSTANCE()->getTextures().size());
+    poolSizes[2].descriptorCount = static_cast<uint32_t>(this->renderer->getImageCount() * MAX_TEXTURES);
 
     VkDescriptorPoolCreateInfo poolInfo{};
     poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
@@ -558,7 +563,7 @@ bool ModelsPipeline::createDescriptorSetLayout() {
 
     VkDescriptorSetLayoutBinding samplersLayoutBinding{};
     samplersLayoutBinding.binding = 2;
-    samplersLayoutBinding.descriptorCount = Models::INSTANCE()->getTextures().size() > 0 ? MAX_TEXTURES : 0;
+    samplersLayoutBinding.descriptorCount = MAX_TEXTURES;
     samplersLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
     samplersLayoutBinding.pImmutableSamplers = nullptr;
     samplersLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;

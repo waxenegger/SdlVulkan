@@ -167,17 +167,15 @@ bool ScreenMidPointPipeline::createDescriptorPool() {
         this->descriptorPool = nullptr;
     }
 
-    std::vector<VkDescriptorPoolSize> poolSizes(2);
+    VkDescriptorPoolSize poolSize;
 
-    poolSizes[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-    poolSizes[0].descriptorCount = this->renderer->getImageCount();
-    poolSizes[1].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-    poolSizes[1].descriptorCount = this->renderer->getImageCount();
+    poolSize.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    poolSize.descriptorCount = this->renderer->getImageCount();
 
     VkDescriptorPoolCreateInfo poolInfo{};
     poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-    poolInfo.poolSizeCount = static_cast<uint32_t>(poolSizes.size());
-    poolInfo.pPoolSizes = poolSizes.data();
+    poolInfo.poolSizeCount = 1;
+    poolInfo.pPoolSizes = &poolSize;
     poolInfo.maxSets = this->renderer->getImageCount();
 
     VkResult ret = vkCreateDescriptorPool(this->renderer->getLogicalDevice(), &poolInfo, nullptr, &this->descriptorPool);
@@ -206,14 +204,6 @@ bool ScreenMidPointPipeline::createDescriptorSetLayout() {
     modelUniformLayoutBinding.pImmutableSamplers = nullptr;
     modelUniformLayoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
     layoutBindings.push_back(modelUniformLayoutBinding);
-
-    VkDescriptorSetLayoutBinding samplersLayoutBinding{};
-    samplersLayoutBinding.binding = 1;
-    samplersLayoutBinding.descriptorCount = 1;
-    samplersLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-    samplersLayoutBinding.pImmutableSamplers = nullptr;
-    samplersLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
-    layoutBindings.push_back(samplersLayoutBinding);
 
     VkDescriptorSetLayoutCreateInfo layoutInfo{};
     layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
