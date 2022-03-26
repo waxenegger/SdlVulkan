@@ -231,6 +231,27 @@ class SkyboxPipeline : public GraphicsPipeline {
         ~SkyboxPipeline();
 };
 
+class ScreenMidPointPipeline : public GraphicsPipeline {
+    private:
+        bool createScreenMidPoint();
+        
+        bool createDescriptorSetLayout();
+        bool createDescriptorPool();
+        bool createDescriptorSets();
+        
+    public:
+        ScreenMidPointPipeline(const Renderer * renderer);
+        ScreenMidPointPipeline & operator=(ScreenMidPointPipeline) = delete;
+
+        bool createGraphicsPipeline(const VkPushConstantRange & pushConstantRange);
+        bool updateGraphicsPipeline();
+        
+        void draw(const VkCommandBuffer & commandBuffer, const uint16_t commandBufferIndex);
+        void update();
+        
+        ~ScreenMidPointPipeline();
+};
+
 class ImGuiPipeline : public GraphicsPipeline {
     private:
         bool createDescriptorPool();
@@ -389,11 +410,13 @@ class Engine final {
         Renderer * renderer = nullptr;
         
         bool showSkybox = false;
+        bool showScreenMidPoint = false;
         bool showComponents = true;
         bool showGuiOverlay = false;
         bool showBoundingBoxes = false;
         
         int skyboxPipelineIndex = -1;
+        int screenMidPointPipelineIndex = -1;
         int modelPipelineIndex = -1;
         int guiPipelineIndex = -1;
         
@@ -403,6 +426,7 @@ class Engine final {
         void createModelPipeline();
         void updateModelPipeline();
         void createSkyboxPipeline();
+        void createScreenMidPointPipeline();
         void createImGuiPipeline();
         
         void inputLoop();
@@ -435,6 +459,7 @@ class Engine final {
         void setShowComponents(const bool flag);
         void setShowGuiOverlay(const bool flag);
         void setShowBoundingBoxes(const bool flag);
+        void setShowScreenMidPoint(const bool flag);
         
         float getDeltaFactor();
 };

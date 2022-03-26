@@ -51,6 +51,7 @@ set(projectSources
     src/pipeline.cpp
     src/models-pipeline.cpp
     src/skybox-pipeline.cpp
+    src/midpoint-pipeline.cpp
     src/imgui-pipeline.cpp
     src/shader.cpp
     src/models.cpp

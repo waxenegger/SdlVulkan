@@ -49,6 +49,7 @@ int start(int argc, char* argv []) {
     
     // show everything (pretty much)
     engine->setShowSkybox(true);
+    engine->setShowScreenMidPoint(true);
     engine->setShowGuiOverlay(true);
     engine->setShowBoundingBoxes(false);
 

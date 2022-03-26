@@ -145,7 +145,11 @@ void Engine::init() {
     if (this->showSkybox) {
         this->createSkyboxPipeline();
     }
-    
+
+    if (this->showScreenMidPoint) {
+        this->createScreenMidPointPipeline();
+    }
+
     if (this->showComponents) {
         this->createModelPipeline();
     }
@@ -228,6 +232,26 @@ void Engine::createSkyboxPipeline() {
         this->skyboxPipelineIndex = this->renderer->addPipeline(pipeline.release());
     
         logInfo("Added Skybox Pipeline");
+    }
+}
+
+void Engine::createScreenMidPointPipeline() {
+    if (this->renderer == nullptr || !renderer->isReady()) return;    
+
+    logInfo("Creating Screen Midpoint Pipeline...");
+
+    std::unique_ptr<GraphicsPipeline> pipeline = std::make_unique<ScreenMidPointPipeline>(this->renderer);
+
+    pipeline->addShader((Engine::getAppPath(SHADERS) / "midpoint-vert.spv").string(), VK_SHADER_STAGE_VERTEX_BIT);
+    pipeline->addShader((Engine::getAppPath(SHADERS) / "midpoint-frag.spv").string(), VK_SHADER_STAGE_FRAGMENT_BIT);
+
+    VkPushConstantRange pushConstantRange{};
+    
+    if (pipeline->createGraphicsPipeline(pushConstantRange)) {
+        
+        this->screenMidPointPipelineIndex = this->renderer->addPipeline(pipeline.release());
+    
+        logInfo("Added Screen Midpoint Pipeline");
     }
 }
 
@@ -402,6 +426,10 @@ void Engine::startInputCapture() {
 
 void Engine::setShowSkybox(const bool flag) {
     this->showSkybox = flag;
+}
+
+void Engine::setShowScreenMidPoint(const bool flag) {
+    this->showScreenMidPoint = flag;
 }
 
 void Engine::setShowComponents(const bool flag) {
