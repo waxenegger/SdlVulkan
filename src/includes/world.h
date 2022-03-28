@@ -53,6 +53,7 @@ class Camera
         void setTranslation(glm::vec3 translation);
         void translate(glm::vec3 delta);
         void update(const float delta, const std::function<bool(BoundingBox)> collisionCheck = nullptr);
+        glm::mat4 getModelMatrix();
         glm::mat4 getViewMatrix();
         glm::mat4 getProjectionMatrix();
         static Camera * INSTANCE(glm::vec3 pos);

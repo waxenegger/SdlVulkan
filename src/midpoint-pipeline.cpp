@@ -12,28 +12,13 @@ bool ScreenMidPointPipeline::createGraphicsPipeline(const VkPushConstantRange & 
         return false;        
     }
 
-    if (!this->createDescriptorPool()) {
-        logError("Failed to create Screen Midpoint Pipeline Descriptor Pool");
-        return false;
-    }
-
-    if (!this->createDescriptorSetLayout()) {
-        logError("Failed to create Screen Midpoint Pipeline Descriptor Set Layout");
-        return false;
-    }
-
-    if (!this->createDescriptorSets()) {
-        logError("Failed to create Screen Midpoint Pipeline Descriptor Sets");
-        return false;
-    }
-
     if (!this->updateGraphicsPipeline()) return false;
     
     return true;
 }
 
 bool ScreenMidPointPipeline::updateGraphicsPipeline() {
-    if (this->renderer == nullptr || !this->renderer->isReady() || this->descriptorSetLayout == nullptr) return false;
+    if (this->renderer == nullptr || !this->renderer->isReady()) return false;
         
     this->destroyPipelineObjects();
     
@@ -104,8 +89,8 @@ bool ScreenMidPointPipeline::updateGraphicsPipeline() {
 
     VkPipelineDepthStencilStateCreateInfo depthStencil{};
     depthStencil.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
-    depthStencil.depthTestEnable = VK_FALSE;
-    depthStencil.depthWriteEnable = VK_FALSE;
+    depthStencil.depthTestEnable = VK_TRUE;
+    depthStencil.depthWriteEnable = VK_TRUE;
     depthStencil.depthCompareOp = VK_COMPARE_OP_LESS;
     depthStencil.depthBoundsTestEnable = VK_FALSE;
     depthStencil.stencilTestEnable = VK_FALSE;
@@ -124,7 +109,7 @@ bool ScreenMidPointPipeline::updateGraphicsPipeline() {
     VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
     pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
     pipelineLayoutInfo.pSetLayouts = &this->descriptorSetLayout;
-    pipelineLayoutInfo.setLayoutCount = 1;
+    pipelineLayoutInfo.setLayoutCount = 0;
 
     VkResult ret = vkCreatePipelineLayout(this->renderer->getLogicalDevice(), &pipelineLayoutInfo, nullptr, &this->layout);
     if (ret != VK_SUCCESS) {
@@ -160,111 +145,21 @@ bool ScreenMidPointPipeline::updateGraphicsPipeline() {
 void ScreenMidPointPipeline::update() {}
 
 bool ScreenMidPointPipeline::createDescriptorPool() {
-    if (this->renderer == nullptr || !this->renderer->isReady()) return false;
-
-    if (this->descriptorPool != nullptr) {
-        vkDestroyDescriptorPool(this->renderer->getLogicalDevice(), this->descriptorPool, nullptr);
-        this->descriptorPool = nullptr;
-    }
-
-    VkDescriptorPoolSize poolSize;
-
-    poolSize.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-    poolSize.descriptorCount = this->renderer->getImageCount();
-
-    VkDescriptorPoolCreateInfo poolInfo{};
-    poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-    poolInfo.poolSizeCount = 1;
-    poolInfo.pPoolSizes = &poolSize;
-    poolInfo.maxSets = this->renderer->getImageCount();
-
-    VkResult ret = vkCreateDescriptorPool(this->renderer->getLogicalDevice(), &poolInfo, nullptr, &this->descriptorPool);
-    if (ret != VK_SUCCESS) {
-       logError("Failed to Create Screen Midpoint Pipeline Descriptor Pool!");
-       return false;
-    }
-    
     return true;
 }
 
 bool ScreenMidPointPipeline::createDescriptorSetLayout() {
-    if (this->renderer == nullptr || !this->renderer->isReady()) return false;
-    
-    if (this->descriptorSetLayout != nullptr) {
-        vkDestroyDescriptorSetLayout(this->renderer->getLogicalDevice(), this->descriptorSetLayout, nullptr);
-        this->descriptorSetLayout = nullptr;
-    }
-    
-    std::vector<VkDescriptorSetLayoutBinding> layoutBindings;
-
-    VkDescriptorSetLayoutBinding modelUniformLayoutBinding{};
-    modelUniformLayoutBinding.binding = 0;
-    modelUniformLayoutBinding.descriptorCount = 1;
-    modelUniformLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-    modelUniformLayoutBinding.pImmutableSamplers = nullptr;
-    modelUniformLayoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
-    layoutBindings.push_back(modelUniformLayoutBinding);
-
-    VkDescriptorSetLayoutCreateInfo layoutInfo{};
-    layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-    layoutInfo.bindingCount = layoutBindings.size();
-    layoutInfo.pBindings = layoutBindings.data();
-
-    VkResult ret = vkCreateDescriptorSetLayout(this->renderer->getLogicalDevice(), &layoutInfo, nullptr, &this->descriptorSetLayout);
-    if (ret != VK_SUCCESS) {
-        logError("Failed to Create Screen Midpoint Pipeline Descriptor Set Layout!");
-        return false;
-    }
-    
     return true;
 }
 
 bool ScreenMidPointPipeline::createDescriptorSets() {
-    if (this->renderer == nullptr || !this->renderer->isReady()) return false;
-    
-    std::vector<VkDescriptorSetLayout> layouts(this->renderer->getImageCount(), this->descriptorSetLayout);
-    
-    VkDescriptorSetAllocateInfo allocInfo{};
-    allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-    allocInfo.descriptorPool = this->descriptorPool;
-    allocInfo.descriptorSetCount = this->renderer->getImageCount();
-    allocInfo.pSetLayouts = layouts.data();
-
-    this->descriptorSets.resize(this->renderer->getImageCount());
-    VkResult ret = vkAllocateDescriptorSets(this->renderer->getLogicalDevice(), &allocInfo, this->descriptorSets.data());
-    if (ret != VK_SUCCESS) {
-        logError("Failed to Allocate Screen Midpoint Pipeline Descriptor Sets!");
-        return false;
-    }
-
-    for (size_t i = 0; i < this->descriptorSets.size(); i++) {
-        VkDescriptorBufferInfo uniformBufferInfo{};
-        uniformBufferInfo.buffer = this->renderer->getUniformBuffer(i);
-        uniformBufferInfo.offset = 0;
-        uniformBufferInfo.range = sizeof(struct ModelUniforms);
-
-        std::vector<VkWriteDescriptorSet> descriptorWrites;
-
-        VkWriteDescriptorSet uniformDescriptorSet = {};
-        uniformDescriptorSet.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-        uniformDescriptorSet.dstSet = this->descriptorSets[i];
-        uniformDescriptorSet.dstBinding = 0;
-        uniformDescriptorSet.dstArrayElement = 0;
-        uniformDescriptorSet.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-        uniformDescriptorSet.descriptorCount = 1;
-        uniformDescriptorSet.pBufferInfo = &uniformBufferInfo;
-        descriptorWrites.push_back(uniformDescriptorSet);
-        
-        vkUpdateDescriptorSets(this->renderer->getLogicalDevice(), static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0, nullptr);
-    }
-    
     return true;
 }
 
 bool ScreenMidPointPipeline::createScreenMidPoint() {    
     if (this->renderer == nullptr || !this->renderer->isReady()) return false;
     
-    VkDeviceSize bufferSize = MIDPOINT_VERTICES.size() * sizeof(class SimpleVertex);
+    VkDeviceSize bufferSize = CROSSHAIR.size() * sizeof(class SimpleVertex);
     
     VkBuffer stagingBuffer;
     VkDeviceMemory stagingBufferMemory;
@@ -276,7 +171,7 @@ bool ScreenMidPointPipeline::createScreenMidPoint() {
 
     void* data = nullptr;
     vkMapMemory(this->renderer->getLogicalDevice(), stagingBufferMemory, 0, bufferSize, 0, &data);
-    memcpy(data, MIDPOINT_VERTICES.data(), bufferSize);
+    memcpy(data, CROSSHAIR.data(), bufferSize);
     vkUnmapMemory(this->renderer->getLogicalDevice(), stagingBufferMemory);
 
     if (!Helper::createBuffer(this->renderer->getPhysicalDevice(), this->renderer->getLogicalDevice(), bufferSize,
@@ -295,15 +190,13 @@ bool ScreenMidPointPipeline::createScreenMidPoint() {
 
 void ScreenMidPointPipeline::draw(const VkCommandBuffer & commandBuffer, const uint16_t commandBufferIndex) {
     if (this->isReady() && this->isEnabled() && this->vertexBuffer != nullptr) {
-        vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, this->layout, 0, 1, &this->descriptorSets[commandBufferIndex], 0, nullptr);
-
         vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, this->pipeline);
 
         VkDeviceSize offsets[] = {0};
         VkBuffer vertexBuffers[] = {this->vertexBuffer};
         vkCmdBindVertexBuffers(commandBuffer, 0, 1, vertexBuffers, offsets);
-        
-        vkCmdDraw(commandBuffer, MIDPOINT_VERTICES.size(), 1, 0, 0);
+
+        vkCmdDraw(commandBuffer, CROSSHAIR.size(), 1, 0, 0);
     }
 }
 

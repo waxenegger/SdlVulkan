@@ -28,6 +28,18 @@ glm::vec3 Camera::getPosition() {
     return this->position;
 }
 
+glm::mat4 Camera::getModelMatrix() {
+    glm::mat4 modelMatrix = glm::mat4(1.0f);
+
+    modelMatrix = glm::translate(modelMatrix, this->position);
+    
+    if (this->rotation.x != 0.0f) modelMatrix = glm::rotate(modelMatrix, this->rotation.x, glm::vec3(1, 0, 0));
+    if (this->rotation.y != 0.0f) modelMatrix = glm::rotate(modelMatrix, this->rotation.y, glm::vec3(0, 1, 0));
+    if (this->rotation.z != 0.0f) modelMatrix = glm::rotate(modelMatrix, this->rotation.z, glm::vec3(0, 0, 1));
+
+    return modelMatrix;
+}
+
 bool Camera::moving()
 {
     return this->keys.left || this->keys.right || this->keys.up || this->keys.down;

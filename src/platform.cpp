@@ -5,14 +5,11 @@ std::filesystem::path Engine::base  = "";
 int start(int argc, char* argv []) {
     const std::unique_ptr<Engine> engine = std::make_unique<Engine>("Sdl Vulkan App", argc > 1 ? argv[1] : "");
 
-    
     // adding models
     engine->addModel("cyborg", "cyborg.obj");
     engine->addModel("contraption", "contraption.obj");
     engine->addTextModel("text", "FreeMono.ttf", "Hello World", 50);
     engine->addModel("nanosuit", "nanosuit.obj");
-    
-    
     
     // adding model instances
     Component * rock = Components::INSTANCE()->addComponentFromModel("rock", "rock");

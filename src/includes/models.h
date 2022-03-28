@@ -275,9 +275,11 @@ class Models final {
 
 };
 
-const std::vector<SimpleVertex> MIDPOINT_VERTICES = {
-    SimpleVertex(glm::vec3(0.5f,  0.5f, -1.0f)),
-    SimpleVertex(glm::vec3(0.5f,  0.5f, 1.0f))
+const std::vector<SimpleVertex> CROSSHAIR = {
+    SimpleVertex(glm::vec3(-0.1f, 0.0f, 0.0f)),
+    SimpleVertex(glm::vec3(0.1f, 0.0f, 0.0f)),
+    SimpleVertex(glm::vec3(0.0f,  -0.1f, 0.0f)),
+    SimpleVertex(glm::vec3(0.0f,  0.1f, 0.0f))
 };
 
 const std::vector<SimpleVertex> SKYBOX_VERTICES = {
