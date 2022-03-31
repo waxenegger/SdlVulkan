@@ -121,6 +121,7 @@ class Components final {
         void update(const float delta);
         
         bool checkCollision(const BoundingBox bbox1);
+        std::vector<std::tuple<std::string, float>> checkRayIntersection(const glm::vec3 rayOrigin, const glm::vec3 rayDirection);
         
         ~Components();
 };

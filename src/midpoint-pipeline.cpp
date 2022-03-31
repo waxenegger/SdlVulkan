@@ -142,7 +142,8 @@ bool ScreenMidPointPipeline::updateGraphicsPipeline() {
     return true;
 }
 
-void ScreenMidPointPipeline::update() {}
+void ScreenMidPointPipeline::update() {    
+}
 
 bool ScreenMidPointPipeline::createDescriptorPool() {
     return true;

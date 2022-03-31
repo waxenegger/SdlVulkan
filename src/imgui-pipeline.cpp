@@ -114,9 +114,34 @@ void ImGuiPipeline::draw(const VkCommandBuffer & commandBuffer, const uint16_t c
     ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0);
 
     ImGui::SetNextWindowPos(ImVec2(10, 10));
-    ImGui::SetNextWindowSize(ImVec2(100, 10), ImGuiCond_Always);
+    ImGui::SetNextWindowSize(ImVec2(150, 500), ImGuiCond_Always);
     
     ImGui::Begin(std::string("FPS:\t" + std::to_string(this->renderer->getFrameRate())).c_str() , nullptr, ImGuiWindowFlags_NoBackground | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoCollapse);
+    
+    
+    
+    
+    glm::vec3 pos = Camera::INSTANCE()->getPosition();
+    pos.x *= -1;
+    pos.z *= -1;
+    
+    glm::vec3 front = Camera::INSTANCE()->getCameraFront();
+    front.x *= -1;
+    front.z *= -1;
+    
+    auto hits = Components::INSTANCE()->checkRayIntersection(pos, front);
+    if (!hits.empty()) {
+        ImGui::PushID(0);
+        ImGui::BeginListBox("", ImVec2(150, 50));
+        for (auto h : hits) {
+            ImGui::Selectable(std::get<0>(h).c_str());
+        }
+        ImGui::EndListBox();
+        ImGui::PopID();
+    }
+
+    
+    
 
     ImGui::End();
 

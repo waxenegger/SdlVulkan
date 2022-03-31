@@ -44,7 +44,7 @@
 
 int start(int argc, char* argv []);
 
-static constexpr bool USE_THREADS = true;
+static constexpr bool USE_THREADS = false;
 static constexpr bool USE_THREADED_COMMAND_BUFFERS = USE_THREADS && true;
 static constexpr bool USE_THREADED_INPUT = USE_THREADS && true;
 

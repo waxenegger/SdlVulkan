@@ -8,6 +8,7 @@ int start(int argc, char* argv []) {
     // adding models
     engine->addModel("cyborg", "cyborg.obj");
     engine->addModel("contraption", "contraption.obj");
+    engine->addModel("rock", "rock.obj");
     engine->addTextModel("text", "FreeMono.ttf", "Hello World", 50);
     engine->addModel("nanosuit", "nanosuit.obj");
     
@@ -34,6 +35,7 @@ int start(int argc, char* argv []) {
     Component * contraption = Components::INSTANCE()->addComponentFromModel("contraption1", "contraption");
     if (contraption != nullptr) {
         contraption->setPosition(10.0f, 30.0f,20.0f);
+        contraption->rotate(10.0f, 30.0f,20.0f);
     }
 
     Component * cyborg = Components::INSTANCE()->addComponentFromModel("cyborg", "cyborg");
