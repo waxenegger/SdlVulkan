@@ -121,15 +121,7 @@ void ImGuiPipeline::draw(const VkCommandBuffer & commandBuffer, const uint16_t c
     
     
     
-    glm::vec3 pos = Camera::INSTANCE()->getPosition();
-    pos.x *= -1;
-    pos.z *= -1;
-    
-    glm::vec3 front = Camera::INSTANCE()->getCameraFront();
-    front.x *= -1;
-    front.z *= -1;
-    
-    auto hits = Components::INSTANCE()->checkRayIntersection(pos, front);
+    auto hits = Helper::getCameraCrossHairIntersection();
     if (!hits.empty()) {
         ImGui::PushID(0);
         ImGui::BeginListBox("", ImVec2(150, 50));

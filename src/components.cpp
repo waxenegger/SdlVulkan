@@ -287,44 +287,21 @@ std::vector<std::tuple<std::string, float>> Components::checkRayIntersection(con
         const BoundingBox compModelBbox = 
             Helper::getBBoxAfterModelMatrixMultiply(c->getModel()->getBoundingBox(), c->getModelMatrix());
 
-        float t[8];
-        t[0] = (compModelBbox.min.x - rayOrigin.x) / rayDirection.x;
-        t[1] = (compModelBbox.max.x - rayOrigin.x) / rayDirection.x;
-        t[2] = (compModelBbox.min.y - rayOrigin.y) / rayDirection.y;
-        t[3] = (compModelBbox.max.y - rayOrigin.y) / rayDirection.y;
-        t[4] = (compModelBbox.min.z - rayOrigin.z) / rayDirection.z;
-        t[5] = (compModelBbox.max.z - rayOrigin.z) / rayDirection.z;
-        t[6] = glm::max(glm::max(glm::min(t[0], t[1]), glm::min(t[2], t[3])), glm::min(t[4], t[5]));
-        t[7] = glm::min(glm::min(glm::max(t[0], t[1]), glm::max(t[2], t[3])), glm::max(t[4], t[5]));
-        
-        if (t[7] > 0) {
-            glm::vec3 hit(rayOrigin + rayDirection * glm::max(t[6], t[7]));
-            BoundingBox bbox = {
-                .min = hit,
-                .max = hit
-            };
+            
+        float maxDistance = Helper::getClosestDistanceToBBox(compModelBbox, rayOrigin, rayDirection);
+        if (maxDistance > 0) {
+            glm::vec3 hit(rayOrigin + rayDirection * maxDistance);
+            BoundingBox bbox = { .min = hit, .max = hit };
             
             if (Helper::checkBBoxIntersection(bbox, compModelBbox)) {
                 for (auto & m : c->getModel()->getMeshes()) {
                     const BoundingBox compMeshBbox = 
                         Helper::getBBoxAfterModelMatrixMultiply(m.getBoundingBox(), c->getModelMatrix());
-                        
-                    t[0] = (compMeshBbox.min.x - rayOrigin.x) / rayDirection.x;
-                    t[1] = (compMeshBbox.max.x - rayOrigin.x) / rayDirection.x;
-                    t[2] = (compMeshBbox.min.y - rayOrigin.y) / rayDirection.y;
-                    t[3] = (compMeshBbox.max.y - rayOrigin.y) / rayDirection.y;
-                    t[4] = (compMeshBbox.min.z - rayOrigin.z) / rayDirection.z;
-                    t[5] = (compMeshBbox.max.z - rayOrigin.z) / rayDirection.z;
-                    t[6] = glm::max(glm::max(glm::min(t[0], t[1]), glm::min(t[2], t[3])), glm::min(t[4], t[5]));
-                    t[7] = glm::min(glm::min(glm::max(t[0], t[1]), glm::max(t[2], t[3])), glm::max(t[4], t[5]));
-
-                    if (t[7] > 0) {
-                        float maxDistance = glm::max(t[6], t[7]);
+                    
+                    maxDistance = Helper::getClosestDistanceToBBox(compMeshBbox, rayOrigin, rayDirection);
+                    if (maxDistance > 0) {
                         hit = glm::vec3(rayOrigin + rayDirection * maxDistance);
-                        bbox = {
-                            .min = hit,
-                            .max = hit
-                        };
+                        bbox = { .min = hit, .max = hit };
                         
                         if (Helper::checkBBoxIntersection(bbox, compMeshBbox)) {
                             hits.push_back(std::make_tuple(c->getId(), maxDistance));

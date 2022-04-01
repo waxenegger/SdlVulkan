@@ -528,5 +528,32 @@ bool  Helper::checkBBoxIntersection(const BoundingBox bbox1, const BoundingBox b
     return (intersectsAlongX && intersectsAlongY && intersectsAlongZ);
 }
 
+float Helper::getClosestDistanceToBBox(const BoundingBox bbox, const glm::vec3 rayOrigin, const glm::vec3 rayDirection) {
+
+    const float t0 = (bbox.min.x - rayOrigin.x) / rayDirection.x;
+    const float t1 = (bbox.max.x - rayOrigin.x) / rayDirection.x;
+    const float t2 = (bbox.min.y - rayOrigin.y) / rayDirection.y;
+    const float t3 = (bbox.max.y - rayOrigin.y) / rayDirection.y;
+    const float t4 = (bbox.min.z - rayOrigin.z) / rayDirection.z;
+    const float t5 = (bbox.max.z - rayOrigin.z) / rayDirection.z;
+
+    const float t6 = glm::max(glm::max(glm::min(t0, t1), glm::min(t2, t3)), glm::min(t4, t5));
+    const float t7 = glm::min(glm::min(glm::max(t0, t1), glm::max(t2, t3)), glm::max(t4, t5));
+
+    return glm::max(t6, t7);
+}
+
+std::vector<std::tuple<std::string, float>> Helper::getCameraCrossHairIntersection() {
+    glm::vec3 pos = Camera::INSTANCE()->getPosition();
+    pos.x *= -1;
+    pos.z *= -1;
+    
+    glm::vec3 front = Camera::INSTANCE()->getCameraFront();
+    front.x *= -1;
+    front.z *= -1;
+    
+    return Components::INSTANCE()->checkRayIntersection(pos, front);
+}
+
 std::uniform_real_distribution<float> Helper::distribution = std::uniform_real_distribution<float>(0.0, 1.0);
 std::default_random_engine Helper::default_random_engine = std::default_random_engine();
