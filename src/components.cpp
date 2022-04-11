@@ -21,6 +21,10 @@ glm::mat4 Component::getModelMatrix() {
     return this->modelMatrix;
 }
 
+float Component::getScalingFactor() {
+    return this->scaleFactor;
+}
+
 void Component::updateModelMatrix() {
     glm::mat4 transformation = glm::mat4(1.0f);
 
@@ -96,6 +100,7 @@ void Component::setRotation(glm::vec3 rotation) {
 void Component::scale(float factor) {
     if (factor <= 0) return;
     this->scaleFactor = factor;
+    this->updateModelMatrix();
 }
 
 std::string Component::getId() {
@@ -284,30 +289,19 @@ std::vector<std::tuple<std::string, float>> Components::checkRayIntersection(con
     std::vector<std::tuple<std::string, float>> hits;
     
     for (auto & c : allComps) { 
-        const BoundingBox compModelBbox = 
-            Helper::getBBoxAfterModelMatrixMultiply(c->getModel()->getBoundingBox(), c->getModelMatrix());
-
+        const BoundingBox compModelBbox = Helper::getScaledBBox(c->getModel()->getBoundingBox(), c->getScalingFactor());
             
-        float maxDistance = Helper::getClosestDistanceToBBox(compModelBbox, rayOrigin, rayDirection);
-        if (maxDistance > 0) {
-            glm::vec3 hit(rayOrigin + rayDirection * maxDistance);
-            BoundingBox bbox = { .min = hit, .max = hit };
-            
-            if (Helper::checkBBoxIntersection(bbox, compModelBbox)) {
-                for (auto & m : c->getModel()->getMeshes()) {
-                    const BoundingBox compMeshBbox = 
-                        Helper::getBBoxAfterModelMatrixMultiply(m.getBoundingBox(), c->getModelMatrix());
-                    
-                    maxDistance = Helper::getClosestDistanceToBBox(compMeshBbox, rayOrigin, rayDirection);
-                    if (maxDistance > 0) {
-                        hit = glm::vec3(rayOrigin + rayDirection * maxDistance);
-                        bbox = { .min = hit, .max = hit };
-                        
-                        if (Helper::checkBBoxIntersection(bbox, compMeshBbox)) {
-                            hits.push_back(std::make_tuple(c->getId(), maxDistance));
-                            break;
-                        }
-                    }
+        float distance = Helper::checkRayIntersection(compModelBbox, rayOrigin, rayDirection, c->getModelMatrix());
+        if (distance > 0) {
+            for (auto & m : c->getModel()->getMeshes()) {
+                if (m.isBoundingBoxMesh()) continue;
+                
+                const BoundingBox compMeshBbox = Helper::getScaledBBox(m.getBoundingBox(), c->getScalingFactor());
+    
+                distance = Helper::checkRayIntersection(compMeshBbox, rayOrigin, rayDirection, c->getModelMatrix());
+                if (distance > 0) {
+                    hits.push_back(std::make_tuple(c->getId(), distance));
+                    break;
                 }
             }
         }

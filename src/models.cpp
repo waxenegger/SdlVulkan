@@ -471,7 +471,58 @@ Model::Model(const std::string id, const  std::filesystem::path file) : Model(id
 void Model::processNode(const aiNode * node, const aiScene *scene) {
     for(unsigned int i=0; i < node->mNumMeshes; i++) {
         aiMesh* mesh = scene->mMeshes[node->mMeshes[i]];
-        this->meshes.push_back(this->processMesh(mesh, scene));
+        
+        Mesh m = this->processMesh(mesh, scene);
+        this->meshes.push_back(m);
+        
+        BoundingBox mBbox = m.getBoundingBox();
+        
+        float padding = 0.0;
+        std::vector<ModelVertex> bboxVertices = {
+            ModelVertex(glm::vec3(mBbox.min.x-padding, mBbox.min.y-padding, mBbox.min.z-padding)),            
+            ModelVertex(glm::vec3(mBbox.min.x-padding, mBbox.max.y+padding, mBbox.min.z-padding)),
+            ModelVertex(glm::vec3(mBbox.max.x+padding, mBbox.max.y+padding, mBbox.min.z-padding)),
+            ModelVertex(glm::vec3(mBbox.max.x+padding, mBbox.min.y-padding, mBbox.min.z-padding)),
+            ModelVertex(glm::vec3(mBbox.min.x-padding, mBbox.min.y-padding, mBbox.max.z+padding)),
+            ModelVertex(glm::vec3(mBbox.min.x-padding, mBbox.max.y+padding, mBbox.max.z+padding)),
+            ModelVertex(glm::vec3(mBbox.max.x+padding, mBbox.max.y+padding, mBbox.max.z+padding)),
+            ModelVertex(glm::vec3(mBbox.max.x+padding, mBbox.min.y-padding, mBbox.max.z+padding))
+        };
+        glm::vec3 edge1 = bboxVertices[3].getPosition() - bboxVertices[1].getPosition();
+        glm::vec3 edge2 = bboxVertices[1].getPosition() - bboxVertices[0].getPosition();
+        glm::vec cross1 = normalize(glm::cross(edge2, edge1));
+        
+        glm::vec3 edge3 = bboxVertices[6].getPosition() - bboxVertices[2].getPosition();
+        glm::vec3 edge4 = bboxVertices[6].getPosition() - bboxVertices[7].getPosition();
+        glm::vec cross2 = normalize(glm::cross(edge4, edge3));
+
+        glm::vec3 edge5 = bboxVertices[5].getPosition() - bboxVertices[1].getPosition();
+        glm::vec cross3 = normalize(glm::cross(edge5, edge1));
+        
+        bboxVertices[0].setNormal((cross1+cross3) / 2.0f);
+        bboxVertices[1].setNormal((cross1+cross3) / 2.0f);
+        bboxVertices[2].setNormal((cross1+cross2) / 2.0f);
+        bboxVertices[3].setNormal((cross1+cross2) / 2.0f);
+        bboxVertices[4].setNormal((-cross1+cross3) / 2.0f);
+        bboxVertices[5].setNormal((-cross1+cross3) / 2.0f);
+        bboxVertices[6].setNormal((-cross1+cross2) / 2.0f);
+        bboxVertices[7].setNormal((-cross1+cross2) / 2.0f);
+        
+        std::vector<uint32_t> bboxIndices = {
+            1, 3, 0, 3, 1, 2,
+            3, 2, 7, 6, 7, 2,
+            1, 0, 4, 4, 5, 1,        
+            4, 0, 7 ,7, 0, 3,
+            6, 1, 5, 6, 2, 1,        
+            5, 4, 7, 6, 5, 7
+        };
+    
+        Mesh meshBbox = Mesh(bboxVertices, bboxIndices);
+        meshBbox.setColor(glm::vec4(1.0f));
+        meshBbox.setOpacity(0.3);
+        meshBbox.markAsBoundingBoxMesh();
+        
+        this->meshes.push_back(meshBbox);        
     }
 
     for(unsigned int i=0; i<node->mNumChildren; i++) {
@@ -577,7 +628,7 @@ Mesh Model::processMesh(const aiMesh *mesh, const aiScene *scene) {
      Mesh m = Mesh(vertices, indices, textures, materials);
      m.setBoundingBox(bbox);
      m.setName(name);
-     
+          
      return m;
 }
 
@@ -657,7 +708,7 @@ void Model::calculateBoundingBox() {
         this->bbox.max.z = std::max(m.getBoundingBox().max.z, this->bbox.max.z);
     }
 
-    float padding = 0.01;
+    float padding = 0.0;
 
     if (this->bbox.min.x == this->bbox.max.x) {
         this->bbox.min.x -= padding;

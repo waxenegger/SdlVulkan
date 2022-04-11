@@ -509,6 +509,13 @@ BoundingBox Helper::getBBoxAfterModelMatrixMultiply(const BoundingBox bbox, cons
     };
 }
 
+BoundingBox Helper::getScaledBBox(const BoundingBox bbox, const float scalingFactor) {
+    return BoundingBox {
+        .min = bbox.min * scalingFactor,
+        .max = bbox.max * scalingFactor
+    };
+}
+
 bool  Helper::checkBBoxIntersection(const BoundingBox bbox1, const BoundingBox bbox2) {
     const bool intersectsAlongX = 
         (bbox1.min.x >= bbox2.min.x && bbox1.min.x <= bbox2.max.x) ||
@@ -528,19 +535,47 @@ bool  Helper::checkBBoxIntersection(const BoundingBox bbox1, const BoundingBox b
     return (intersectsAlongX && intersectsAlongY && intersectsAlongZ);
 }
 
-float Helper::getClosestDistanceToBBox(const BoundingBox bbox, const glm::vec3 rayOrigin, const glm::vec3 rayDirection) {
+float Helper::checkRayIntersection(const BoundingBox bbox, const glm::vec3 rayOrigin, const glm::vec3 rayDirection, const glm::mat4 modelMatrix) {
+    const glm::vec3 xAxis = glm::normalize(glm::vec3(modelMatrix[0]));
+    const glm::vec3 yAxis = glm::normalize(glm::vec3(modelMatrix[1]));
+    const glm::vec3 zAxis = glm::normalize(glm::vec3(modelMatrix[2]));
+    
+    const glm::vec3 projRayDirection(
+        glm::dot(rayDirection, xAxis),
+        glm::dot(rayDirection, yAxis), 
+        glm::dot(rayDirection, zAxis)
+    );
+        
+    const glm::vec3 projRayOrigin = 
+        glm::vec3(
+            glm::dot(glm::vec3(modelMatrix[3]) - rayOrigin, xAxis), 
+            glm::dot(glm::vec3(modelMatrix[3]) - rayOrigin, yAxis),
+            glm::dot(glm::vec3(modelMatrix[3]) - rayOrigin, zAxis)
+        );
 
-    const float t0 = (bbox.min.x - rayOrigin.x) / rayDirection.x;
-    const float t1 = (bbox.max.x - rayOrigin.x) / rayDirection.x;
-    const float t2 = (bbox.min.y - rayOrigin.y) / rayDirection.y;
-    const float t3 = (bbox.max.y - rayOrigin.y) / rayDirection.y;
-    const float t4 = (bbox.min.z - rayOrigin.z) / rayDirection.z;
-    const float t5 = (bbox.max.z - rayOrigin.z) / rayDirection.z;
-
-    const float t6 = glm::max(glm::max(glm::min(t0, t1), glm::min(t2, t3)), glm::min(t4, t5));
-    const float t7 = glm::min(glm::min(glm::max(t0, t1), glm::max(t2, t3)), glm::max(t4, t5));
-
-    return glm::max(t6, t7);
+    float tNear = -INFINITY;
+    float tFar = INFINITY;
+        
+    for (int j=0;j<3;j++) {
+        if (glm::abs(projRayDirection[j]) < 0.000001 && 
+            (-projRayOrigin[j] + bbox.min[j] > 0 || -projRayOrigin[j] + bbox.max[j] < 0)) return -1;
+        
+        float t0 = (bbox.min[j] + projRayOrigin[j]) / projRayDirection[j];
+        float t1 = (bbox.max[j] + projRayOrigin[j]) / projRayDirection[j];
+        
+        if (t0 > t1) {
+            const float tmp = t1;
+            t1 = t0;
+            t0 = tmp;
+        }
+    
+        if (t0 > tNear) tNear = t0;
+        if (t1 < tFar) tFar = t1;
+        
+        if (tNear > tFar || tFar < 0) return -1;
+    }
+    
+    return tNear > 0 ? tNear : tFar;
 }
 
 std::vector<std::tuple<std::string, float>> Helper::getCameraCrossHairIntersection() {

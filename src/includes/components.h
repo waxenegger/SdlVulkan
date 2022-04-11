@@ -80,6 +80,7 @@ class Component final {
         void moveForward(const float delta);
         void scale(float factor);
         glm::mat4 getModelMatrix();
+        float getScalingFactor();
         glm::vec3 getRotation();
         bool isVisible();
         void setVisible(bool visible);

@@ -37,8 +37,9 @@ class Helper final {
         static float getRandomFloatBetween0and1();
         static bool  checkBBoxIntersection(const BoundingBox bbox1, const BoundingBox bbox2);
         static BoundingBox getBBoxAfterModelMatrixMultiply(const BoundingBox bbox, const glm::mat4 modelMatrix);
+        static BoundingBox getScaledBBox(const BoundingBox bbox, const float scalingFactor);
         static BoundingBox getBoundingBox(const glm::vec3 pos, const float buffer = 0.15f);
-        static float getClosestDistanceToBBox(const BoundingBox bbox, const glm::vec3 rayOrigin, const glm::vec3 rayDirection);
+        static float checkRayIntersection(const BoundingBox bbox, const glm::vec3 rayOrigin, const glm::vec3 rayDirection, const glm::mat4 modelMatrix);
         static std::vector<std::tuple<std::string, float>> getCameraCrossHairIntersection();
 };
 

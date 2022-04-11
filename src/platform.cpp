@@ -35,6 +35,7 @@ int start(int argc, char* argv []) {
     Component * contraption = Components::INSTANCE()->addComponentFromModel("contraption1", "contraption");
     if (contraption != nullptr) {
         contraption->setPosition(10.0f, 30.0f,20.0f);
+        contraption->scale(2.0f);
         contraption->rotate(10.0f, 30.0f,20.0f);
     }
 
