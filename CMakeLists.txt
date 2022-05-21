@@ -9,7 +9,7 @@ set(CMAKE_DEBUG_POSTFIX "")
 
 set(THIRD_PARTY_DIR "${PROJECT_SOURCE_DIR}/thirdParty")
 
-set(SDL2_DIR "${THIRD_PARTY_DIR}/SDL2/SDL2-2.0.18")
+set(SDL2_DIR "${THIRD_PARTY_DIR}/SDL2/SDL2-2.0.22")
 add_subdirectory(${SDL2_DIR} EXCLUDE_FROM_ALL)
 find_library(SDL2main SDL2)
 
@@ -23,7 +23,7 @@ set(SDL2_image_DIR "${THIRD_PARTY_DIR}/SDL2/SDL2_image-2.0.5")
 add_subdirectory(${SDL2_image_DIR} EXCLUDE_FROM_ALL)
 find_library(SDL2_IMAGE SDL2_image)
 
-set(Assimp_DIR "${THIRD_PARTY_DIR}/assimp-5.0.1")
+set(Assimp_DIR "${THIRD_PARTY_DIR}/assimp-5.2.3")
 add_subdirectory(${Assimp_DIR} EXCLUDE_FROM_ALL)
 find_library(ASSIMP Assimp)
 
