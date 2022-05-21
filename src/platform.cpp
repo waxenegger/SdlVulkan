@@ -11,6 +11,7 @@ int start(int argc, char* argv []) {
     engine->addModel("rock", "rock.obj");
     engine->addTextModel("text", "FreeMono.ttf", "Hello World", 50);
     engine->addModel("nanosuit", "nanosuit.obj");
+    engine->addModel("unit-cube", "unit-cube.obj");
     
     // adding model instances
     Component * rock = Components::INSTANCE()->addComponentFromModel("rock", "rock");
@@ -43,7 +44,7 @@ int start(int argc, char* argv []) {
     if (cyborg != nullptr) {
         cyborg->setPosition(0.0f,0.0f,10.0f);
         cyborg->scale(2.0f);
-        cyborg->addComponentBehavior(new RandomWalkBehavior(cyborg));
+        cyborg->addComponentBehavior(new RandomWalkBehavior());
     }
     
     

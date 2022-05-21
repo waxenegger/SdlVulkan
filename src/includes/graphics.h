@@ -462,6 +462,7 @@ class Engine final {
         void setShowScreenMidPoint(const bool flag);
         
         float getDeltaFactor();
+        Camera * getCamera();
 };
 
 #endif

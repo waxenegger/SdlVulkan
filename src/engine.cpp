@@ -163,7 +163,7 @@ void Engine::init() {
     VkExtent2D windowSize = this->renderer->getSwapChainExtent();
     this->camera->setAspectRatio(static_cast<float>(windowSize.width) / windowSize.height);
     
-    this->renderer->updateRenderer();
+    //this->renderer->updateRenderer();
 }
 
 float Engine::getDeltaFactor() {
@@ -449,6 +449,10 @@ void Engine::setShowBoundingBoxes(const bool flag) {
     if (modelPipeline != nullptr) {
         modelPipeline->setShowBoundingBoxes(this->showBoundingBoxes);
     }
+}
+
+Camera * Engine::getCamera() {
+    return this->camera;
 }
 
 Engine::~Engine() {    

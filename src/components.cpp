@@ -81,20 +81,25 @@ void Component::rotate(int xAxis, int yAxis, int zAxis) {
 }
 
 void Component::moveForward(const float delta) {
+    glm::vec3 deltaPosition = this->position;
+    deltaPosition = this->getFront() * delta;
+    
+    this->setPosition(this->position.x + deltaPosition.x, this->position.y + deltaPosition.y, this->position.z + deltaPosition.z);
+}
+
+glm::vec3 Component::getFront() {
     glm::vec3 frontOfComponent(
         cos(this->rotation.x) * sin(this->rotation.y),
         sin(this->rotation.x),
         cos(this->rotation.x) * cos(this->rotation.y));
     frontOfComponent = glm::normalize(frontOfComponent);
     
-    glm::vec3 deltaPosition = this->position;
-    deltaPosition = frontOfComponent * delta;
-    
-    this->setPosition(this->position.x + deltaPosition.x, this->position.y + deltaPosition.y, this->position.z + deltaPosition.z);
+    return frontOfComponent;
 }
 
 void Component::setRotation(glm::vec3 rotation) {
     this->rotation = rotation;
+    this->updateModelMatrix();
 }
 
 void Component::scale(float factor) {
@@ -253,7 +258,9 @@ glm::vec3 Component::getRotation() {
 }
 
 void Component::addComponentBehavior(ComponentBehavior * behavior) {
-    this->componentBehavior.push_back(std::unique_ptr<ComponentBehavior>(behavior));
+    std::unique_ptr<ComponentBehavior> behave(behavior);
+    behave->setComponent(this);
+    this->componentBehavior.push_back(std::move(behave));
 }
 
 void Components::update(const float delta) {
@@ -322,14 +329,17 @@ Components::Components() { }
 
 Components * Components::instance = nullptr;
 
-ComponentBehavior::ComponentBehavior(Component* component) : component(component) { }
+ComponentBehavior::ComponentBehavior() { }
 ComponentBehavior::~ComponentBehavior() {}
 
-RandomWalkBehavior::RandomWalkBehavior(Component* component) : ComponentBehavior(component) {
-    
+void ComponentBehavior::setComponent(Component* component) {
+    this->component = component;    
 }
 
+RandomWalkBehavior::RandomWalkBehavior() : ComponentBehavior() {}
+
 void RandomWalkBehavior::update(const float delta) {
+    
     if (this->component == nullptr) return;
 
     const float randFloat = Helper::getRandomFloatBetween0and1();
@@ -343,3 +353,15 @@ void RandomWalkBehavior::update(const float delta) {
 }
 
 RandomWalkBehavior::~RandomWalkBehavior() {}
+
+CustomLambdaBehavior::CustomLambdaBehavior(const std::function<void (Component * component, const float delta)> behavior) {
+    this->behavior = behavior;
+}
+
+void CustomLambdaBehavior::update(const float delta) {
+    if (this->component == nullptr || this->behavior == nullptr) return;
+    
+    this->behavior(this->component, delta);
+}
+
+CustomLambdaBehavior::~CustomLambdaBehavior() {}

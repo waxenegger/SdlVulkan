@@ -11,17 +11,18 @@ struct ComponentProperties final {
 
 
 class Component;
-class ComponentBehavior {
+class ComponentBehavior {        
     protected:
         Component * component = nullptr;
-        
+
     public:
         ComponentBehavior(const ComponentBehavior&) = delete;
         ComponentBehavior& operator=(const ComponentBehavior &) = delete;
         ComponentBehavior(ComponentBehavior &&) = delete;
         
-        ComponentBehavior(Component * component);
-
+        ComponentBehavior();
+        void setComponent(Component * component);
+        
         virtual void update(const float delta) = 0;
         virtual ~ComponentBehavior();
 };
@@ -32,12 +33,26 @@ class RandomWalkBehavior : public ComponentBehavior {
         RandomWalkBehavior& operator=(const RandomWalkBehavior &) = delete;
         RandomWalkBehavior(RandomWalkBehavior &&) = delete;
 
-        RandomWalkBehavior(Component * component);
+        RandomWalkBehavior();
         
         void update(const float delta);
         ~RandomWalkBehavior();
 };
 
+class CustomLambdaBehavior : public ComponentBehavior {
+    private:
+        std::function<void (Component * component, const float delta)> behavior;
+    
+    public:
+        CustomLambdaBehavior(const CustomLambdaBehavior&) = delete;
+        CustomLambdaBehavior& operator=(const CustomLambdaBehavior &) = delete;
+        CustomLambdaBehavior(CustomLambdaBehavior &&) = delete;
+
+        CustomLambdaBehavior(const std::function<void (Component * component, const float delta)> behavior);
+        
+        void update(const float delta);
+        ~CustomLambdaBehavior();    
+};
 
 class Component final {
     private:
@@ -88,6 +103,7 @@ class Component final {
         void setSsboIndex(const uint32_t index);
         uint32_t getSsboIndex();
         VkDeviceSize getSsboSize();
+        glm::vec3 getFront();
 
         std::vector<ComponentProperties> & getProperties();
         void addComponentProperties(const ComponentProperties props);

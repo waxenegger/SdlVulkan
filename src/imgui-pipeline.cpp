@@ -126,7 +126,7 @@ void ImGuiPipeline::draw(const VkCommandBuffer & commandBuffer, const uint16_t c
         ImGui::PushID(0);
         ImGui::BeginListBox("", ImVec2(150, 50));
         for (auto h : hits) {
-            ImGui::Selectable(std::get<0>(h).c_str());
+            ImGui::Selectable(std::string(std::get<0>(h) + "<" + std::to_string(std::get<1>(h))).c_str());
         }
         ImGui::EndListBox();
         ImGui::PopID();
