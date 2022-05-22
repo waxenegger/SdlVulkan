@@ -107,6 +107,20 @@ bool GraphicsPipeline::isEnabled() {
     return this->enabled;
 }
 
+void GraphicsPipeline::correctViewPortCoordinates(const VkCommandBuffer & commandBuffer) {
+    if (!this->isEnabled() || !this->canRender()) return;
+
+    VkViewport viewport{};
+    viewport.x = 0;
+    viewport.y = (float)this->renderer->getSwapChainExtent().height;
+    viewport.width = (float)this->renderer->getSwapChainExtent().width;
+    viewport.height = -(float)this->renderer->getSwapChainExtent().height;
+    viewport.minDepth = 0.0f;
+    viewport.maxDepth = 1.0f;
+    vkCmdSetViewport(commandBuffer, 0, 1, &viewport);
+}
+
+
 bool GraphicsPipeline::isShowingBoundingBoxes() {
     return this->showBoundingBoxes;
 }

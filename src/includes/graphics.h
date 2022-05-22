@@ -166,6 +166,8 @@ class GraphicsPipeline {
         virtual void draw(const VkCommandBuffer & commandBuffer, const uint16_t commandBufferIndex) = 0;
         virtual void update() = 0;
         
+        void correctViewPortCoordinates(const VkCommandBuffer & commandBuffer);
+        
         bool isEnabled();
         void setEnabled(const bool flag);
         

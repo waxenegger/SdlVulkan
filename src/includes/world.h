@@ -33,8 +33,6 @@ class Camera
             bool down = false;
         } keys;
 
-        bool flipY = true;
-        
         glm::mat4 perspective = glm::mat4();
         glm::mat4 view = glm::mat4();
 

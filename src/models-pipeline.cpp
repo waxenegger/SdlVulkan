@@ -367,8 +367,8 @@ bool ModelsPipeline::updateGraphicsPipeline() {
     rasterizer.rasterizerDiscardEnable = VK_FALSE;
     rasterizer.polygonMode = this->renderer->doesShowWireFrame() ? VK_POLYGON_MODE_LINE : VK_POLYGON_MODE_FILL;
     rasterizer.lineWidth = 1.0f;
-    rasterizer.cullMode = VK_CULL_MODE_BACK_BIT;
-    rasterizer.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
+    rasterizer.cullMode = VK_CULL_MODE_FRONT_BIT;
+    rasterizer.frontFace = VK_FRONT_FACE_CLOCKWISE;
     rasterizer.depthBiasEnable = VK_FALSE;
 
     VkPipelineMultisampleStateCreateInfo multisampling{};
@@ -468,6 +468,8 @@ void ModelsPipeline::draw(const VkCommandBuffer & commandBuffer, const uint16_t 
         if (this->indexBuffer != nullptr) {
             vkCmdBindIndexBuffer(commandBuffer, this->indexBuffer, 0, VK_INDEX_TYPE_UINT32);
         }
+        
+        this->correctViewPortCoordinates(commandBuffer);
         
         auto & allModels = Models::INSTANCE()->getModels();
         for (auto & model :  allModels) {            

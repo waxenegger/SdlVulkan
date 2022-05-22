@@ -488,8 +488,8 @@ float Helper::getRandomFloatBetween0and1() {
 
 BoundingBox Helper::getBoundingBox(const glm::vec3 pos, const float buffer) {
     return BoundingBox {
-        .min = glm::vec3(-pos.x-buffer, pos.y-buffer, -pos.z-buffer),
-        .max = glm::vec3(-pos.x+buffer, pos.y+buffer, -pos.z+buffer)
+        .min = glm::vec3(pos.x-buffer, pos.y-buffer, pos.z-buffer),
+        .max = glm::vec3(pos.x+buffer, pos.y+buffer, pos.z+buffer)
     };
 }
 
@@ -578,16 +578,9 @@ float Helper::checkRayIntersection(const BoundingBox bbox, const glm::vec3 rayOr
     return tNear > 0 ? tNear : tFar;
 }
 
-std::vector<std::tuple<std::string, float>> Helper::getCameraCrossHairIntersection() {
-    glm::vec3 pos = Camera::INSTANCE()->getPosition();
-    pos.x *= -1;
-    pos.z *= -1;
-    
-    glm::vec3 front = Camera::INSTANCE()->getCameraFront();
-    front.x *= -1;
-    front.z *= -1;
-    
-    return Components::INSTANCE()->checkRayIntersection(pos, front);
+std::vector<std::tuple<std::string, float>> Helper::getCameraCrossHairIntersection() {    
+    return Components::INSTANCE()->checkRayIntersection(
+        Camera::INSTANCE()->getPosition(), -Camera::INSTANCE()->getCameraFront());
 }
 
 std::uniform_real_distribution<float> Helper::distribution = std::uniform_real_distribution<float>(0.0, 1.0);

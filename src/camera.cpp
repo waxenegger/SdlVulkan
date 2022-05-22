@@ -6,15 +6,12 @@ void Camera::updateViewMatrix() {
     glm::mat4 rotM = glm::mat4(1.0f);
     glm::mat4 transM;
 
-    rotM = glm::rotate(rotM, this->rotation.x * (this->flipY ? -1.0f : 1.0f), glm::vec3(1.0f, 0.0f, 0.0f));    
+    rotM = glm::rotate(rotM, this->rotation.x, glm::vec3(1.0f, 0.0f, 0.0f));    
     rotM = glm::rotate(rotM, this->rotation.y, glm::vec3(0.0f, 1.0f, 0.0f));
     rotM = glm::rotate(rotM, this->rotation.z, glm::vec3(0.0f, 0.0f, 1.0f));
 
-    glm::vec3 translation = this->position;
+    glm::vec3 translation = -this->position;
 
-    if (this->flipY) {
-        translation.y *= -1.0f;
-    }
     transM = glm::translate(glm::mat4(1.0f), translation);
 
     if (type == CameraType::firstperson) {
@@ -22,6 +19,8 @@ void Camera::updateViewMatrix() {
     } else {
         this->view = transM * rotM;
     }
+    
+    logInfo(glm::to_string(this->position));
 };
 
 glm::vec3 Camera::getPosition() {
@@ -85,9 +84,6 @@ float Camera::getFovY()
 void Camera::setPerspective()
 {
     this->perspective = glm::perspective(glm::radians(this->fovy), this->aspect, 0.1f, 1000.0f);
-    if (this->flipY) {
-        this->perspective[1][1] *= -1.0f;
-    }
     this->updateViewMatrix();
 };
 
@@ -141,16 +137,16 @@ void Camera::update(const float delta, const std::function<bool(BoundingBox)> co
             glm::vec3 pos = this->position;
                         
             if (this->keys.up) {
-                pos += camFront * delta;
-            }
-            if (this->keys.down) {
                 pos -= camFront * delta;
             }
+            if (this->keys.down) {
+                pos += camFront * delta;
+            }
             if (this->keys.left) {
-                pos -= glm::normalize(glm::cross(camFront, glm::vec3(0.0f, 1.0f, 0.0f))) * delta;
+                pos += glm::normalize(glm::cross(camFront, glm::vec3(0.0f, 1.0f, 0.0f))) * delta;
             }
             if (this->keys.right) {
-                pos += glm::normalize(glm::cross(camFront, glm::vec3(0.0f, 1.0f, 0.0f))) * delta;
+                pos -= glm::normalize(glm::cross(camFront, glm::vec3(0.0f, 1.0f, 0.0f))) * delta;
             }
             
             if (collisionCheck != nullptr && collisionCheck(Helper::getBoundingBox(pos))) return;
@@ -165,7 +161,7 @@ void Camera::update(const float delta, const std::function<bool(BoundingBox)> co
 void Camera::updateDirection(const float deltaX, const float  deltaY, float delta) {    
     glm::vec3 rot(0.0f);
     rot.y = deltaX * delta;
-    rot.x = -deltaY * delta;
+    rot.x = deltaY * delta;
         
     this->rotate(rot);
 }
@@ -182,8 +178,7 @@ glm::mat4 Camera::getProjectionMatrix() {
     return this->perspective;
 };
 
-Camera::Camera(glm::vec3 position)
-{
+Camera::Camera(glm::vec3 position){
     setPosition(position);
 }
 
